@@ -298,6 +298,12 @@ async def main() -> int:
         await pg.wait_for_timeout(400)
         check(await pg.evaluate("location.hash") == "#pedido", "la transferencia en bolívares con comprobante se envía")
 
+        # una cuenta sin pedidos no ve la factura de ejemplo con datos de Ana
+        await login("lucia.rojas@unimet.edu.ve", "demo-mod-01")
+        await pg.goto(URL + "#factura")
+        await pg.wait_for_timeout(300)
+        check("Ana Torres" not in await pg.inner_text("#factura") and "Aún no tienes facturas" in await pg.inner_text("#fcCard"), "la factura vacía no muestra datos de otra cuenta")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 

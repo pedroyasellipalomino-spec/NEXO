@@ -199,7 +199,7 @@
 
 <!-- 4 · Inicio -->
 <section class="screen app" id="inicio" data-title="Inicio" data-tab="inicio" data-crumb="Inicio" hidden>
-  <div class="row">
+  <div class="row inicio-head">
     <div><h1 class="h1">Hola, <span data-user="first">Ana</span> 👋</h1><p class="lead">Todo tu campus, en un solo lugar.</p></div>
     <div class="row" style="gap:8px;flex-wrap:wrap;justify-content:flex-end"><span class="pill ok" data-bcv-pill title="Tasa oficial del Banco Central de Venezuela">Dólar BCV · Bs. 901,62</span><span class="pill neutral only-wide" data-sim-date>Jueves, 12 nov 2026</span></div>
   </div>
@@ -258,7 +258,7 @@
     <div><h1 class="h1">¿Qué quieres hacer hoy?</h1><p class="lead">Paga, reserva y retira sin filas en el Campus Central.</p></div>
     <span class="pill neutral only-wide">4 servicios disponibles</span>
   </div>
-  <div class="input" style="max-width:560px"><i data-lucide="search"></i><input id="s-search" type="search" placeholder="Buscar un servicio"></div>
+  <div class="input" style="max-width:560px"><i data-lucide="search"></i><input id="s-search" aria-label="Buscar un servicio" type="search" placeholder="Buscar un servicio"></div>
   <div class="cols">
     <div class="svc-grid">
       <div class="card svc">
@@ -307,7 +307,7 @@
 <!-- 5 · Comida y kioscos -->
 <section class="screen app" id="comida" data-title="Comida y kioscos" data-back="servicios" data-tab="servicios" data-crumb="Servicios  /  Comida y kioscos" hidden>
   <div><h1 class="h1">Tu próxima pausa</h1><p class="lead">Compra desde aquí y retira en el campus.</p></div>
-  <div class="input" style="max-width:560px"><i data-lucide="search"></i><input id="c-search" type="search" placeholder="Buscar comida o local"><i data-lucide="sliders-horizontal"></i></div>
+  <div class="input" style="max-width:560px"><i data-lucide="search"></i><input id="c-search" aria-label="Buscar comida o local" type="search" placeholder="Buscar comida o local"><i data-lucide="sliders-horizontal"></i></div>
   <div class="chips" data-chips data-filter="comida"><button class="pill ok" type="button" data-show="all">Todos · 7</button><button class="pill neutral" type="button" data-show="local">Locales de comida · 4</button><button class="pill neutral" type="button" data-show="kiosco">Kioscos · 3</button></div>
   <div class="cols">
     <div class="stack">
@@ -823,7 +823,7 @@
         <p class="tiny center">QR ilustrativo · No válido para entrar</p>
         <div class="sep"></div>
         <b style="font-size:17px;font-weight:600"><span data-user="full">Ana Torres</span></b>
-        <div class="kv"><span>Carnet</span><b><span data-user="carnet">20241010186</span></b></div><div class="kv"><span>Vehículo</span><b data-veh="full">Toyota Yaris 2019</b></div>
+        <div class="kv" data-has-carnet><span>Carnet</span><b><span data-user="carnet">20241010186</span></b></div><div class="kv"><span>Vehículo</span><b data-veh="full">Toyota Yaris 2019</b></div>
         <div class="kv total"><span>Placa</span><b data-veh="plate">AB123CD</b></div><div class="kv"><span>Válido hasta</span><b><span data-planv="end">01 dic 2026</span></b></div>
       </div>
       <div class="card">
@@ -888,7 +888,7 @@
 
 <!-- 15 · Materias y estado de cuenta -->
 <section class="screen app" id="materias" data-title="Estado de cuenta" data-back="inicio" data-tab="cuenta" data-crumb="Estado de cuenta" hidden>
-  <div><h1 class="h1">Tu cuenta, sin sorpresas</h1><p class="lead"><span data-user="full">Ana Torres</span> · Carnet <span data-user="carnet">20241010186</span> · Trimestre sep–nov 2026</p></div>
+  <div><h1 class="h1">Tu cuenta, sin sorpresas</h1><p class="lead"><span data-user="full">Ana Torres</span> <span data-has-carnet>· Carnet <span data-user="carnet">20241010186</span> </span>· Trimestre sep–nov 2026</p></div>
   <div class="card simbar">
     <div class="row start" style="gap:10px"><i data-lucide="calendar-clock" style="color:var(--brand);font-size:20px"></i><div><b style="font-size:13px">Fecha de simulación</b><p class="tiny">Solo para probar el prototipo: cambia el día para ver cómo se emiten las facturas.</p></div></div>
     <div class="row start" style="flex-wrap:wrap;gap:8px">
@@ -939,7 +939,7 @@
 
 <!-- 16 · Pago universitario y caja -->
 <section class="screen app" id="caja" data-title="Pagar factura" data-back="materias" data-tab="cuenta" data-crumb="Estado de cuenta  /  Pagar factura" hidden>
-  <div><h1 class="h1">Paga tu factura del mes</h1><p class="lead"><span data-user="full">Ana Torres</span> · Carnet <span data-user="carnet">20241010186</span> · Trimestre sep–nov 2026</p></div>
+  <div><h1 class="h1">Paga tu factura del mes</h1><p class="lead"><span data-user="full">Ana Torres</span> <span data-has-carnet>· Carnet <span data-user="carnet">20241010186</span> </span>· Trimestre sep–nov 2026</p></div>
   <div class="cols">
     <div class="stack">
       <div class="card">
@@ -1319,7 +1319,7 @@
 <section class="screen app" id="perfil" data-title="Mi cuenta" data-back="inicio" data-tab="perfil" data-crumb="Mi cuenta" hidden>
   <div class="profile-head">
     <span class="avatar xl" data-user="initials">AT</span>
-    <div style="min-width:0"><h1 class="h1" data-user="full">Ana Torres</h1><p class="lead"><span data-user="email"></span> · Carnet <span data-user="carnet"></span></p></div>
+    <div style="min-width:0"><h1 class="h1" data-user="full">Ana Torres</h1><p class="lead"><span data-user="email"></span><span data-has-carnet> · Carnet <span data-user="carnet"></span></span><span data-no-carnet hidden> · Cuenta del equipo de Nexo</span></p></div>
   </div>
   <div class="cols">
     <div class="stack">

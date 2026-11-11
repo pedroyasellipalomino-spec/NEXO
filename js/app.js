@@ -180,6 +180,8 @@ function applyUser() {
   const initials = ((words[0] || "")[0] || "") + ((words.length > 1 ? words[words.length - 1] : "")[0] || "");
   const vals = { full: user.full, first, initials: initials.toLocaleUpperCase("es"), carnet: user.carnet, email: user.email };
   document.querySelectorAll("[data-user]").forEach(el => { el.textContent = vals[el.dataset.user] ?? ""; });
+  document.querySelectorAll("[data-has-carnet]").forEach(el => { el.hidden = !user.carnet; });
+  document.querySelectorAll("[data-no-carnet]").forEach(el => { el.hidden = !!user.carnet; });
   if (typeof renderCards === "function" && document.getElementById("cardPicker")) try { renderCards(); } catch (err) {}
 }
 /* cambiar de cuenta recarga la app para cargar los datos de esa cuenta */
@@ -1874,8 +1876,17 @@ function renderComprobante() {
 }
 const FC_SAMPLE = ["fcLead", "fcNotice", "fcCard", "fcPickup"].map(id => [id, document.getElementById(id).innerHTML]);
 function renderFactura() {
-  const o = curOrder && orders.find(x => x.id === curOrder);
-  if (!o) { // sin pedido elegido se muestra la factura de ejemplo
+  const o = (curOrder && orders.find(x => x.id === curOrder)) || (!isDemo ? orders.filter(x => !x.cancelledAt).sort((a, b) => (b.paidAt || 0) - (a.paidAt || 0))[0] : null);
+  ["fcNotice", "fcPickup"].forEach(id => { document.getElementById(id).hidden = false; });
+  document.getElementById("fcPickup").parentElement.hidden = !o && !isDemo;
+  document.querySelector("#factura .h1").textContent = !o && !isDemo ? "Tus facturas de comida" : "Tu pago está confirmado";
+  if (!o && !isDemo) { // cuenta sin pedidos: nada que facturar (la factura de ejemplo es de la cuenta demo)
+    document.getElementById("fcLead").textContent = "Aquí verás la factura de cada pedido de comida que pagues.";
+    ["fcNotice", "fcPickup"].forEach(id => { document.getElementById(id).hidden = true; });
+    document.getElementById("fcCard").innerHTML = `<div class="row start"><span class="ico lg"><i data-lucide="receipt-text"></i></span><div><h2 class="h2">Aún no tienes facturas de comida</h2><p class="small" style="font-size:13px">Cuando pagues un pedido, su factura aparecerá aquí y en Actividad.</p></div></div><button class="btn" type="button" data-go="comida" style="max-width:320px"><i data-lucide="utensils"></i>Ver comida y kioscos</button>`;
+    setFrame("factura", "Factura de comida", ["Actividad", "Factura"]); icons(); return;
+  }
+  if (!o) { // cuenta demo sin pedido elegido: factura de ejemplo
     FC_SAMPLE.forEach(([id, h]) => { document.getElementById(id).innerHTML = h; });
     setFrame("factura", "Factura de comida", ["Actividad", "Factura"]); icons(); return;
   }
@@ -2162,7 +2173,7 @@ function inviteCard() {
   return `<form class="card" data-invite novalidate>
     <h3 class="sec">Asignar moderador</h3>
     <p class="small" style="font-size:12px">Invita a una persona para responder tickets y ofrecer soluciones.</p>
-    <div class="field"><label>Correo institucional</label><div class="input"><input type="email" name="email" placeholder="nombre@unimet.edu.ve" autocomplete="off"></div><p class="tiny" data-inv-hint hidden></p></div>
+    <div class="field"><label>Correo institucional</label><div class="input"><input type="email" name="email" placeholder="nombre@unimet.edu.ve" autocomplete="off" aria-label="Correo institucional de la persona invitada"></div><p class="tiny" data-inv-hint hidden></p></div>
     <div class="row"><span style="font-size:12px">Rol de acceso</span><span class="pill ok">Moderador</span></div>
     <button class="btn" type="submit"><i data-lucide="user-plus"></i>Enviar invitación</button>
     <p class="tiny">La persona recibirá un enlace por correo (simulado): al crear su cuenta con ese correo, entra como moderador.</p>
@@ -2545,7 +2556,7 @@ function creatorInvite() {
   return `<form class="card" data-invite novalidate>
     <h2 class="sec">Invitar al equipo</h2>
     <p class="small" style="font-size:12px">Solo el creador puede asignar administradores y moderadores.</p>
-    <div class="field"><label>Correo institucional</label><div class="input"><input type="email" name="email" placeholder="nombre@unimet.edu.ve" autocomplete="off"></div><p class="tiny" data-inv-hint hidden></p></div>
+    <div class="field"><label>Correo institucional</label><div class="input"><input type="email" name="email" placeholder="nombre@unimet.edu.ve" autocomplete="off" aria-label="Correo institucional de la persona invitada"></div><p class="tiny" data-inv-hint hidden></p></div>
     <fieldset class="roles"><legend>Selecciona un rol</legend>
       <label class="pill ${admin ? "ok" : "neutral"}"><input type="radio" name="role" value="admin"${admin ? " checked" : ""}>Administrador</label>
       <label class="pill ${admin ? "neutral" : "ok"}"><input type="radio" name="role" value="mod"${admin ? "" : " checked"}>Moderador</label></fieldset>
