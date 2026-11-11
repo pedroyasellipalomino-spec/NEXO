@@ -307,8 +307,10 @@
 <!-- 5 · Comida y kioscos -->
 <section class="screen app" id="comida" data-title="Comida y kioscos" data-back="servicios" data-tab="servicios" data-crumb="Servicios  /  Comida y kioscos" hidden>
   <div><h1 class="h1">Tu próxima pausa</h1><p class="lead">Compra desde aquí y retira en el campus.</p></div>
-  <div class="input" style="max-width:560px"><i data-lucide="search"></i><input id="c-search" aria-label="Buscar comida o local" type="search" placeholder="Buscar comida o local"><i data-lucide="sliders-horizontal"></i></div>
-  <div class="chips" data-chips data-filter="comida"><button class="pill ok" type="button" data-show="all">Todos · 7</button><button class="pill neutral" type="button" data-show="local">Locales de comida · 4</button><button class="pill neutral" type="button" data-show="kiosco">Kioscos · 3</button></div>
+  <div class="input" style="max-width:560px"><i data-lucide="search"></i><input id="c-search" aria-label="Buscar comida o local" type="search" placeholder="Buscar comida o local"><button class="ffbtn" type="button" id="ffToggle" aria-expanded="false" aria-controls="foodFilters" aria-label="Filtros"><i data-lucide="sliders-horizontal"></i><span class="nbadge" id="ffCount" hidden></span></button></div>
+  <div class="card ffpanel" id="foodFilters" hidden></div>
+  <div class="chips" id="ffActive" hidden></div>
+  <div class="chips" data-chips data-filter="comida"><button class="pill ok" type="button" data-show="all" data-ffn="all">Todos · 7</button><button class="pill neutral" type="button" data-show="local" data-ffn="local">Locales de comida · 4</button><button class="pill neutral" type="button" data-show="kiosco" data-ffn="kiosco">Kioscos · 3</button></div>
   <div class="cols">
     <div class="stack">
       <div class="stack s14" data-group="local">

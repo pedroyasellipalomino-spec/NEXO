@@ -1641,41 +1641,125 @@ const cartTotal = () => { const l = cartLocal(); return l ? cart.lines.reduce((a
 const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
 
 /* Lista de locales y kioscos */
+/* Filtros de Comida: abiertos ahora, precio máximo, tiempo de retiro, tipo de comida y orden (sessionStorage "nexo-ff") */
+const FF0 = { open: false, price: 0, eta: 0, type: "", sort: "rec" };
+let ff = { ...FF0 };
+try { ff = { ...FF0, ...(JSON.parse(sessionStorage.getItem("nexo-ff") || "null") || {}) }; } catch (err) {}
+const saveFF = () => { try { sessionStorage.setItem("nexo-ff", JSON.stringify(ff)); } catch (err) {} };
+const FF_PRICES = [[0, "Cualquiera"], [2, "Hasta $2"], [5, "Hasta $5"], [8, "Hasta $8"]];
+const FF_ETAS = [[0, "Cualquiera"], [5, "5 min o menos"], [10, "10 min o menos"], [15, "15 min o menos"]];
+const FF_TYPES = [["", "Todo"], ["cafe", "Café"], ["almuerzo", "Almuerzos"], ["bebida", "Bebidas"], ["merienda", "Meriendas y snacks"], ["saludable", "Saludable"]];
+const FF_SORTS = [["rec", "Recomendados"], ["price", "Menor precio"], ["eta", "Retiro más rápido"]];
+const ffActiveCount = () => (ff.open ? 1 : 0) + (ff.price ? 1 : 0) + (ff.eta ? 1 : 0) + (ff.type ? 1 : 0) + (ff.sort !== "rec" ? 1 : 0);
+// Tipo de comida de un producto, según su categoría, nombre e ícono
+function itemTypes(l, cat, it) {
+  const c = normTxt(cat.name), t = normTxt(it.name + " " + it.desc), out = new Set();
+  if (/cafe/.test(c) || it.icon === "coffee") out.add("cafe");
+  if (/almuerzo|plato|bowl|hamburguesa/.test(c)) out.add("almuerzo");
+  if (/bebida/.test(c) || ["cup-soda", "glass-water", "zap"].includes(it.icon)) out.add("bebida");
+  if (/merienda|snack|dulce|desayuno/.test(c)) out.add("merienda");
+  if (l.id === "teeb" || /ensalada|bowl/.test(c) || /^(ensalada|bowl|batido)/.test(normTxt(it.name))) out.add("saludable");
+  return out;
+}
+const etaMax = l => Math.max(...(l.eta.match(/\d+/g) || ["0"]).map(Number));
+const toMin = hm => { const [h, m] = hm.split(":").map(Number); return h * 60 + (m || 0); };
+function openState(l) {
+  if (isPaused(l.id)) return { open: false, label: "Pausado", cls: "warn" };
+  const [a, b] = l.hours.split("–"), now = new Date(), m = now.getHours() * 60 + now.getMinutes();
+  if (m >= toMin(a) && m < toMin(b)) return { open: true, label: "Abierto", cls: "ok" };
+  return { open: false, label: m < toMin(a) ? `Abre a las ${a}` : "Cerrado por hoy", cls: "neutral" };
+}
+function foodMatches(l, q) {
+  // productos que cumplen la búsqueda, el precio y el tipo
+  const items = l.cats.flatMap(c => c.items.filter(it => !isSoldOut(l.id, it.id)
+    && (!ff.price || it.price <= ff.price) && (!ff.type || itemTypes(l, c, it).has(ff.type))
+    && (!q || normTxt(it.name + " " + it.desc).includes(q) || normTxt(l.name + " " + l.tagline).includes(q))));
+  if (!items.length) return null;
+  if (ff.open && !openState(l).open) return null;
+  if (ff.eta && etaMax(l) > ff.eta) return null;
+  return items;
+}
+function renderFoodFilters() {
+  const n = ffActiveCount(), badge = document.getElementById("ffCount");
+  badge.hidden = !n; badge.textContent = n;
+  const panel = document.getElementById("foodFilters");
+  const grp = (key, opts, label) => `<div class="ffgroup"><span class="small" style="font-weight:600">${label}</span><div class="chips" role="radiogroup" aria-label="${label}">${opts.map(([v, t]) => `<button class="pill ${ff[key] === v ? "ok" : "neutral"}" type="button" role="radio" aria-checked="${ff[key] === v}" data-ff="${key}" data-ffv="${v}">${t}</button>`).join("")}</div></div>`;
+  if (!panel.hidden) panel.innerHTML = `
+    <div class="row"><h2 class="h3">Filtrar y ordenar</h2><button class="link b" type="button" data-ff-clear${n ? "" : " hidden"}>Limpiar filtros</button></div>
+    <div class="row ffopen"><div><b style="font-size:13px">Solo abiertos ahora</b><p class="tiny">Según el horario de hoy y si el local pausó los pedidos.</p></div><button class="switch" type="button" role="switch" aria-checked="${ff.open}" aria-label="Solo abiertos ahora" data-ff-open></button></div>
+    ${grp("price", FF_PRICES, "Precio")}${grp("eta", FF_ETAS, "Tiempo de retiro")}${grp("type", FF_TYPES, "Tipo de comida")}${grp("sort", FF_SORTS, "Ordenar por")}
+    <button class="btn" type="button" data-ff-close>Ver ${plural(document.querySelectorAll("#foodLocales [data-open-local], #foodKioscos [data-open-local]").length, "resultado", "resultados")}</button>`;
+  const act = document.getElementById("ffActive"), tags = [];
+  if (ff.open) tags.push(["open", "Abiertos ahora"]);
+  if (ff.price) tags.push(["price", FF_PRICES.find(x => x[0] === ff.price)[1]]);
+  if (ff.eta) tags.push(["eta", "Retiro " + FF_ETAS.find(x => x[0] === ff.eta)[1]]);
+  if (ff.type) tags.push(["type", FF_TYPES.find(x => x[0] === ff.type)[1]]);
+  if (ff.sort !== "rec") tags.push(["sort", FF_SORTS.find(x => x[0] === ff.sort)[1]]);
+  act.hidden = !tags.length;
+  act.innerHTML = tags.map(([k, t]) => `<button class="pill ok fftag" type="button" data-ff-rm="${k}" aria-label="Quitar filtro ${t}">${t}<i data-lucide="x"></i></button>`).join("") + (tags.length > 1 ? `<button class="link b" type="button" data-ff-clear style="font-size:12px">Limpiar todo</button>` : "");
+  icons();
+}
 function renderFoodList() {
   const q = normTxt((document.getElementById("c-search") || {}).value || "").trim();
-  const match = l => !q || normTxt(l.name + " " + l.tagline).includes(q) || itemsOf(l).some(i => normTxt(i.name + " " + i.desc).includes(q));
-  const card = l => {
-    const hit = q && itemsOf(l).find(i => normTxt(i.name + " " + i.desc).includes(q));
-    const star = hit || itemsOf(l).find(i => i.tag) || itemsOf(l)[0];
+  const filtering = !!(q || ff.price || ff.type);
+  const card = (l, items) => {
+    const st = openState(l);
+    const hit = q && items.find(i => normTxt(i.name + " " + i.desc).includes(q));
+    const cheapest = items.slice().sort((a, b) => a.price - b.price)[0];
+    const star = hit || (filtering ? cheapest : (itemsOf(l).find(i => i.tag && items.includes(i)) || items[0]));
     return `<div class="card svc" data-kind="${l.kind}">
-      <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="${l.icon}"></i></span><div><h3 class="h3">${esc(l.name)}</h3><p class="small">${l.place} · Retiro en ${l.eta}</p></div></div>${isPaused(l.id) ? `<span class="pill warn">Pausado</span>` : `<span class="pill ok">Abierto</span>`}</div>
-      <div><b style="font-weight:600;font-size:14px">${hit ? "Coincide: " : ""}${esc(star.name)}</b><p class="small" style="font-size:13px">${esc(l.tagline)}</p></div>
-      <div class="row"><span class="price">${money(star.price)}</span><span class="small">Hoy · ${l.hours}</span></div>
+      <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="${l.icon}"></i></span><div><h3 class="h3">${esc(l.name)}</h3><p class="small">${l.place} · Retiro en ${l.eta}</p></div></div><span class="pill ${st.cls}">${st.label}</span></div>
+      <div><b style="font-weight:600;font-size:14px">${hit ? "Coincide: " : filtering && items.length > 1 ? `${items.length} opciones · ` : ""}${esc(star.name)}</b><p class="small" style="font-size:13px">${esc(l.tagline)}</p></div>
+      <div class="row"><span class="price">${filtering && !hit && items.length > 1 ? "Desde " : ""}${money(star.price)}</span><span class="small">Hoy · ${l.hours}</span></div>
       <button class="btn${l.kind === "local" ? "" : " ghost"}" type="button" data-open-local="${l.id}"><i data-lucide="arrow-right"></i>${l.kind === "local" ? "Ver menú de " + esc(l.name) : "Ver kiosco"}</button>
     </div>`;
   };
-  const locs = LOCALES.filter(l => l.kind === "local" && match(l)), kios = LOCALES.filter(l => l.kind === "kiosco" && match(l));
-  document.getElementById("foodLocales").innerHTML = locs.map(card).join("");
-  document.getElementById("foodKioscos").innerHTML = kios.map(card).join("");
+  const res = LOCALES.map(l => ({ l, items: foodMatches(l, q) })).filter(x => x.items);
+  const minP = x => Math.min(...x.items.map(i => i.price));
+  if (ff.sort === "price") res.sort((a, b) => minP(a) - minP(b));
+  if (ff.sort === "eta") res.sort((a, b) => etaMax(a.l) - etaMax(b.l) || minP(a) - minP(b));
+  const locs = res.filter(x => x.l.kind === "local"), kios = res.filter(x => x.l.kind === "kiosco");
+  document.getElementById("foodLocales").innerHTML = locs.map(x => card(x.l, x.items)).join("");
+  document.getElementById("foodKioscos").innerHTML = kios.map(x => card(x.l, x.items)).join("");
   document.getElementById("foodLocalCount").textContent = `${plural(locs.length, "local", "locales")} · Feria Central`;
   document.getElementById("foodKioscoCount").textContent = `${plural(kios.length, "kiosco", "kioscos")} · Campus Central`;
+  const nums = { all: res.length, local: locs.length, kiosco: kios.length }, names = { all: "Todos", local: "Locales de comida", kiosco: "Kioscos" };
+  document.querySelectorAll("[data-ffn]").forEach(b => { b.textContent = `${names[b.dataset.ffn]} · ${nums[b.dataset.ffn]}`; });
   document.getElementById("foodLocales").closest("[data-group]").classList.toggle("q-empty", !locs.length);
   document.getElementById("foodKioscos").closest("[data-group]").classList.toggle("q-empty", !kios.length);
-  document.getElementById("foodEmpty").hidden = locs.length + kios.length > 0;
+  const empty = document.getElementById("foodEmpty");
+  empty.hidden = res.length > 0;
+  empty.innerHTML = ffActiveCount() ? `No hay locales ni productos con estos filtros. <button class="link b" type="button" data-ff-clear>Limpiar filtros</button>` : "No encontramos productos ni locales con esa búsqueda.";
   const cc = document.getElementById("foodCartCard"), cl = cartLocal();
   cc.hidden = !cl || !cart.lines.length;
   if (!cc.hidden) cc.innerHTML = `<h3 class="h3">Tu carrito</h3><p class="small" style="font-size:13px">${plural(cartCount(), "producto", "productos")} · ${esc(cl.name)}</p>
     <button class="btn ghost" type="button" data-go="carrito"><i data-lucide="shopping-bag"></i>Ver carrito · ${money(cartTotal())}</button>`;
+  renderFoodFilters();
   icons();
 }
+document.addEventListener("click", e => {
+  if (e.target.closest("#ffToggle")) {
+    const p = document.getElementById("foodFilters"), t = document.getElementById("ffToggle");
+    p.hidden = !p.hidden; t.setAttribute("aria-expanded", String(!p.hidden)); renderFoodFilters();
+    if (!p.hidden) { const f = p.querySelector("button"); if (f) f.focus(); }
+    return;
+  }
+  const o = e.target.closest("[data-ff]");
+  if (o) { const k = o.dataset.ff, raw = o.dataset.ffv; ff[k] = ["price", "eta"].includes(k) ? +raw : raw; saveFF(); renderFoodList(); document.querySelector(`[data-ff="${k}"][data-ffv="${raw}"]`)?.focus(); return; }
+  if (e.target.closest("[data-ff-open]")) { ff.open = !ff.open; saveFF(); renderFoodList(); document.querySelector("[data-ff-open]")?.focus(); return; }
+  const rm = e.target.closest("[data-ff-rm]");
+  if (rm) { const k = rm.dataset.ffRm; ff[k] = FF0[k]; saveFF(); renderFoodList(); return; }
+  if (e.target.closest("[data-ff-clear]")) { ff = { ...FF0 }; saveFF(); renderFoodList(); toast("Quitamos los filtros."); return; }
+  if (e.target.closest("[data-ff-close]")) { const p = document.getElementById("foodFilters"); p.hidden = true; document.getElementById("ffToggle").setAttribute("aria-expanded", "false"); document.getElementById("ffToggle").focus(); }
+});
 
 /* Menú de un local */
 function renderLocal() {
   const l = localById(curLocal);
   setFrame("local", l.name, ["Comida y kioscos", l.name]);
   document.getElementById("localHead").innerHTML = `<h1 class="h1">${esc(l.name)}</h1><p class="lead">${l.place} · ${esc(l.tagline)}</p>
-    <div class="chips" style="margin-top:12px">${isPaused(l.id) ? `<span class="pill warn">Pedidos en pausa</span>` : `<span class="pill ok">Abierto</span>`}<span class="pill neutral">Retiro en ${l.eta}</span><span class="pill neutral">${l.hours}</span></div>
-    ${isPaused(l.id) ? `<div class="notice warn" style="margin-top:12px"><i data-lucide="circle-pause"></i><p>${esc(l.name)} no está recibiendo pedidos en este momento. Puedes ver el menú y volver más tarde.</p></div>` : ""}`;
+    <div class="chips" style="margin-top:12px">${isPaused(l.id) ? `<span class="pill warn">Pedidos en pausa</span>` : `<span class="pill ${openState(l).cls}">${openState(l).label}</span>`}<span class="pill neutral">Retiro en ${l.eta}</span><span class="pill neutral">${l.hours}</span></div>
+    ${isPaused(l.id) ? `<div class="notice warn" style="margin-top:12px"><i data-lucide="circle-pause"></i><p>${esc(l.name)} no está recibiendo pedidos en este momento. Puedes ver el menú y volver más tarde.</p></div>` : !openState(l).open ? `<div class="notice" style="margin-top:12px"><i data-lucide="clock"></i><p>${esc(l.name)} atiende hoy de ${l.hours}. En el prototipo igual puedes hacer el pedido para probar el flujo.</p></div>` : ""}`;
   const cats = ["Todos", ...l.cats.map(c => c.name)];
   if (!cats.includes(curCat)) curCat = "Todos";
   document.getElementById("localChips").innerHTML = cats.map(c => `<button class="pill ${c === curCat ? "ok" : "neutral"}" type="button" data-food-cat="${esc(c)}">${esc(c)}</button>`).join("");
