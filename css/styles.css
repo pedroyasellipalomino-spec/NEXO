@@ -675,3 +675,8 @@ button.tk-row.on{background:var(--mint-bg)}
 .modebtn svg{font-size:13px;color:var(--brand)}
 .nav .mode-nav{margin-top:14px;border:1px dashed rgba(255,255,255,.25)}
 .pm-err{color:var(--danger)}
+
+/* ---------- Equivalentes en bolívares (tasa BCV) ---------- */
+.bsv{display:block;font-size:11px;font-weight:500;color:var(--muted);font-family:var(--font);letter-spacing:0;margin-top:2px}
+.bsv.inline{display:inline;margin:0 0 0 2px}
+.plan-price .bsv{text-align:right}

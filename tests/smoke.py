@@ -262,6 +262,7 @@ async def main() -> int:
         await pg.click("#pmForm button[type=submit]")
         await pg.wait_for_timeout(200)
         check(await pg.locator(".pm-err:visible").count() == 4, "Pago Móvil marca cada dato inválido bajo su campo")
+        check(await pg.inner_text("[data-pm=amount]") == "Bs. 9.016,20 · equivale a $10,00", "Pago Móvil calcula los bolívares con la tasa BCV (901,62)")
         await pg.fill("#pm-phone", "04141234567")
         await pg.fill("#pm-ci", "26123456")
         await pg.fill("#pm-ref", "00456789")

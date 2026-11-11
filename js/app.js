@@ -306,6 +306,19 @@ let WALLET = isDemo ? 40 : 0;
 try { const w = localStorage.getItem(K("nexo-wallet")); if (w !== null && !isNaN(+w)) WALLET = +w; } catch (err) {}
 const saveWallet = () => { try { localStorage.setItem(K("nexo-wallet"), String(WALLET)); } catch (err) {} };
 const money = n => { const [i, d] = Math.abs(n).toFixed(2).split("."); return (n < 0 ? "-" : "") + "$" + i.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + d; };
+/* ---------- Tasa oficial del dólar (BCV) ----------
+   Valor inicial: Dólar BCV del miércoles 11/11/2026 = Bs. 901,62, consultado en alcambio.app (fuente oficial: bcv.org.ve).
+   El creador la actualiza en Configuración (nexo-bcv, global). Todos los equivalentes en bolívares salen de aquí. */
+const BCV0 = { rate: 901.62, date: "2026-11-11", source: "alcambio.app · fuente oficial BCV" };
+let BCV = { ...BCV0 };
+try { const b = JSON.parse(localStorage.getItem("nexo-bcv") || "null"); if (b && b.rate > 0 && b.date) BCV = { ...BCV0, ...b }; } catch (err) {}
+const saveBCV = () => { try { localStorage.setItem("nexo-bcv", JSON.stringify(BCV)); } catch (err) {} };
+const bcvRate = () => BCV.rate;
+const bsAmt = n => "Bs. " + money(n).slice(1);
+const bsOf = usd => bsAmt(Math.round(usd * BCV.rate * 100) / 100);
+const bcvDateTxt = () => { const [y, m, d] = BCV.date.split("-").map(Number); return `${d} ${["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"][m - 1]} ${y}`; };
+const bcvStale = () => { const t = new Date(); return BCV.date < `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; };
+const bsTag = usd => `<span class="bsv">${bsOf(usd)}</span>`;
 function renderWallet() {
   document.querySelectorAll("[data-wallet]").forEach(el => el.textContent = money(WALLET));
   const sel = document.querySelector("#planList .opt.plan.on");
@@ -344,7 +357,7 @@ function updatePlan(btn) {
   pendingPlan = { key, name, price, days, start: isoOf(start), end: isoOf(end) };
   ps("tag").textContent = isCurrent ? `Renovación · Plan ${name.toLowerCase()}` : active ? `Siguiente período · Plan ${name.toLowerCase()}` : `Nuevo plan ${name.toLowerCase()}`;
   ps("range").textContent = days === 1 ? fmtLong(start) : `${fmtLong(start)} – ${fmtLong(end)}`;
-  ps("price").textContent = money(price);
+  ps("price").innerHTML = `${money(price)}${bsTag(price)}`;
   let noVeh = false; try { noVeh = !vehicle; } catch (err) {}
   const after = WALLET - price, short = after < 0;
   ps("after").textContent = short ? money(WALLET) : money(after);
@@ -493,7 +506,7 @@ function renderDebt() {
   document.getElementById("cuotasList").innerHTML = INVOICES.map((iv, i) => { if (!MATERIAS.length) return ""; const s = statusOf(iv);
     return `<div class="cuota"><span class="ico"><i data-lucide="${s === "pagada" || s === "externa" ? "circle-check" : s === "futura" ? "lock" : "file-text"}"></i></span>
       <div class="grow"><b>Factura de ${iv.mes}</b><span class="tiny">${invLine(iv)}</span></div>
-      <div class="mv-actions"><b class="mono">${s === "futura" ? "desde " + money(PRICE_PP * MATERIAS.length) : s === "externa" ? "—" : money(amountOf(iv))}</b><span class="pill ${ST[s][0]}">${ST[s][1]}</span></div></div>`; }).join("");
+      <div class="mv-actions"><b class="mono">${s === "futura" ? "desde " + money(PRICE_PP * MATERIAS.length) : s === "externa" ? "—" : money(amountOf(iv))}${["pronto", "pendiente", "vencida"].includes(s) ? bsTag(amountOf(iv)) : ""}</b><span class="pill ${ST[s][0]}">${ST[s][1]}</span></div></div>`; }).join("");
 
   const ci = document.getElementById("currentInvoice");
   if (next) {
@@ -506,6 +519,7 @@ function renderDebt() {
       ${MATERIAS.map(m => `<div class="kv"><span>${m.n} · ${m.c}</span><b>${pp ? `<span class="strike">${money(PRICE_REG)}</span>` : ""}${money(u)}</b></div>`).join("")}
       <div class="sep"></div>
       <div class="kv total"><span>Total de la factura</span><b>${pp ? `<span class="strike">${money(PRICE_REG * MATERIAS.length)}</span>` : ""}${money(u * MATERIAS.length)}</b></div>
+      <div class="kv"><span>En bolívares · tasa BCV ${bcvDateTxt()}</span><b>${bsOf(u * MATERIAS.length)}</b></div>
       <button class="btn" type="button" data-go="caja">Pagar ${money(u * MATERIAS.length)}</button>`;
   } else {
     ci.hidden = !nextFuture && !review;
@@ -899,6 +913,7 @@ function renderRecarga() {
   field.classList.toggle("bad", !ok && rcAmount > 0);
   hint.textContent = ok ? `Mínimo ${money(RC_MIN)} · Máximo ${money(RC_MAX)} por recarga.` : rcAmount > RC_MAX ? `El máximo por recarga es ${money(RC_MAX)}.` : `El mínimo por recarga es ${money(RC_MIN)}.`;
   rc("amount").forEach(el => el.textContent = money(ok ? rcAmount : 0));
+  rc("bs").forEach(el => el.textContent = `${bsOf(ok ? rcAmount : 0)} · tasa BCV ${bcvDateTxt()}`);
   document.querySelectorAll("#rcMethods .opt").forEach(o => { const on = o.dataset.rcm === rcMethod; o.classList.toggle("on", on); o.setAttribute("aria-checked", String(on)); });
   // tarjeta
   if (rcCardId && !cards.find(c => c.id === rcCardId)) rcCardId = null;
@@ -1023,10 +1038,10 @@ document.getElementById("pm-phone").addEventListener("input", e => { let v = e.t
 ["pm-ci", "pm-ref"].forEach(id => document.getElementById(id).addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, ""); }));
 document.getElementById("pm-bs").addEventListener("input", e => { e.target.value = e.target.value.replace(/[^\d,]/g, "").replace(/(,.*?),/g, "$1").replace(/(,\d{2}).+/, "$1"); });
 /* Validación del Pago Móvil: todos los errores a la vez, cada uno bajo su campo; también al salir de cada campo.
-   BCV_REF es una tasa de referencia ilustrativa del prototipo (no es la tasa oficial). */
-const BCV_REF = 48.5, PM_TOL_LOW = 0.99, PM_TOL_HIGH = 1.05, PM_MAX_DAYS = 7;
-const bs = n => "Bs. " + money(n).slice(1);
-const pmExpected = () => Math.round(rcAmount * BCV_REF * 100) / 100;
+   El monto en bolívares se calcula con la tasa BCV vigente en la app (BCV.rate). */
+const PM_TOL_LOW = 0.99, PM_TOL_HIGH = 1.05, PM_MAX_DAYS = 7;
+const bs = bsAmt;
+const pmExpected = () => Math.round(rcAmount * bcvRate() * 100) / 100;
 const PM_PREFIX = ["0412", "0414", "0416", "0422", "0424", "0426"];
 function pmCheck(id) {
   const v = document.getElementById(id).value.trim();
@@ -1061,7 +1076,7 @@ function pmCheck(id) {
   if (id === "pm-bs") {
     const n = parseAmt(v), exp = pmExpected();
     if (!(n > 0)) return "Escribe el monto que pagaste en bolívares.";
-    if (n < exp * PM_TOL_LOW) return `Ese monto equivale a ${money(n / BCV_REF)}. Para recargar ${money(rcAmount)} debes pagar ${bs(exp)} (faltan ${bs(exp - n)}).`;
+    if (n < exp * PM_TOL_LOW) return `Ese monto equivale a ${money(n / bcvRate())}. Para recargar ${money(rcAmount)} debes pagar ${bs(exp)} (faltan ${bs(exp - n)}).`;
     if (n > exp * PM_TOL_HIGH) return `Pagaste ${bs(n - exp)} de más. Escribe el monto exacto de tu comprobante o elige una recarga mayor.`;
     return "";
   }
@@ -1078,8 +1093,8 @@ function pmShow(id, msg) {
 function pmRefreshAmount() {
   const exp = pmExpected();
   document.querySelector('[data-pm="amount"]').textContent = `${bs(exp)} · equivale a ${money(rcAmount)}`;
-  document.querySelector('[data-pm="bshint"]').innerHTML = `Debe ser ${bs(exp)}: ${money(rcAmount)} a la tasa de referencia del prototipo (${bs(BCV_REF)} por US$). <button class="link b" type="button" data-pm-fill style="font-size:11px">Usar este monto</button>`;
-  document.querySelector('[data-pm="ratenote"]').textContent = `Tasa de referencia ilustrativa: ${bs(BCV_REF)} por US$. En la app real se usará la tasa BCV del día.`;
+  document.querySelector('[data-pm="bshint"]').innerHTML = `Debe ser ${bs(exp)}: ${money(rcAmount)} a la tasa BCV del ${bcvDateTxt()} (${bs(bcvRate())} por US$). <button class="link b" type="button" data-pm-fill style="font-size:11px">Usar este monto</button>`;
+  document.querySelector('[data-pm="ratenote"]').textContent = `Tasa BCV del ${bcvDateTxt()}: ${bs(bcvRate())} por US$.${bcvStale() ? " Puede haber cambiado: confirma con tu banco la tasa del día." : ""}`;
 }
 document.getElementById("pm-cit").addEventListener("change", e => {
   const j = e.target.value === "J", lbl = document.querySelector('label[for="pm-ci"]'), inp = document.getElementById("pm-ci");
@@ -1665,7 +1680,7 @@ function renderLocal() {
   document.getElementById("localMenu").innerHTML = l.cats.filter(c => curCat === "Todos" || c.name === curCat).map(c => `<h2 class="h2">${esc(c.name)}</h2>` + c.items.map(it =>
     `<button class="card row${isSoldOut(l.id, it.id) ? " soldout" : ""}" type="button" data-open-item="${it.id}" style="text-align:left;flex-direction:row"${isSoldOut(l.id, it.id) ? ` aria-disabled="true"` : ""}>
       <span class="ico lg"><i data-lucide="${it.icon}"></i></span>
-      <div style="flex:1;min-width:0"><b class="h3">${esc(it.name)}</b><p class="small">${esc(it.desc)}</p><div class="row start" style="gap:8px;margin-top:4px"><b style="font-size:17px;font-weight:600">${money(it.price)}</b>${isSoldOut(l.id, it.id) ? `<span class="pill neutral">Agotado</span>` : it.tag ? `<span class="pill ok">${it.tag}</span>` : ""}${it.opts ? `<span class="tiny">Con opciones</span>` : ""}</div></div>
+      <div style="flex:1;min-width:0"><b class="h3">${esc(it.name)}</b><p class="small">${esc(it.desc)}</p><div class="row start" style="gap:8px;margin-top:4px"><b style="font-size:17px;font-weight:600">${money(it.price)}</b><span class="bsv inline">${bsOf(it.price)}</span>${isSoldOut(l.id, it.id) ? `<span class="pill neutral">Agotado</span>` : it.tag ? `<span class="pill ok">${it.tag}</span>` : ""}${it.opts ? `<span class="tiny">Con opciones</span>` : ""}</div></div>
       <span class="ico"><i data-lucide="chevron-right"></i></span>
     </button>`).join("")).join("");
   const cl = cartLocal(), mine = cl && cl.id === l.id && cart.lines.length;
@@ -1722,7 +1737,7 @@ function renderDetalle(note) {
         ${other ? `<div class="notice" style="font-size:13px"><i data-lucide="info"></i><p>Tu carrito tiene productos de <b>${esc(other.name)}</b>. Cada pedido se retira en un solo local, así que al añadir este producto se vaciará tu carrito.</p></div>` : ""}
         <div class="row">
           <div class="stack s14" style="gap:6px"><span class="small">Cantidad</span><span class="qty"><button type="button" aria-label="Quitar uno" data-det-qty="-1"><i data-lucide="minus"></i></button><span id="detQty">${detQty}</span><button type="button" aria-label="Agregar uno" data-det-qty="1"><i data-lucide="plus"></i></button></span></div>
-          <div style="text-align:right"><span class="small">Total del producto</span><p style="font-size:25px;font-weight:600" class="mono" id="detTotal">${money(detUnit(it) * detQty)}</p></div>
+          <div style="text-align:right"><span class="small">Total del producto</span><p style="font-size:25px;font-weight:600" class="mono" id="detTotal">${money(detUnit(it) * detQty)}</p><span class="bsv" id="detBs">${bsOf(detUnit(it) * detQty)}</span></div>
         </div>
         ${isPaused(l.id) || isSoldOut(l.id, it.id) ? `<div class="notice warn"><i data-lucide="circle-pause"></i><p>${isPaused(l.id) ? `${esc(l.name)} no está recibiendo pedidos ahora.` : "Este producto se agotó por hoy."}</p></div>` : ""}
         <button class="btn" type="button" id="detAdd"${isPaused(l.id) || isSoldOut(l.id, it.id) ? " disabled" : ""}><i data-lucide="shopping-bag"></i>${editing ? "Guardar cambios" : other ? "Vaciar carrito y añadir" : "Añadir al carrito"} · <span id="detAddAmt">${money(detUnit(it) * detQty)}</span></button>
@@ -1735,6 +1750,7 @@ function refreshDetTotal() {
   document.getElementById("detQty").textContent = detQty;
   document.getElementById("detTotal").textContent = t;
   document.getElementById("detAddAmt").textContent = t;
+  document.getElementById("detBs").textContent = bsOf(detUnit(it) * detQty);
 }
 function addFromDetalle() {
   const note = document.getElementById("d-note").value.trim();
@@ -1810,6 +1826,7 @@ function renderCarrito() {
       <div class="kv"><span>Retiro en el local</span><b class="pos">Gratis</b></div>
       <div class="sep"></div>
       <div class="kv total" style="font-size:18px"><span>Total a pagar</span><b style="font-size:27px">${money(total)}</b></div>
+      <div class="kv"><span>En bolívares · tasa BCV ${bcvDateTxt()}</span><b>${bsOf(total)}</b></div>
       <p class="small">Precios finales · Sin cargos extra</p>
       ${blocked ? `<div class="notice warn"><i data-lucide="circle-pause"></i><p>${isPaused(l.id) ? `${esc(l.name)} pausó los pedidos por ahora. Inténtalo más tarde.` : `Se agotó: ${soldNames.join(", ")}. Quítalo del carrito para continuar.`}</p></div>` : ""}
       <button class="btn" type="button" id="cartPay"${blocked ? " disabled" : ""}><i data-lucide="arrow-right"></i>${payMethod === "card" ? "Pagar con tarjeta" : "Continuar con transferencia"} · ${money(total)}</button>
@@ -2543,7 +2560,15 @@ function renderConfig() {
     ${SVC4.map(s => `<div class="field"><label for="cf-${s}">${SVC_LABEL[s]}</label><div class="input"><input id="cf-${s}" data-rate="${s}" type="number" inputmode="decimal" min="0" max="15" step="0.25" value="${rates[s]}"><span class="small">%</span></div></div>`).join("")}
     <div class="notice" id="cfPreview"></div>
     <div class="row"><button class="btn ghost" type="button" data-cf-default>Valores por defecto</button><button class="btn" type="submit"><i data-lucide="check"></i>Guardar cambios</button></div>`;
-  document.getElementById("cfSide").innerHTML = `<div class="card"><h2 class="h2">Datos del prototipo</h2>
+  document.getElementById("cfSide").innerHTML = `<form class="card" id="bcvForm" novalidate><div class="row"><h2 class="h2">Dólar BCV</h2><span class="pill ${bcvStale() ? "warn" : "ok"}">${bcvStale() ? "Desactualizada" : "Al día"}</span></div>
+    <p class="small" style="font-size:13px">Tasa oficial con la que Nexo muestra los precios en bolívares y valida los Pago Móvil. Cópiala de <b>bcv.org.ve</b> (o de alcambio.app, que la toma del BCV).</p>
+    <div class="grid2">
+      <div class="field"><label for="bcv-rate">Bs. por US$</label><div class="input"><input id="bcv-rate" inputmode="decimal" autocomplete="off" value="${money(BCV.rate).slice(1)}"></div></div>
+      <div class="field"><label for="bcv-date">Fecha valor</label><div class="input"><input id="bcv-date" type="date" value="${BCV.date}"></div></div>
+    </div>
+    <p class="tiny">Vigente: ${bsAmt(BCV.rate)} del ${bcvDateTxt()} · ${esc(BCV.source)}${BCV.by ? ` · actualizada por ${esc(BCV.by)}` : ""}.</p>
+    <button class="btn" type="submit"><i data-lucide="refresh-cw"></i>Actualizar tasa</button></form>
+    <div class="card"><h2 class="h2">Datos del prototipo</h2>
     <p class="small" style="font-size:13px">Vuelve a los tickets, invitaciones, equipo y comisiones de ejemplo. Solo afecta a este navegador; las cuentas de estudiantes y sus compras se conservan.</p>
     ${cfConfirm ? `<div class="confirm"><p>¿Restablecer los datos de gestión? Se perderán los tickets y cambios hechos en este navegador.</p><div class="row"><button class="btn ghost" type="button" data-cf-no>Volver</button><button class="btn" type="button" data-cf-yes>Restablecer</button></div></div>`
       : `<button class="btn ghost" type="button" data-cf-reset><i data-lucide="rotate-ccw"></i>Restablecer datos de ejemplo</button>`}</div>
@@ -2559,10 +2584,10 @@ function updateCfPreview() {
   const { r, bad } = readRates(), p = PERIODS["2026-10"], el = document.getElementById("cfPreview");
   if (bad) { el.className = "notice warn"; el.innerHTML = `<i data-lucide="info"></i><p>Cada comisión debe estar entre 0 % y 15 %.</p>`; icons(); return; }
   const vol = sumObj(p.vol), rev = SVC4.reduce((a, s) => a + p.vol[s] * r[s] / 100, 0);
-  el.className = "notice"; el.innerHTML = `<i data-lucide="percent"></i><p>Con estas comisiones, octubre habría dado <b>${money0(rev)}</b> de ingresos · comisión efectiva <b>${pctTxt(rev / vol, 2)}</b>.</p>`; icons();
+  el.className = "notice"; el.innerHTML = `<i data-lucide="percent"></i><p>Con estas comisiones, octubre habría dado <strong>${money0(rev)}</strong> de ingresos · comisión efectiva <strong>${pctTxt(rev / vol, 2)}</strong>.</p>`; icons();
 }
 function resetDemoData() {
-  ["nexo-tickets", "nexo-invites", "nexo-audit", "nexo-config"].forEach(k => { try { localStorage.removeItem(k); } catch (err) {} });
+  ["nexo-tickets", "nexo-invites", "nexo-audit", "nexo-config", "nexo-bcv"].forEach(k => { try { localStorage.removeItem(k); } catch (err) {} });
   STAFF0.forEach(s => { const a = accByEmail(s.email); if (a) { a.role = s.role; delete a.disabled; } });
   accounts.filter(a => (a.role === "admin" || a.role === "mod") && !STAFF0.some(s => s.email === a.email)).forEach(a => { delete a.role; delete a.disabled; });
   saveAccounts();
@@ -2614,6 +2639,18 @@ document.addEventListener("submit", e => {
     const ta = document.getElementById("ceText"), txt = ta.value.trim();
     if (!txt) { ta.focus(); toast("Escribe una respuesta antes de enviarla."); return; }
     ticketReply(tkById(ceSel), txt); renderCreadorEquipo(); return;
+  }
+  if (f.id === "bcvForm") {
+    e.preventDefault();
+    const rate = parseAmt(document.getElementById("bcv-rate").value), date = document.getElementById("bcv-date").value;
+    const t = new Date(), today = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+    if (!(rate > 0) || rate > 1000000) { document.getElementById("bcv-rate").focus(); toast("Escribe la tasa en bolívares por dólar, por ejemplo 901,62."); return; }
+    if (!date || date > today) { document.getElementById("bcv-date").focus(); toast("La fecha valor no puede ser posterior a hoy."); return; }
+    if (rate === BCV.rate && date === BCV.date) { toast("La tasa ya está al día."); return; }
+    const before = BCV.rate;
+    BCV = { rate, date, source: "cargada en Configuración", by: user.full }; saveBCV();
+    logAudit("config", `Actualizó la tasa BCV: ${bsAmt(before)} → ${bsAmt(rate)} (fecha valor ${bcvDateTxt()}).`);
+    refreshBcvUI(); toast(`Tasa BCV actualizada: ${bsAmt(rate)} por US$.`); renderConfig(); return;
   }
   if (f.id === "cfForm") {
     e.preventDefault();
@@ -2679,7 +2716,7 @@ function renderPedido() {
         ${st === "listo" ? `<button class="btn" type="button" data-picked="${o.id}"><i data-lucide="check"></i>Ya lo retiré</button>` : ""}
       </div>
       <div class="card">
-        <div class="row"><h2 class="h2">Tu pedido</h2><span class="small">${n} ${n === 1 ? "producto" : "productos"} · ${money(o.total)}</span></div>
+        <div class="row"><h2 class="h2">Tu pedido</h2><span class="small">${n} ${n === 1 ? "producto" : "productos"} · ${money(o.total)} · ${bsOf(o.total)}</span></div>
         ${o.lines.map(x => `<div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="${x.icon}"></i></div><div><b style="font-size:13px">${x.qty} × ${esc(x.name)}</b>${x.opts.map(t => `<p class="small">${esc(t)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}</div></div>`).join("")}
         <button class="btn ghost" type="button" data-go="factura" data-order="${o.id}"><i data-lucide="receipt-text"></i>Ver factura</button>
       </div>
@@ -3092,6 +3129,14 @@ if (account && !account.carnet) {
   document.querySelectorAll('#inicio [data-go="materias"], #inicio [data-go="caja"]').forEach(el => { (el.closest(".card") || el).hidden = true; });
 }
 
+/* Tasa BCV en pantallas estáticas: Inicio y lista de planes */
+function refreshBcvUI() {
+  document.querySelectorAll("[data-bcv-pill]").forEach(p => { p.textContent = `Dólar BCV · ${bsAmt(BCV.rate)} · ${bcvDateTxt()}`; p.classList.toggle("warn", bcvStale()); p.classList.toggle("ok", !bcvStale()); });
+  document.querySelectorAll("#planList .opt.plan").forEach(b => { const pr = b.querySelector(".plan-price"); if (!pr) return; pr.querySelector(".bsv")?.remove(); pr.insertAdjacentHTML("beforeend", bsTag(parseFloat(b.dataset.price.replace(",", ".")))); });
+  try { renderRecarga(); } catch (err) {}
+}
+refreshBcvUI();
+window.addEventListener("storage", e => { if (e.key === "nexo-bcv") { try { BCV = { ...BCV0, ...JSON.parse(e.newValue || "{}") }; } catch (err) {} refreshBcvUI(); } });
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();
   const carnet = f.querySelector("[data-digits]");
