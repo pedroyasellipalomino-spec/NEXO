@@ -37,11 +37,19 @@ const NAV = [
   ["perfil","user-round","Mi cuenta","perfil"]
 ];
 const TABS = NAV.filter(n => n[0] !== "cuenta" && n[0] !== "perfil");
+/* Espacio de gestión: cada sección con data-staff="admin" o "mod" usa su propio menú */
+const STAFF_NAV = {
+  admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"]],
+  mod: [["moderacion","inbox","Mis tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]]
+};
+const ROLE_LABEL = { admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
+const ROLE_HOME = { admin: "gestion", mod: "moderacion", estudiante: "inicio" };
 
 document.querySelectorAll("[data-account]").forEach(el => el.append(document.getElementById("account-tpl").content.cloneNode(true)));
 
 document.querySelectorAll("section.app").forEach(sec => {
-  const tab = sec.dataset.tab, back = sec.dataset.back, title = sec.dataset.title;
+  const tab = sec.dataset.tab, back = sec.dataset.back, title = sec.dataset.title, staff = sec.dataset.staff;
+  const nav = staff ? STAFF_NAV[staff] : NAV, home = staff ? ROLE_HOME[staff] : "inicio";
   const body = document.createElement("main");
   body.className = "content gutter";
   while (sec.firstChild) body.append(sec.firstChild);
@@ -49,26 +57,36 @@ document.querySelectorAll("section.app").forEach(sec => {
   const side = document.createElement("aside");
   side.className = "side";
   side.innerHTML = `
-    <button class="brand" type="button" data-go="inicio" style="color:#fff"><span class="emblem"><i data-lucide="layers"></i></span>nexo</button>
+    <button class="brand" type="button" data-go="${home}" style="color:#fff"><span class="emblem"><i data-lucide="layers"></i></span>nexo</button>
     <div class="inst"><b>U. Metropolitana</b><span>Campus Central · Caracas</span></div>
-    <nav class="nav">${NAV.map(n => `<button type="button" data-go="${n[3]}" class="${n[0]===tab?'on':''}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`).join("")}</nav>
-    <div class="profile"><p class="tag">ESPACIO DE ESTUDIANTE</p><button class="user userbtn" type="button" data-go="perfil" aria-label="Abrir mi cuenta"><span class="avatar" data-user="initials">AT</span><div><b data-user="full">Ana Torres</b><span>Ver mi cuenta</span></div></button></div>
+    <nav class="nav">${nav.map(n => `<button type="button" data-go="${n[3]}" class="${n[0]===tab?'on':''}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`).join("")}</nav>
+    ${staff
+      ? `<div class="profile"><p class="tag">ESPACIO DE GESTIÓN</p><div class="user"><span class="avatar" data-user="initials">AT</span><div><b data-user="full">Ana Torres</b><span>${ROLE_LABEL[staff]}</span></div></div></div>`
+      : `<div class="profile"><p class="tag">ESPACIO DE ESTUDIANTE</p><button class="user userbtn" type="button" data-go="perfil" aria-label="Abrir mi cuenta"><span class="avatar" data-user="initials">AT</span><div><b data-user="full">Ana Torres</b><span>Ver mi cuenta</span></div></button></div>`}
     <button class="logout" type="button" data-logout><i data-lucide="log-out"></i>Cerrar sesión</button>`;
 
   const main = document.createElement("div");
   main.className = "main";
   const left = back
     ? `<button class="title" type="button" data-go="${back}"><i data-lucide="arrow-left"></i>${title}</button>`
-    : `<button class="brand" type="button" data-go="inicio"><span class="emblem"><i data-lucide="layers"></i></span>nexo</button>`;
+    : `<button class="brand" type="button" data-go="${home}"><span class="emblem"><i data-lucide="layers"></i></span>nexo</button>`;
+  const macts = staff
+    ? `<span class="pill ok">${ROLE_LABEL[staff]}</span><button class="avatarbtn" type="button" aria-label="Cerrar sesión" title="Cerrar sesión" data-logout><i data-lucide="log-out"></i></button>`
+    : `<button class="bellbtn" type="button" aria-label="Notificaciones" data-go="notificaciones"><i data-lucide="bell"></i><span class="nbadge" data-notif-badge hidden></span></button><button class="avatarbtn" type="button" aria-label="Mi cuenta" data-go="perfil"><span data-user="initials">AT</span></button>`;
+  const dacts = staff
+    ? `<span class="pill ok">Acceso: ${ROLE_LABEL[staff]}</span><span>ES</span>`
+    : `<span class="pill ok">Trimestre sep–nov 2026</span><button class="bellbtn desk" type="button" aria-label="Notificaciones" data-go="notificaciones"><i data-lucide="bell"></i><span class="nbadge" data-notif-badge hidden></span></button><span>ES</span>`;
+  const crumbBase = staff ? "" : "Mi campus&nbsp;&nbsp;/&nbsp;&nbsp;";
   main.innerHTML = `
-    <header class="mbar gutter">${left}<div class="mbar-acts"><button class="bellbtn" type="button" aria-label="Notificaciones" data-go="notificaciones"><i data-lucide="bell"></i><span class="nbadge" data-notif-badge hidden></span></button><button class="avatarbtn" type="button" aria-label="Mi cuenta" data-go="perfil"><span data-user="initials">AT</span></button></div></header>
-    <header class="deskbar"><div class="crumbs">${back ? `<button class="deskback" type="button" data-go="${back}" aria-label="Volver"><i data-lucide="arrow-left"></i>Volver</button>` : ""}<span>Mi campus&nbsp;&nbsp;/&nbsp;&nbsp;${sec.dataset.crumb.replace(/  \/  /g,"&nbsp;&nbsp;/&nbsp;&nbsp;")}</span></div>
-      <div class="acts"><span class="pill ok">Trimestre sep–nov 2026</span><button class="bellbtn desk" type="button" aria-label="Notificaciones" data-go="notificaciones"><i data-lucide="bell"></i><span class="nbadge" data-notif-badge hidden></span></button><span>ES</span></div></header>`;
+    <header class="mbar gutter">${left}<div class="mbar-acts">${macts}</div></header>
+    <header class="deskbar"><div class="crumbs">${back ? `<button class="deskback" type="button" data-go="${back}" aria-label="Volver"><i data-lucide="arrow-left"></i>Volver</button>` : ""}<span>${crumbBase}${sec.dataset.crumb.replace(/  \/  /g,"&nbsp;&nbsp;/&nbsp;&nbsp;")}</span></div>
+      <div class="acts">${dacts}</div></header>`;
   main.append(body);
   const bar = document.createElement("nav");
   bar.className = "tabbar";
   bar.setAttribute("aria-label", "Navegación principal");
-  bar.innerHTML = TABS.map(n => `<button type="button" data-go="${n[3]}" class="${n[0]===tab?'on':''}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`).join("");
+  bar.innerHTML = (staff ? nav : TABS).map(n => `<button type="button" data-go="${n[3]}" class="${n[0]===tab?'on':''}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`).join("")
+    + (staff ? `<button type="button" data-logout><i data-lucide="log-out"></i>Salir</button>` : "");
   main.append(bar);
   sec.append(side, main);
 });
@@ -118,6 +136,18 @@ const normEmail = s => s.trim().toLowerCase();
 let accounts = [];
 try { accounts = JSON.parse(localStorage.getItem("nexo-accounts") || "[]") || []; } catch (err) {}
 if (!accounts.some(a => a.email === DEMO_EMAIL)) accounts.unshift({ ...DEFAULT_USER, pass: passKey("demo-nexo-01") });
+/* Cuentas de gestión de ejemplo (sin carnet): administradora y dos moderadores */
+const STAFF0 = [
+  { full: "María Vera", carnet: "", email: "maria.vera@unimet.edu.ve", role: "admin", pw: "demo-admin-01" },
+  { full: "Lucía Rojas", carnet: "", email: "lucia.rojas@unimet.edu.ve", role: "mod", pw: "demo-mod-01" },
+  { full: "Carlos Gil", carnet: "", email: "carlos.gil@unimet.edu.ve", role: "mod", pw: "demo-mod-02" }
+];
+STAFF0.forEach(({ pw, ...a }) => { if (!accounts.some(x => x.email === a.email)) accounts.push({ ...a, pass: passKey(pw) }); });
+const roleOf = a => (a && a.role) || "estudiante";
+/* Invitaciones de moderación: quien se registra con un correo invitado entra como moderador */
+let invites = [];
+try { invites = JSON.parse(localStorage.getItem("nexo-invites") || "[]") || []; } catch (err) {}
+const saveInvites = () => { try { localStorage.setItem("nexo-invites", JSON.stringify(invites)); } catch (err) {} };
 const saveAccounts = () => { try { localStorage.setItem("nexo-accounts", JSON.stringify(accounts)); } catch (err) {} };
 saveAccounts();
 function getSession() { let s = null; try { s = localStorage.getItem("nexo-session") || sessionStorage.getItem("nexo-session"); } catch (err) {} return s && accounts.some(a => a.email === s) ? s : null; }
@@ -149,7 +179,7 @@ function applyUser() {
 function enterApp(email, remember, flash) {
   setSession(email, remember);
   try { sessionStorage.setItem("nexo-flash", flash); } catch (err) {}
-  history.replaceState(null, "", "#inicio");
+  history.replaceState(null, "", "#" + ROLE_HOME[roleOf(accounts.find(a => a.email === email))]);
   location.reload();
 }
 
@@ -157,9 +187,14 @@ function enterApp(email, remember, flash) {
 const screens = [...document.querySelectorAll("section.screen")].map(s => s.id);
 let current = null, previous = "tutorial";
 const PUBLIC = ["tutorial", "login", "registro", "ayuda"];
+const STAFF_SCREENS = { gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod" };
 function show(id) {
   if (!screens.includes(id)) id = sessionEmail ? "inicio" : "tutorial";
   if (!sessionEmail && !PUBLIC.includes(id)) { id = "login"; if (location.hash !== "#login") history.replaceState(null, "", "#login"); setTimeout(() => toast("Inicia sesión para continuar."), 0); }
+  if (sessionEmail && !PUBLIC.includes(id)) {
+    const role = roleOf(account), need = STAFF_SCREENS[id];
+    if (role === "estudiante" ? need : need !== role) { id = ROLE_HOME[role]; history.replaceState(null, "", "#" + id); }
+  }
   if (current && current !== id) previous = current;
   current = id;
   screens.forEach(s => { document.getElementById(s).hidden = s !== id; });
@@ -175,6 +210,12 @@ function show(id) {
   if (id === "carrito" && typeof renderCarrito === "function") renderCarrito();
   if (id === "comprobante" && typeof renderComprobante === "function") renderComprobante();
   if (id === "factura" && typeof renderFactura === "function") renderFactura();
+  if (id === "gestion" && typeof renderGestion === "function") renderGestion();
+  if (id === "equipo" && typeof renderEquipo === "function") renderEquipo();
+  if (id === "caso" && typeof renderCaso === "function") renderCaso();
+  if (id === "moderacion" && typeof renderModeracion === "function") renderModeracion();
+  if (id === "resueltos" && typeof renderResueltos === "function") renderResueltos();
+  if (id === "soporte" && typeof renderSoporte === "function") renderSoporte();
   if (id === "planes") { const s = document.querySelector("#planList .opt.plan.on"); if (s) try { updatePlan(s); } catch (err) {} }
 
   window.scrollTo(0, 0);
@@ -750,6 +791,11 @@ document.getElementById("loginForm").addEventListener("submit", e => {
     loginError("No encontramos esa cuenta.", byDigits ? `No hay ninguna cuenta con el carnet ${ident}. Revisa los 11 dígitos o crea una cuenta.` : !ident.includes("@") ? `"${ident}" no es un correo registrado. Escribe tu correo institucional completo o tu carnet.` : `No hay ninguna cuenta con el correo ${normEmail(ident)}.`, !byDigits && ident.includes("@"));
     idEl.focus(); return;
   }
+  if (acc.disabled) {
+    idEl.closest(".field").classList.add("bad");
+    loginError("Tu acceso está desactivado.", "Un administrador desactivó tu cuenta de moderación. Escríbele si crees que es un error.", false);
+    return;
+  }
   if (acc.pass !== passKey(pass)) {
     passEl.closest(".field").classList.add("bad");
     loginError("La contraseña no es correcta.", "Revísala e inténtalo de nuevo, o usa \"¿Olvidaste tu contraseña?\".", false);
@@ -791,9 +837,11 @@ document.getElementById("registerForm").addEventListener("submit", e => {
   if (accounts.some(a => a.carnet === carnetEl.value)) return signupError("Ese carnet ya está registrado.", "Cada carnet solo puede tener una cuenta. Inicia sesión o revisa los dígitos.", carnetEl);
   const full = cleanName(nameEl.value);
   const now = new Date();
-  accounts.push({ full, carnet: carnetEl.value, email, pass: passKey(passEl.value), created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}` });
+  const inv = invites.find(i => i.email === email);
+  accounts.push({ full, carnet: carnetEl.value, email, pass: passKey(passEl.value), created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`, ...(inv ? { role: inv.role } : {}) });
   saveAccounts();
-  enterApp(email, true, `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
+  if (inv) { invites = invites.filter(i => i !== inv); saveInvites(); }
+  enterApp(email, true, inv ? `Cuenta creada. Ya eres parte del equipo de moderación, ${full.split(" ")[0]}.` : `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
 });
 document.addEventListener("click", e => {
   if (!e.target.closest("[data-logout]")) return;
@@ -1422,7 +1470,7 @@ function setFrame(secId, title, crumb) {
   const t = sec.querySelector(".mbar .title");
   if (t) t.lastChild.textContent = title;
   const c = sec.querySelector(".deskbar .crumbs span");
-  if (c) c.innerHTML = "Mi campus&nbsp;&nbsp;/&nbsp;&nbsp;" + crumb.map(esc).join("&nbsp;&nbsp;/&nbsp;&nbsp;");
+  if (c) c.innerHTML = (sec.dataset.staff ? "" : "Mi campus&nbsp;&nbsp;/&nbsp;&nbsp;") + crumb.map(esc).join("&nbsp;&nbsp;/&nbsp;&nbsp;");
 }
 const icons = () => { try { lucide.createIcons(); } catch (err) {} };
 
@@ -1748,6 +1796,381 @@ document.getElementById("cpForm").addEventListener("submit", e => {
   confirmOrder(o);
 });
 renderFoodList();
+
+/* ---------- Soporte: tickets compartidos entre estudiantes, moderadores y administración ----------
+   Los tickets viven en localStorage["nexo-tickets"] (no por cuenta), así que en este navegador
+   lo que crea un estudiante lo ve la administración y lo atiende moderación. */
+const TK_STATE = { abierto: ["Abierto", "neutral"], revision: ["En revisión", "warn"], espera: ["En espera", "neutral"], resuelto: ["Resuelto", "ok"] };
+const TK_PRIO = { alta: "Alta", media: "Media", baja: "Baja" };
+const SERVICES = ["Comida", "Estacionamiento", "Materias", "Canchas", "Acceso", "Otro"];
+const MIN = 60000, HOUR = 60 * MIN;
+const myRole = () => roleOf(account);
+const stPill = st => `<span class="pill ${TK_STATE[st][1]}">${TK_STATE[st][0]}</span>`;
+const hhmm = t => { const d = new Date(t); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+const fullDate = t => `${fmtD(new Date(t))}, ${hhmm(t)}`;
+function ago(t) {
+  const m = Math.max(0, Math.round((Date.now() - t) / MIN));
+  if (m < 1) return "Ahora";
+  if (m < 60) return `Hace ${m} min`;
+  if (m < 24 * 60) return `Hace ${Math.round(m / 60)} h`;
+  const d = new Date(t); return `${d.getDate()} ${MES_CORTO[d.getMonth()]} · ${hhmm(t)}`;
+}
+const accByEmail = e => accounts.find(a => a.email === e);
+const nameOf = e => (accByEmail(e) || {}).full || e;
+const firstName = n => String(n).split(" ")[0];
+const initialsOf = n => String(n).split(" ").filter(Boolean).slice(0, 2).map(w => w[0]).join("").toLocaleUpperCase("es");
+
+function seedTickets() {
+  const n = Date.now(), ana = DEMO_EMAIL, lucia = "lucia.rojas@unimet.edu.ve", carlos = "carlos.gil@unimet.edu.ve";
+  const msg = (from, name, text, t) => ({ from, name, text, t });
+  return [
+    { id: "TK-1048", created: n - 31 * MIN, student: { email: ana, name: "Ana Torres" }, subject: "Cobro duplicado de almuerzo", service: "Comida", status: "revision", mod: lucia, prio: "alta",
+      purchase: { item: "Almuerzo del día", place: "Pincho Pan · Feria Central", num: "NX-261112-0791", amount: 8.5, method: "Visa ···· 4242" },
+      note: "Segundo cargo detectado: $8,50. No existe un segundo pedido.", attach: "comprobante-0791.pdf · 248 KB", actions: [],
+      messages: [msg("student", "Ana Torres", "Hola, compré un almuerzo en Pincho Pan y aparecen dos cargos de $8,50 en mi tarjeta. Solo retiré un pedido. Adjunto el comprobante.", n - 31 * MIN),
+        msg("mod", "Lucía Rojas", "Hola, Ana. Ya localicé tu compra y estoy validando el segundo cargo. Si confirmamos el duplicado, devolveremos $8,50 a tu tarjeta.", n - 19 * MIN),
+        msg("student", "Ana Torres", "¡Gracias! Ambos cargos aparecen como completados.", n - 13 * MIN)] },
+    { id: "TK-1047", created: n - 46 * MIN, student: { email: "luis.perez@correo.unimet.edu.ve", name: "Luis Pérez" }, subject: "QR de reserva no disponible", service: "Canchas", status: "abierto", mod: null, prio: "alta", actions: [],
+      purchase: { item: "Cancha de fútbol sala · 1 h", place: "Canchas · Polideportivo", num: "RS-261111-0412", amount: 15, method: "Mastercard ···· 8812" },
+      messages: [msg("student", "Luis Pérez", "Pagué la reserva de la cancha para hoy a las 4 p. m., pero no me aparece el QR para entrar.", n - 46 * MIN)] },
+    { id: "TK-1045", created: n - HOUR, student: { email: "sofia.diaz@correo.unimet.edu.ve", name: "Sofía Díaz" }, subject: "Pago de materia sin actualizar", service: "Materias", status: "revision", mod: carlos, prio: "media", actions: [],
+      messages: [msg("student", "Sofía Díaz", "Pagué la cuota de noviembre por transferencia hace dos días y sigue apareciendo como pendiente.", n - HOUR),
+        msg("mod", "Carlos Gil", "Hola, Sofía. Ya pedí a Caja que valide tu referencia. Te aviso apenas se actualice.", n - 40 * MIN)] },
+    { id: "TK-1043", created: n - 2 * HOUR, student: { email: "diego.leon@correo.unimet.edu.ve", name: "Diego León" }, subject: "Cancelar pedido en kiosco", service: "Comida", status: "abierto", mod: null, prio: "media", actions: [],
+      purchase: { item: "Café con leche y tequeños", place: "La Tiendita Unimetana A1", num: "A1-261111-0033", amount: 4.3, method: "Visa ···· 1190" },
+      messages: [msg("student", "Diego León", "Hice un pedido por error y todavía no lo retiro. ¿Lo pueden cancelar?", n - 2 * HOUR)] },
+    { id: "TK-1040", created: n - 3 * HOUR, student: { email: "valeria.ruiz@correo.unimet.edu.ve", name: "Valeria Ruiz" }, subject: "Consulta de factura", service: "Materias", status: "espera", mod: lucia, prio: "baja", actions: [],
+      messages: [msg("student", "Valeria Ruiz", "Necesito la factura de septiembre a nombre de mi representante.", n - 3 * HOUR),
+        msg("mod", "Lucía Rojas", "Hola, Valeria. ¿Me indicas el nombre y la cédula o RIF de tu representante?", n - 2.5 * HOUR)] },
+    { id: "TK-1036", created: n - 21 * HOUR, student: { email: ana, name: "Ana Torres" }, subject: "No puedo renovar mi plan", service: "Estacionamiento", status: "abierto", mod: carlos, prio: "media", actions: [],
+      messages: [msg("student", "Ana Torres", "Intento renovar el plan mensual y el código de verificación nunca me llega.", n - 21 * HOUR)] },
+    { id: "TK-1029", created: n - 30 * HOUR, student: { email: "mateo.silva@correo.unimet.edu.ve", name: "Mateo Silva" }, subject: "Problema de acceso", service: "Acceso", status: "resuelto", mod: lucia, prio: "media", actions: [], resolved: n - 26 * HOUR,
+      messages: [msg("student", "Mateo Silva", "No puedo entrar a mi cuenta, dice que el carnet no existe.", n - 30 * HOUR),
+        msg("mod", "Lucía Rojas", "Listo, Mateo: tu cuenta estaba registrada con un dígito de más. Ya lo corregimos.", n - 26 * HOUR)] },
+    { id: "TK-1012", created: n - 12 * 24 * HOUR, student: { email: ana, name: "Ana Torres" }, subject: "Cancelación de cancha", service: "Canchas", status: "resuelto", mod: carlos, prio: "baja", resolved: n - 11 * 24 * HOUR,
+      purchase: { item: "Cancha de tenis · 1 h", place: "Canchas · Polideportivo", num: "RS-261030-0207", amount: 12.6, method: "Visa ···· 4242" },
+      actions: [{ type: "refund", amount: 12.6, by: "Carlos Gil", t: n - 11 * 24 * HOUR }],
+      messages: [msg("student", "Ana Torres", "Llovió y cerraron las canchas. ¿Me pueden devolver el pago?", n - 12 * 24 * HOUR),
+        msg("mod", "Carlos Gil", "Hecho, Ana: reembolsamos $12,60 a tu Visa. Llega en 3 a 5 días hábiles.", n - 11 * 24 * HOUR)] }
+  ];
+}
+let tickets = null;
+try { tickets = JSON.parse(localStorage.getItem("nexo-tickets") || "null"); } catch (err) {}
+if (!Array.isArray(tickets)) { tickets = seedTickets(); try { localStorage.setItem("nexo-tickets", JSON.stringify(tickets)); } catch (err) {} }
+const saveTickets = () => { try { localStorage.setItem("nexo-tickets", JSON.stringify(tickets)); } catch (err) {} };
+const tkById = id => tickets.find(t => t.id === id);
+const nextTkId = () => "TK-" + (Math.max(1000, ...tickets.map(t => +t.id.slice(3) || 0)) + 1);
+const isOpen = t => t.status !== "resuelto";
+const mods = () => accounts.filter(a => a.role === "mod");
+const lastActivity = t => Math.max(t.created, ...t.messages.map(m => m.t), ...(t.actions || []).map(a => a.t));
+
+/* Movimiento en la Actividad del estudiante (sus datos se guardan por cuenta) */
+function pushStudentMove(email, m) {
+  const key = "nexo-moves:" + email;
+  try { const list = JSON.parse(localStorage.getItem(key) || "[]") || []; list.push({ id: "m" + Date.now(), ...m }); localStorage.setItem(key, JSON.stringify(list)); } catch (err) {}
+}
+
+/* Conversación (compartida por moderación, administración y estudiante) */
+function convHTML(t, viewer) {
+  return t.messages.map(m => {
+    const mine = viewer === "student" ? m.from === "student" : m.from === "mod";
+    const who = m.from === "student" ? (viewer === "student" ? "Tú" : `${esc(m.name)} · Estudiante`) : `${esc(m.name)} · Moderación`;
+    return `<div class="msg${m.from === "mod" ? " staff" : ""}${mine ? " mine" : ""}"><div class="row"><b>${who}</b><span class="tiny">${hhmm(m.t)}</span></div><p>${esc(m.text)}</p></div>`;
+  }).join("") + (t.attach && viewer !== "student" ? `<div class="attach"><i data-lucide="file-text"></i><span class="grow">${esc(t.attach)}</span><button class="link" type="button" data-toast="La descarga no está disponible en el prototipo." aria-label="Descargar adjunto"><i data-lucide="download"></i></button></div>` : "");
+}
+const actionLabel = a => a.type === "refund" ? `Reembolso de ${money(a.amount)}` : `Compra cancelada (${money(a.amount)})`;
+function purchaseCard(t) {
+  if (!t.purchase) return `<div class="card"><h3 class="sec">Compra relacionada</h3><p class="small" style="font-size:13px">Este ticket no está asociado a una compra.</p></div>`;
+  const p = t.purchase, done = (t.actions || []).length;
+  return `<div class="card"><h3 class="sec">Compra relacionada</h3>
+    <span class="pill ${done ? "neutral" : "ok"}">${done ? actionLabel(t.actions[0]) : "Pago completado"}</span>
+    <div><b style="font-size:14px">${esc(p.item)}</b><p class="small">${esc(p.place)}</p></div>
+    <div class="kv"><span>Compra</span><b>${esc(p.num)}</b></div><div class="kv"><span>Importe</span><b>${money(p.amount)}</b></div>
+    <div class="kv"><span>Método</span><b>${esc(p.method)}</b></div><div class="kv"><span>Estudiante</span><b>${esc(t.student.name)}</b></div>
+    ${t.note ? `<div class="sep"></div><p class="small">${esc(t.note)}</p>` : ""}</div>`;
+}
+function assignSelect(t, attrs = "") {
+  return `<div class="input sel sm"><select data-assign="${t.id}" aria-label="Moderador de ${t.id}" ${attrs}><option value="">Sin asignar</option>${mods().filter(m => !m.disabled || m.email === t.mod).map(m => `<option value="${m.email}"${t.mod === m.email ? " selected" : ""}>${esc(m.full)}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div>`;
+}
+
+/* ===== Administración ===== */
+function inviteCard() {
+  return `<form class="card" data-invite novalidate>
+    <h3 class="sec">Asignar moderador</h3>
+    <p class="small" style="font-size:12px">Invita a una persona para responder tickets y ofrecer soluciones.</p>
+    <div class="field"><label>Correo institucional</label><div class="input"><input type="email" name="email" placeholder="nombre@unimet.edu.ve" autocomplete="off"></div><p class="tiny" data-inv-hint hidden></p></div>
+    <div class="row"><span style="font-size:12px">Rol de acceso</span><span class="pill ok">Moderador</span></div>
+    <button class="btn" type="submit"><i data-lucide="user-plus"></i>Enviar invitación</button>
+    <p class="tiny">La persona recibirá un enlace por correo (simulado): al crear su cuenta con ese correo, entra como moderador.</p>
+  </form>`;
+}
+function teamRows() {
+  return [...mods().map(m => ({ name: m.full, email: m.email, kind: m.disabled ? "off" : "on" })), ...invites.map(i => ({ name: i.email, email: i.email, kind: "inv" }))];
+}
+function teamCard() {
+  return `<div class="card"><h3 class="sec">Equipo de soporte</h3>${teamRows().map(r => {
+    const n = tickets.filter(t => t.mod === r.email && isOpen(t)).length;
+    return `<div><b style="font-size:13px">${esc(r.name)}</b><p class="small">${r.kind === "inv" ? "Invitación pendiente" : r.kind === "off" ? "Desactivado" : `${n} ${n === 1 ? "ticket" : "tickets"} · Disponible`}</p></div>`;
+  }).join("") || `<p class="small">Aún no hay moderadores.</p>`}
+  <button class="link b" type="button" data-go="equipo">Gestionar equipo →</button></div>`;
+}
+const ADMIN_NOTE = `<div class="notice"><i data-lucide="shield-check"></i><p>Tu acceso: asignar moderadores y consultar tickets. Las respuestas y soluciones las gestiona moderación.</p></div>`;
+function filteredTickets() {
+  const q = normTxt(document.getElementById("gsSearch").value.trim()), st = document.getElementById("gsState").value, sv = document.getElementById("gsService").value;
+  return tickets.filter(t => (st === "all" || (st === "open" ? isOpen(t) : t.status === st)) && (sv === "all" || t.service === sv)
+    && (!q || normTxt([t.id, t.subject, t.student.name, t.service, t.purchase ? t.purchase.num : ""].join(" ")).includes(q)))
+    .sort((a, b) => (isOpen(b) - isOpen(a)) || (({ alta: 0, media: 1, baja: 2 })[a.prio] - ({ alta: 0, media: 1, baja: 2 })[b.prio]) || b.created - a.created);
+}
+function renderGestion() {
+  const open = tickets.filter(isOpen), prio = open.filter(t => t.prio === "alta").length, unassigned = open.filter(t => !t.mod).length;
+  const active = mods().filter(m => !m.disabled).length, team = teamRows().length;
+  const firsts = tickets.map(t => { const r = t.messages.find(m => m.from === "mod"); return r ? r.t - t.created : null; }).filter(x => x !== null);
+  const avg = firsts.length ? Math.round(firsts.reduce((a, b) => a + b, 0) / firsts.length / MIN) : null;
+  const now = new Date();
+  document.getElementById("gsUpdated").textContent = `Actualizado · ${now.getDate()} ${MES_CORTO[now.getMonth()]}, ${hhmm(now)}`;
+  const kpi = (label, val, pill, cls, sub, go) => `<button class="card kpi" type="button" ${go}><div class="row"><span class="small">${label}</span><i data-lucide="arrow-up-right"></i></div><b class="kv-big">${val}</b><div class="row start" style="gap:8px"><span class="pill ${cls}">${pill}</span><span class="tiny">${sub}</span></div></button>`;
+  document.getElementById("gsKpis").innerHTML =
+    kpi("Tickets abiertos", open.length, `${prio} ${prio === 1 ? "prioritario" : "prioritarios"}`, prio ? "bad" : "ok", unassigned ? `${unassigned} sin asignar` : "todos asignados", `data-gs-state="open"`) +
+    kpi("Moderadores activos", active, active ? "Equipo disponible" : "Sin equipo", active ? "ok" : "warn", `de ${team} ${team === 1 ? "integrante" : "integrantes"}`, `data-go="equipo"`) +
+    kpi("Tiempo de primera respuesta", avg === null ? "—" : avg < 60 ? `${avg} min` : `${(avg / 60).toFixed(1).replace(".", ",")} h`, "Promedio", "ok", `de ${firsts.length} tickets respondidos`, `data-gs-state="all"`);
+  const svc = document.getElementById("gsService");
+  if (svc.options.length === 1) svc.insertAdjacentHTML("beforeend", SERVICES.map(s => `<option>${s}</option>`).join(""));
+  const list = filteredTickets();
+  document.getElementById("gsTable").innerHTML = `<div class="tk-row tk-head"><span>Ticket</span><span>Estudiante / Motivo</span><span>Estado</span><span>Moderador</span><span>Prioridad</span></div>`
+    + (list.map(t => `<div class="tk-row">
+      <div><button class="link b" type="button" data-case="${t.id}">${t.id}</button><p class="tiny">${ago(t.created)}</p></div>
+      <div class="tk-main"><button class="tk-subj" type="button" data-case="${t.id}">${esc(t.subject)}</button><p class="tiny">${esc(t.student.name)} · ${t.service}</p></div>
+      <div>${stPill(t.status)}</div>
+      <div>${isOpen(t) ? assignSelect(t) : `<span class="small">${esc(t.mod ? nameOf(t.mod) : "—")}</span>`}</div>
+      <div><span class="prio ${t.prio}">${TK_PRIO[t.prio]}</span></div>
+    </div>`).join("") || `<p class="nempty" style="padding:18px">No hay tickets con esos filtros.</p>`)
+    + `<div class="tk-foot"><span class="small">${list.length} de ${tickets.length} tickets</span></div>`;
+  document.getElementById("gsSide").innerHTML = inviteCard() + teamCard() + ADMIN_NOTE;
+  icons();
+}
+function renderEquipo() {
+  const rows = teamRows();
+  document.getElementById("eqTable").innerHTML = `<div class="tk-row tk-head eq"><span>Persona</span><span>Abiertos</span><span>Resueltos</span><span>Estado</span><span></span></div>` + (rows.map(r => {
+    const open = tickets.filter(t => t.mod === r.email && isOpen(t)).length, done = tickets.filter(t => t.mod === r.email && !isOpen(t)).length;
+    const st = r.kind === "inv" ? `<span class="pill warn">Invitación pendiente</span>` : r.kind === "off" ? `<span class="pill neutral">Desactivado</span>` : `<span class="pill ok">Activo</span>`;
+    const act = r.kind === "inv" ? `<button class="link" type="button" data-inv-cancel="${r.email}">Cancelar invitación</button>`
+      : r.kind === "off" ? `<button class="link b" type="button" data-mod-on="${r.email}">Reactivar</button>`
+      : `<button class="link" type="button" style="color:var(--danger)" data-mod-off="${r.email}">Desactivar</button>`;
+    return `<div class="tk-row eq"><div class="row start"><span class="avatar sm">${r.kind === "inv" ? `<i data-lucide="mail"></i>` : initialsOf(r.name)}</span><div style="min-width:0"><b style="font-size:13px">${esc(r.name)}</b><p class="tiny">${r.kind === "inv" ? "Invitado como moderador" : esc(r.email)}</p></div></div>
+      <div><span class="tk-lbl">Abiertos</span>${r.kind === "inv" ? "—" : open}</div><div><span class="tk-lbl">Resueltos</span>${r.kind === "inv" ? "—" : done}</div><div>${st}</div><div>${act}</div></div>`;
+  }).join("") || `<p class="nempty" style="padding:18px">Aún no hay moderadores. Invita al primero.</p>`);
+  document.getElementById("eqSide").innerHTML = inviteCard() + `<div class="notice"><i data-lucide="info"></i><p>Al desactivar a un moderador, sus tickets abiertos quedan sin asignar para que los repartas.</p></div>`;
+  icons();
+}
+let caseId = null;
+function renderCaso() {
+  const t = caseId && tkById(caseId);
+  if (!t) { go("gestion"); return; }
+  setFrame("caso", t.id, ["Gestión", "Administrador", "Tickets", t.id]);
+  document.getElementById("csBody").innerHTML = `
+    <div class="card">
+      <div class="row" style="align-items:flex-start"><h1 class="h2" style="font-size:19px">${esc(t.subject)}</h1>${stPill(t.status)}</div>
+      <p class="tiny">${t.id} · Creado el ${fullDate(t.created)} · ${esc(t.student.name)} · ${t.service}</p><div class="sep"></div>
+      ${convHTML(t, "admin")}
+      ${(t.actions || []).map(a => `<div class="notice"><i data-lucide="rotate-ccw"></i><p>${actionLabel(a)} · por ${esc(a.by)} · ${fullDate(a.t)}</p></div>`).join("")}
+      <p class="tiny">Última actividad: ${ago(lastActivity(t)).toLowerCase()}</p>
+    </div>
+    <div class="stack">
+      <div class="card"><h3 class="sec">Asignación</h3>
+        <div class="kv"><span>Prioridad</span><span class="prio ${t.prio}">${TK_PRIO[t.prio]}</span></div>
+        ${isOpen(t) ? `<div class="field"><label>Moderador</label>${assignSelect(t)}</div>` : `<div class="kv"><span>Resuelto por</span><b>${esc(t.mod ? nameOf(t.mod) : "—")}</b></div>`}
+      </div>
+      ${purchaseCard(t)}${ADMIN_NOTE}
+    </div>`;
+  icons();
+}
+function assignTicket(id, email) {
+  const t = tkById(id); if (!t) return;
+  t.mod = email || null;
+  if (email && t.status === "abierto" && t.messages.some(m => m.from === "mod")) t.status = "revision";
+  saveTickets();
+  toast(email ? `${id} asignado a ${nameOf(email)}.` : `${id} quedó sin asignar.`);
+  if (current === "gestion") renderGestion(); else if (current === "caso") renderCaso();
+}
+function sendInvite(form) {
+  const input = form.querySelector("input[name=email]"), hint = form.querySelector("[data-inv-hint]"), field = input.closest(".field");
+  const email = normEmail(input.value);
+  const fail = msg => { field.classList.add("bad"); hint.hidden = false; hint.textContent = msg; input.focus(); };
+  field.classList.remove("bad"); hint.hidden = true;
+  if (!/^[^\s@]+@(correo\.)?unimet\.edu\.ve$/.test(email)) return fail("Usa un correo institucional, por ejemplo nombre@unimet.edu.ve.");
+  const acc = accByEmail(email);
+  if (acc && (acc.role === "mod" || acc.role === "admin")) return fail(acc.disabled ? "Esa persona ya es moderadora, pero está desactivada. Reactívala desde Moderadores." : "Esa persona ya forma parte del equipo de gestión.");
+  if (invites.some(i => i.email === email)) return fail("Ya enviaste una invitación a ese correo.");
+  if (acc) { acc.role = "mod"; saveAccounts(); toast(`${acc.full} ya tenía cuenta: ahora es moderador.`); }
+  else { invites.push({ email, role: "mod", by: user.email, t: Date.now() }); saveInvites(); toast(`Invitación enviada a ${email}.`); }
+  if (current === "equipo") renderEquipo(); else renderGestion();
+}
+
+/* ===== Moderación ===== */
+let mdSel = null, mdConfirm = null;
+const myTickets = () => tickets.filter(t => t.mod === sessionEmail).sort((a, b) => (isOpen(b) - isOpen(a)) || b.created - a.created);
+function renderModeracion() {
+  const mine = myTickets(), body = document.getElementById("mdBody");
+  if (!mdSel || !mine.some(t => t.id === mdSel)) mdSel = (mine.find(isOpen) || mine[0] || {}).id || null;
+  const t = mdSel && tkById(mdSel), prio = document.getElementById("mdPrio");
+  document.getElementById("mdLead").textContent = t ? `Mis tickets / ${t.id} · Asignado a ti` : "Mis tickets";
+  prio.hidden = !t || !isOpen(t);
+  if (t) { prio.className = "pill " + (t.prio === "alta" ? "bad" : t.prio === "media" ? "warn" : "neutral"); prio.textContent = "Prioridad " + TK_PRIO[t.prio].toLowerCase(); }
+  const queue = `<div class="stack s14 md-queue"><h2 class="sec">Mis tickets · ${mine.filter(isOpen).length}</h2>
+    ${mine.map(x => `<button class="card tk-card${x.id === mdSel ? " sel" : ""}" type="button" data-md="${x.id}"><div class="row"><span class="tk-ref">${x.id}</span><i data-lucide="chevron-right"></i></div><b>${esc(x.subject)}</b><span class="small">${esc(x.student.name)}</span>${stPill(x.status)}</button>`).join("") || `<p class="small">No tienes tickets asignados. Cuando la administración te asigne uno, aparecerá aquí.</p>`}
+    <div class="notice"><i data-lucide="shield-check"></i><p>Puedes responder y ofrecer reembolsos o cancelaciones. No tienes acceso a roles ni estadísticas.</p></div></div>`;
+  if (!t) { body.innerHTML = queue + `<div class="card" style="align-items:flex-start"><span class="ico lg"><i data-lucide="inbox"></i></span><h2 class="h2">Todo al día</h2><p class="small" style="font-size:13px">No hay tickets para atender.</p></div>`; icons(); return; }
+  const open = isOpen(t), p = t.purchase, acted = (t.actions || []).length;
+  const confirmBox = mdConfirm ? `<div class="confirm"><p>${mdConfirm === "refund" ? `¿Reembolsar ${money(p.amount)} a ${esc(p.method)}?` : `¿Cancelar la compra ${esc(p.num)} y devolver ${money(p.amount)}?`} Avisaremos a ${esc(firstName(t.student.name))}.</p><div class="row"><button class="btn ghost" type="button" data-md-no>Volver</button><button class="btn" type="button" data-md-yes>Confirmar</button></div></div>` : "";
+  body.innerHTML = queue + `
+    <div class="stack s14">
+      <div class="card">
+        <div class="row" style="align-items:flex-start"><h2 class="h2" style="font-size:19px">${esc(t.subject)}</h2>${stPill(t.status)}</div>
+        <p class="tiny">${t.id} · Creado el ${fullDate(t.created)}</p><div class="sep"></div>
+        ${convHTML(t, "mod")}
+        ${(t.actions || []).map(a => `<div class="notice"><i data-lucide="rotate-ccw"></i><p>${actionLabel(a)} · por ${esc(a.by)} · ${fullDate(a.t)}</p></div>`).join("")}
+        <p class="tiny">Última actividad: ${ago(lastActivity(t)).toLowerCase()}</p>
+      </div>
+      ${open ? `<form class="card" id="mdReply"><h3 class="sec">Responder a ${esc(firstName(t.student.name))}</h3>
+        <div class="input" style="padding:12px"><textarea id="mdText" rows="3" maxlength="600" placeholder="Escribe tu respuesta…" aria-label="Respuesta"></textarea></div>
+        <div class="row"><button class="btn ghost" type="button" style="width:auto;padding:0 18px" data-toast="Adjuntar archivos no está disponible en el prototipo."><i data-lucide="paperclip"></i>Adjuntar</button><button class="btn" type="submit"><i data-lucide="send"></i>Enviar respuesta</button></div></form>` : ""}
+    </div>
+    <div class="stack s14">
+      ${purchaseCard(t)}
+      ${open && p && !acted ? `<div class="card"><h3 class="sec">Ofrecer una solución</h3><p class="small" style="font-size:12px">Selecciona una acción y confírmala con ${esc(firstName(t.student.name))} antes de ejecutarla.</p>
+        ${confirmBox || `<button class="btn" type="button" data-md-act="refund"><i data-lucide="rotate-ccw"></i>Reembolsar ${money(p.amount)}</button><button class="btn ghost" type="button" data-md-act="cancel"><i data-lucide="circle-x"></i>Cancelar compra</button>`}
+        <p class="tiny">Reembolso al medio original en 3–5 días hábiles. Toda acción queda registrada.</p></div>` : ""}
+      ${open ? `<button class="btn ghost" type="button" data-md-resolve><i data-lucide="check"></i>Marcar como resuelto</button>` : `<button class="btn ghost" type="button" data-md-reopen><i data-lucide="rotate-ccw"></i>Reabrir caso</button>`}
+    </div>`;
+  icons();
+}
+function modAction(type) {
+  const t = tkById(mdSel), p = t.purchase, now = Date.now(), me = user.full;
+  t.actions = [...(t.actions || []), { type, amount: p.amount, by: me, t: now }];
+  t.messages.push({ from: "mod", name: me, t: now, text: type === "refund"
+    ? `Confirmamos el cargo duplicado. Reembolsamos ${money(p.amount)} a tu ${p.method}; llega en 3 a 5 días hábiles.`
+    : `Cancelamos tu compra ${p.num} y devolvimos ${money(p.amount)} a tu ${p.method}.` });
+  if (t.status === "abierto") t.status = "revision";
+  saveTickets();
+  pushStudentMove(t.student.email, { title: type === "refund" ? `Reembolso · ${t.id}` : `Compra cancelada · ${t.id}`, detail: p.place, amount: "+" + money(p.amount), pill: "Reembolsado", pillCls: "ok", date: fmtD(new Date(now)), icon: "rotate-ccw", go: "soporte", goLabel: "Ver solicitud ›" });
+  mdConfirm = null;
+  toast(type === "refund" ? `Reembolso de ${money(p.amount)} registrado.` : "Compra cancelada y reembolsada.");
+  renderModeracion();
+}
+function renderResueltos() {
+  const done = myTickets().filter(t => !isOpen(t));
+  document.getElementById("rsTable").innerHTML = `<div class="tk-row tk-head rs"><span>Ticket</span><span>Estudiante / Motivo</span><span>Solución</span><span>Resuelto</span><span></span></div>` + (done.map(t => `<div class="tk-row rs">
+    <div><span class="tk-ref">${t.id}</span></div>
+    <div class="tk-main"><b style="font-size:12px">${esc(t.subject)}</b><p class="tiny">${esc(t.student.name)} · ${t.service}</p></div>
+    <div><span class="small">${(t.actions || []).length ? t.actions.map(actionLabel).join(", ") : "Respuesta"}</span></div>
+    <div><span class="tiny">${t.resolved ? ago(t.resolved) : "—"}</span></div>
+    <div><button class="link b" type="button" data-md-open="${t.id}">Ver caso</button></div></div>`).join("") || `<p class="nempty" style="padding:18px">Aún no has resuelto tickets.</p>`);
+  icons();
+}
+
+/* ===== Estudiante: Mis solicitudes ===== */
+let supFilter = "all", supOpen = null;
+function renderSoporte() {
+  const mine = tickets.filter(t => t.student.email === sessionEmail).sort((a, b) => lastActivity(b) - lastActivity(a));
+  const nOpen = mine.filter(isOpen).length;
+  const chips = [["all", `Todas · ${mine.length}`], ["open", `Abiertas · ${nOpen}`], ["done", `Resueltas · ${mine.length - nOpen}`]];
+  document.getElementById("supChips").innerHTML = mine.length ? chips.map(([k, l]) => `<button class="pill ${k === supFilter ? "ok" : "neutral"}" type="button" data-sup-f="${k}">${l}</button>`).join("") : "";
+  const list = mine.filter(t => supFilter === "all" || (supFilter === "open" ? isOpen(t) : !isOpen(t)));
+  document.getElementById("supList").innerHTML = !mine.length
+    ? `<div class="card" style="align-items:flex-start"><span class="ico lg"><i data-lucide="inbox"></i></span><b class="h3">Aún no tienes solicitudes</b><p class="small" style="font-size:13px">Si algo sale mal con un pago, una reserva o tu acceso, crea una solicitud y te ayudamos.</p></div>`
+    : list.map(t => {
+      const last = [...t.messages].reverse().find(m => m.from === "mod");
+      const expanded = supOpen === t.id;
+      return `<div class="card">
+        <div class="row"><span class="tiny">${t.id} · ${ago(t.created)}</span>${stPill(t.status)}</div>
+        <div><b>${esc(t.subject)}</b><p class="tiny">${t.service}${t.purchase ? " · Compra " + esc(t.purchase.num) : ""}</p></div>
+        <p style="font-size:12px">${last ? `<b>${esc(firstName(last.name))}:</b> ${esc(last.text)}` : t.mod ? `${esc(firstName(nameOf(t.mod)))} está revisando tu solicitud.` : "Recibimos tu solicitud. Te responderemos pronto."}</p>
+        ${(t.actions || []).map(a => `<span class="pill ok">${actionLabel(a)}</span>`).join("")}
+        <button class="link b" type="button" style="font-size:12px" data-sup-open="${t.id}">${expanded ? "Ocultar conversación" : "Ver conversación →"}</button>
+        ${expanded ? `<div class="sep"></div>${convHTML(t, "student")}${isOpen(t) ? `<form class="stack s14" data-sup-reply="${t.id}"><div class="input" style="padding:12px"><textarea rows="2" maxlength="600" placeholder="Escribe tu respuesta…" aria-label="Tu respuesta"></textarea></div><button class="btn" type="submit"><i data-lucide="send"></i>Enviar</button></form>` : `<p class="tiny">Esta solicitud está resuelta. Si el problema sigue, crea una nueva.</p>`}` : ""}
+      </div>`;
+    }).join("") || `<p class="small">No hay solicitudes en este filtro.</p>`;
+  icons();
+}
+function openSupForm(show) {
+  const f = document.getElementById("supForm");
+  f.hidden = !show;
+  if (show) {
+    const buys = orders.slice().reverse();
+    document.getElementById("sp-buy").innerHTML = `<option value="">Ninguna</option>` + buys.map(o => `<option value="${o.id}">${esc(localById(o.local).name)} · ${o.num} · ${money(o.total)}</option>`).join("");
+    document.getElementById("sp-buy-f").hidden = !buys.length;
+    f.scrollIntoView({ block: "nearest" }); document.getElementById("sp-subj").focus();
+  }
+}
+
+/* Eventos */
+document.addEventListener("click", e => {
+  const c = e.target.closest("[data-case]"); if (c) { caseId = c.dataset.case; go("caso"); return; }
+  const gs = e.target.closest("[data-gs-state]"); if (gs) { document.getElementById("gsState").value = gs.dataset.gsState; renderGestion(); return; }
+  const off = e.target.closest("[data-mod-off]");
+  if (off) {
+    const a = accByEmail(off.dataset.modOff); a.disabled = true; saveAccounts();
+    const freed = tickets.filter(t => t.mod === a.email && isOpen(t)); freed.forEach(t => { t.mod = null; }); saveTickets();
+    toast(`${a.full} quedó desactivado${freed.length ? ` y ${freed.length} ${freed.length === 1 ? "ticket quedó" : "tickets quedaron"} sin asignar` : ""}.`); renderEquipo(); return;
+  }
+  const on = e.target.closest("[data-mod-on]"); if (on) { const a = accByEmail(on.dataset.modOn); delete a.disabled; saveAccounts(); toast(`${a.full} está activo otra vez.`); renderEquipo(); return; }
+  const ic = e.target.closest("[data-inv-cancel]"); if (ic) { invites = invites.filter(i => i.email !== ic.dataset.invCancel); saveInvites(); toast("Invitación cancelada."); renderEquipo(); return; }
+  const md = e.target.closest("[data-md]"); if (md) { mdSel = md.dataset.md; mdConfirm = null; renderModeracion(); window.scrollTo(0, 0); return; }
+  const mo = e.target.closest("[data-md-open]"); if (mo) { mdSel = mo.dataset.mdOpen; mdConfirm = null; go("moderacion"); return; }
+  const ma = e.target.closest("[data-md-act]"); if (ma) { mdConfirm = ma.dataset.mdAct; renderModeracion(); return; }
+  if (e.target.closest("[data-md-no]")) { mdConfirm = null; renderModeracion(); return; }
+  if (e.target.closest("[data-md-yes]")) { modAction(mdConfirm); return; }
+  if (e.target.closest("[data-md-resolve]")) { const t = tkById(mdSel); t.status = "resuelto"; t.resolved = Date.now(); saveTickets(); toast(`${t.id} marcado como resuelto.`); renderModeracion(); return; }
+  if (e.target.closest("[data-md-reopen]")) { const t = tkById(mdSel); t.status = "revision"; delete t.resolved; saveTickets(); toast(`${t.id} reabierto.`); renderModeracion(); return; }
+  const sf = e.target.closest("[data-sup-f]"); if (sf) { supFilter = sf.dataset.supF; renderSoporte(); return; }
+  const so = e.target.closest("[data-sup-open]"); if (so) { supOpen = supOpen === so.dataset.supOpen ? null : so.dataset.supOpen; renderSoporte(); return; }
+  if (e.target.closest("#supNew")) { openSupForm(true); return; }
+  if (e.target.closest("#supCancel")) { document.getElementById("supForm").reset(); openSupForm(false); return; }
+  if (e.target.closest("#gsExport")) {
+    const rows = [["Ticket", "Creado", "Estudiante", "Servicio", "Motivo", "Estado", "Moderador", "Prioridad"], ...filteredTickets().map(t => [t.id, fullDate(t.created), t.student.name, t.service, t.subject, TK_STATE[t.status][0], t.mod ? nameOf(t.mod) : "Sin asignar", TK_PRIO[t.prio]])];
+    const csv = "﻿" + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
+    try { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "tickets-nexo.csv"; a.click(); toast("Descargamos el listado en CSV."); } catch (err) { toast("No se pudo descargar el listado."); }
+  }
+});
+document.addEventListener("change", e => {
+  const a = e.target.closest("[data-assign]"); if (a) { assignTicket(a.dataset.assign, a.value); return; }
+  if (e.target.id === "gsState" || e.target.id === "gsService") renderGestion();
+});
+document.getElementById("gsSearch").addEventListener("input", renderGestion);
+document.addEventListener("submit", e => {
+  const f = e.target;
+  if (f.matches("[data-invite]")) { e.preventDefault(); sendInvite(f); return; }
+  if (f.id === "mdReply") {
+    e.preventDefault();
+    const txt = document.getElementById("mdText").value.trim();
+    if (!txt) { document.getElementById("mdText").focus(); toast("Escribe una respuesta antes de enviarla."); return; }
+    const t = tkById(mdSel); t.messages.push({ from: "mod", name: user.full, text: txt, t: Date.now() });
+    if (t.status === "abierto" || t.status === "espera") t.status = "revision";
+    saveTickets(); toast(`Respuesta enviada a ${firstName(t.student.name)}.`); renderModeracion(); return;
+  }
+  if (f.matches("[data-sup-reply]")) {
+    e.preventDefault();
+    const ta = f.querySelector("textarea"), txt = ta.value.trim();
+    if (!txt) { ta.focus(); return; }
+    const t = tkById(f.dataset.supReply); t.messages.push({ from: "student", name: user.full, text: txt, t: Date.now() });
+    saveTickets(); toast("Enviamos tu mensaje."); renderSoporte(); return;
+  }
+  if (f.id === "supForm") {
+    e.preventDefault();
+    const subj = document.getElementById("sp-subj"), msg = document.getElementById("sp-msg");
+    if (!subj.value.trim()) { subj.focus(); toast("Escribe un asunto."); return; }
+    if (msg.value.trim().length < 10) { msg.focus(); toast("Cuéntanos un poco más del problema."); return; }
+    const o = orders.find(x => x.id === document.getElementById("sp-buy").value);
+    const now = Date.now(), svc = document.getElementById("sp-svc").value;
+    const t = { id: nextTkId(), created: now, student: { email: sessionEmail, name: user.full }, subject: subj.value.trim(), service: svc, status: "abierto", mod: null,
+      prio: o ? "alta" : "media", actions: [], messages: [{ from: "student", name: user.full, text: msg.value.trim(), t: now }] };
+    if (o) { const l = localById(o.local); t.purchase = { item: o.lines.length === 1 ? o.lines[0].name : `${o.lines.length} productos`, place: `${l.name} · ${l.place}`, num: o.num, amount: o.total, method: o.card || "Transferencia" }; }
+    tickets.push(t); saveTickets();
+    f.reset(); openSupForm(false); supFilter = "all"; supOpen = t.id;
+    toast(`Creamos la solicitud ${t.id}. Te responderemos en menos de 24 horas hábiles.`);
+    renderSoporte();
+  }
+});
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();

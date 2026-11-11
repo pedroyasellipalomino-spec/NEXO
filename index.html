@@ -86,6 +86,7 @@
         <button class="link b" type="button" data-toast="Te enviaríamos un enlace a tu correo institucional.">¿Olvidaste tu contraseña?</button>
         <button class="btn" type="submit"><i data-lucide="arrow-right"></i>Iniciar sesión</button>
         <p class="tiny">Cuenta de prueba: <b>ana.torres@correo.unimet.edu.ve</b> · contraseña <b style="white-space:nowrap">demo-nexo-01</b></p>
+        <p class="tiny">Gestión: administradora <b>maria.vera@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-admin-01</b> — moderadora <b>lucia.rojas@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-mod-01</b></p>
       </form>
       <p class="center small">¿No tienes cuenta? <button class="link b" type="button" data-go="registro">Crear cuenta</button></p>
       <div class="secure"><i data-lucide="shield-check"></i><p>Tu información se protege con el acceso seguro de tu universidad.</p></div>
@@ -1103,36 +1104,78 @@
   <div><h1 class="h1">Estamos para ayudarte</h1><p class="lead">Consulta tus solicitudes o cuéntanos qué pasó.</p></div>
   <div class="cols">
     <div class="stack s14">
-      <div class="chips" data-chips data-demo><button class="pill ok" type="button">Todas · 3</button><button class="pill neutral" type="button">Abiertas · 2</button><button class="pill neutral" type="button">Resueltas · 1</button></div>
+      <div class="chips" id="supChips"></div>
       <h2 class="sec">Mis solicitudes</h2>
-      <div class="card" data-new style="align-items:flex-start"><span class="ico lg"><i data-lucide="inbox"></i></span><b class="h3">Aún no tienes solicitudes</b><p class="small" style="font-size:13px">Si algo sale mal con un pago, una reserva o tu acceso, crea una solicitud y la verás aquí.</p></div>
-      <div class="card" data-demo>
-        <div class="row"><span class="tiny">TK-1048 · 12 nov · 09:10</span><span class="pill warn">En revisión</span></div>
-        <div><b>Cobro duplicado de almuerzo</b><p class="tiny">Pincho Pan · Compra NX-261112-0791</p></div>
-        <p style="font-size:12px">Lucía está revisando tu comprobante.</p>
-        <button class="link b" type="button" style="font-size:12px" data-go="factura">Ver la compra →</button>
-      </div>
-      <div class="card" data-demo>
-        <div class="row"><span class="tiny">TK-1036 · 11 nov · 16:20</span><span class="pill neutral">Abierto</span></div>
-        <div><b>No puedo renovar mi plan</b><p class="tiny">Estacionamiento · Plan mensual</p></div>
-        <p style="font-size:12px">Recibimos tu solicitud. Te responderemos pronto.</p>
-        <button class="link b" type="button" style="font-size:12px" data-go="estacionamiento">Ir a estacionamiento →</button>
-      </div>
-      <div class="card" data-demo>
-        <div class="row"><span class="tiny">TK-1012 · 30 oct · 14:35</span><span class="pill ok">Resuelto</span></div>
-        <div><b>Cancelación de cancha</b><p class="tiny">Cancha de tenis · Reembolso $12,60</p></div>
-        <p style="font-size:12px">El dinero fue devuelto a tu método de pago.</p>
-        <button class="link b" type="button" style="font-size:12px" data-go="actividad">Ver en Actividad →</button>
-      </div>
+      <div class="stack s14" id="supList"></div>
     </div>
     <div class="stack">
       <div class="card dark">
         <div class="row start" style="align-items:flex-start"><i data-lucide="messages-square" style="font-size:24px;color:var(--mint)"></i><div><b class="h2">Tu campus te escucha</b><p class="muted small">Lun–vie · 8:00 a 18:00. Respondemos en menos de 24 horas hábiles.</p></div></div>
-        <button class="btn" type="button" data-toast="Nueva solicitud creada (simulada). Te responderemos en menos de 24 horas hábiles."><i data-lucide="plus"></i>Crear nueva solicitud</button>
+        <button class="btn" type="button" id="supNew"><i data-lucide="plus"></i>Crear nueva solicitud</button>
       </div>
+      <form class="card" id="supForm" novalidate hidden>
+        <div><h2 class="h2">Nueva solicitud</h2><p class="small" style="font-size:13px">Cuéntanos qué pasó. Un moderador te responderá aquí.</p></div>
+        <div class="field"><label for="sp-svc">Servicio</label><div class="input sel"><select id="sp-svc"><option>Comida</option><option>Estacionamiento</option><option>Materias</option><option>Canchas</option><option>Acceso</option><option>Otro</option></select><i data-lucide="chevron-down"></i></div></div>
+        <div class="field"><label for="sp-subj">Asunto</label><div class="input"><input id="sp-subj" maxlength="60" placeholder="Ej.: Cobro duplicado de almuerzo"></div></div>
+        <div class="field" id="sp-buy-f"><label for="sp-buy">Compra relacionada · Opcional</label><div class="input sel"><select id="sp-buy"></select><i data-lucide="chevron-down"></i></div></div>
+        <div class="field"><label for="sp-msg">Describe el problema</label><div class="input" style="padding:12px"><textarea id="sp-msg" rows="4" maxlength="600" placeholder="Qué pasó, cuándo y qué esperabas que pasara."></textarea></div></div>
+        <div class="row"><button class="btn ghost" type="button" id="supCancel">Cancelar</button><button class="btn" type="submit"><i data-lucide="send"></i>Enviar solicitud</button></div>
+      </form>
       <div class="notice"><i data-lucide="shield-check"></i><p>Para ayudarte más rápido, incluye el identificador de compra y una captura del problema.</p></div>
     </div>
   </div>
+</section>
+
+<!-- ===== Espacio de gestión (se pinta desde app.js · módulo de soporte) ===== -->
+<!-- G1 · Administrador · Tickets abiertos (Figma 2:25419) -->
+<section class="screen app" id="gestion" data-staff="admin" data-title="Tickets abiertos" data-tab="gestion" data-crumb="Gestión  /  Administrador  /  Tickets abiertos" hidden>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px"><h1 class="h1">El soporte, bajo control</h1><p class="lead">Supervisa los tickets abiertos y organiza tu equipo de moderación.</p></div>
+    <span class="pill neutral" id="gsUpdated">Actualizado</span>
+  </div>
+  <div class="kpis" id="gsKpis"></div>
+  <div class="cols">
+    <div class="stack s14">
+      <div class="row"><h2 class="sec">Todos los tickets</h2><button class="link b" type="button" id="gsExport">Exportar listado ↓</button></div>
+      <div class="filters">
+        <div class="input"><i data-lucide="search"></i><input id="gsSearch" type="search" placeholder="Buscar por ticket, estudiante o compra" aria-label="Buscar tickets"></div>
+        <div class="input sel"><select id="gsState" aria-label="Filtrar por estado"><option value="open">Sin resolver</option><option value="abierto">Abierto</option><option value="revision">En revisión</option><option value="espera">En espera</option><option value="resuelto">Resuelto</option><option value="all">Todos los estados</option></select><i data-lucide="chevron-down"></i></div>
+        <div class="input sel"><select id="gsService" aria-label="Filtrar por servicio"><option value="all">Todos los servicios</option></select><i data-lucide="chevron-down"></i></div>
+      </div>
+      <div class="card tk-table" id="gsTable"></div>
+    </div>
+    <div class="stack" id="gsSide"></div>
+  </div>
+</section>
+
+<!-- G2 · Administrador · Moderadores -->
+<section class="screen app" id="equipo" data-staff="admin" data-title="Moderadores" data-tab="equipo" data-crumb="Gestión  /  Administrador  /  Moderadores" hidden>
+  <div><h1 class="h1">Tu equipo de moderación</h1><p class="lead">Invita, activa o desactiva a quienes responden los tickets.</p></div>
+  <div class="cols">
+    <div class="card tk-table" id="eqTable"></div>
+    <div class="stack" id="eqSide"></div>
+  </div>
+</section>
+
+<!-- G3 · Administrador · Detalle de un ticket (solo lectura) -->
+<section class="screen app" id="caso" data-staff="admin" data-title="Detalle del ticket" data-back="gestion" data-tab="gestion" data-crumb="Gestión  /  Administrador  /  Ticket" hidden>
+  <button class="link back" type="button" data-go="gestion"><i data-lucide="arrow-left"></i>Volver a los tickets</button>
+  <div class="cols" id="csBody"></div>
+</section>
+
+<!-- G4 · Moderador · Mis tickets (Figma 2:25614) -->
+<section class="screen app" id="moderacion" data-staff="mod" data-title="Mis tickets" data-tab="moderacion" data-crumb="Gestión  /  Moderador  /  Mis tickets" hidden>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px"><h1 class="h1">Cada problema, una solución</h1><p class="lead" id="mdLead">Mis tickets</p></div>
+    <span class="pill" id="mdPrio" hidden></span>
+  </div>
+  <div class="mod-grid" id="mdBody"></div>
+</section>
+
+<!-- G5 · Moderador · Resueltos -->
+<section class="screen app" id="resueltos" data-staff="mod" data-title="Resueltos" data-tab="resueltos" data-crumb="Gestión  /  Moderador  /  Resueltos" hidden>
+  <div><h1 class="h1">Casos resueltos</h1><p class="lead">Lo que ya solucionaste, con las acciones que quedaron registradas.</p></div>
+  <div class="card tk-table" id="rsTable"></div>
 </section>
 
 <!-- 21 · Notificaciones -->
