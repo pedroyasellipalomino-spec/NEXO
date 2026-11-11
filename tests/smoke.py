@@ -354,6 +354,19 @@ async def main() -> int:
         await pg.wait_for_timeout(400)
         check("Transferencia en revisión · Bs." in await pg.inner_text("#cuotasList"), "la factura universitaria pagada en bolívares queda en revisión")
 
+        # Caja: la administración aprueba la factura que Ana pagó por transferencia
+        await login("maria.vera@unimet.edu.ve", "demo-admin-01")
+        await pg.goto(URL + "#validar")
+        await pg.wait_for_timeout(300)
+        clave = await pg.evaluate("[...document.querySelectorAll('[data-vl-ok]')].map(b => b.dataset.vlOk).find(k => k.includes('pagos:ana'))")
+        check(bool(clave), "la administración ve la transferencia de Ana por validar")
+        await pg.click(f"[data-vl-ok='{clave}']")
+        await pg.wait_for_timeout(200)
+        await login("ana.torres@correo.unimet.edu.ve", "demo-nexo-01")
+        await pg.goto(URL + "#materias")
+        await pg.wait_for_timeout(300)
+        check("Pagada el" in (await pg.inner_text("#cuotasList")).split("Factura de noviembre")[1], "al aprobarla, la factura de Ana queda pagada")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 

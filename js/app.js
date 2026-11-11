@@ -39,10 +39,10 @@ const NAV = [
 const TABS = NAV.filter(n => n[0] !== "cuenta" && n[0] !== "perfil");
 /* Espacio de gestión: cada sección con data-staff="admin" o "mod" usa su propio menú */
 const STAFF_NAV = {
-  admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"]],
+  admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"], ["validar","badge-check","Pagos por validar","validar"]],
   mod: [["moderacion","inbox","Mis tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]],
   local: [["local-pedidos","chef-hat","Pedidos","local-pedidos"], ["local-menu","book-open","Menú y horario","local-menu"]],
-  creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["config","settings","Configuración","config"]]
+  creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["validar","badge-check","Pagos por validar","validar"], ["config","settings","Configuración","config"]]
 };
 const ROLE_LABEL = { local: "Comercio", creator: "Creador", admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
 const ROLE_HOME = { local: "local-pedidos", creator: "creador", admin: "gestion", mod: "moderacion", estudiante: "inicio" };
@@ -198,7 +198,7 @@ function enterApp(email, remember, flash) {
 const screens = [...document.querySelectorAll("section.screen")].map(s => s.id);
 let current = null, previous = "tutorial";
 const PUBLIC = ["tutorial", "login", "registro", "ayuda", "invitacion"];
-const STAFF_SCREENS = { gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local" };
+const STAFF_SCREENS = { gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator"] };
 function show(id) {
   if (/^invitacion-[A-Z0-9]+$/.test(id)) { ivToken = id.slice(11); id = "invitacion"; }
   if (!screens.includes(id)) id = sessionEmail ? "inicio" : "tutorial";
@@ -206,7 +206,8 @@ function show(id) {
   if (sessionEmail && !PUBLIC.includes(id)) {
     const role = roleOf(account), need = STAFF_SCREENS[id];
     const dual = ["creator", "admin", "mod"].includes(role); // el personal puede usar Nexo como usuario
-    if (role === "estudiante" ? need : dual ? (need && need !== role) : need !== role) { id = ROLE_HOME[role]; history.replaceState(null, "", "#" + id); }
+    const okRole = Array.isArray(need) ? need.includes(role) : need === role;
+    if (role === "estudiante" ? need : dual ? (need && !okRole) : !okRole) { id = ROLE_HOME[role]; history.replaceState(null, "", "#" + id); }
     if (!need && !account?.carnet && ["materias", "caja", "tarjeta", "inscripcion", "revision"].includes(id)) {
       id = "inicio"; history.replaceState(null, "", "#inicio");
       setTimeout(() => toast("El estado de cuenta universitario es para cuentas de estudiante con carnet."), 0);
@@ -241,6 +242,8 @@ function show(id) {
   if (id === "creador-equipo" && typeof renderCreadorEquipo === "function") renderCreadorEquipo();
   if (id === "movimientos" && typeof renderMovimientos === "function") renderMovimientos();
   if (id === "config" && typeof renderConfig === "function") renderConfig();
+  if (id === "validar" && typeof renderValidar === "function") renderValidar();
+  if (id === "notificaciones" && typeof renderNotifs === "function") try { renderNotifs(); } catch (err) {}
   if (id === "local-pedidos" && typeof renderLocalPedidos === "function") renderLocalPedidos();
   if (id === "local-menu" && typeof renderLocalMenu === "function") renderLocalMenu();
   if (id === "planes") { const s = document.querySelector("#planList .opt.plan.on"); if (s) try { updatePlan(s); } catch (err) {} }
@@ -459,6 +462,7 @@ const ST = { externa: ["ok", "Pagada fuera de Nexo"], pagada: ["ok", "Pagada"], 
 function invLine(iv) {
   const s = statusOf(iv), p = pagos[iv.id];
   if (s === "pagada") return `Pagada el ${p.fecha} · ${p.via}${p.pp ? " · con pronto pago" : ""}`;
+  if (p && p.estado === "rechazada" && ["pronto", "pendiente", "vencida"].includes(s)) return `Transferencia rechazada: ${p.motivo}. Vuelve a pagarla · ${s === "pronto" ? `Pronto pago hasta el ${fmtDW(iv.ppEnd)}` : s === "pendiente" ? `Vence el ${fmtDW(iv.due)}` : `Venció el ${fmtDW(iv.due)}`}`;
   if (s === "revision") return `Transferencia en revisión · ${p.currency === "bs" ? `${bsAmt(p.paidAmount)} (${money(p.monto)})` : money(p.monto)}${p.ref ? ` · Ref. ${p.ref.slice(-6)}` : ""}`;
   if (s === "externa") return "Indicaste que la pagaste fuera de Nexo · Puedes cambiarlo en Mis materias";
   if (s === "futura") return `Se emite el ${fmtDW(iv.issue)} · Pronto pago hasta el ${fmtDW(iv.ppEnd)}`;
@@ -741,6 +745,7 @@ function buildNotifs() {
     const s = statusOf(iv), amt = money(amountOf(iv));
     if (t < iv.issue) push({ id: `inv-${iv.id}-soon`, cat: "universidad", when: addDays(iv.issue, -5), title: `La factura de ${iv.mes} se emite el ${fmtDW(iv.issue)}`, body: `Págala antes del ${fmtDW(iv.ppEnd)} y cada materia te cuesta ${money(PRICE_PP)} en lugar de ${money(PRICE_REG)}.`, go: "materias" });
     if (s === "pagada") { push({ id: `inv-${iv.id}-paid`, cat: "universidad", when: PAGOS0[iv.id] ? addDays(iv.issue, 2) : t, title: `Recibimos el pago de la factura de ${iv.mes}`, body: `${money(pagos[iv.id].monto)} · ${pagos[iv.id].via}${pagos[iv.id].pp ? " · con pronto pago" : ""}.`, go: "materias" }); }
+    if (pagos[iv.id] && pagos[iv.id].estado === "rechazada") push({ id: `inv-${iv.id}-rej-${pagos[iv.id].rejectedAt}`, cat: "universidad", alert: true, when: t, title: `Rechazamos tu transferencia de ${iv.mes}`, body: `${pagos[iv.id].motivo}. Revisa los datos y vuelve a pagarla.`, go: "materias" });
     if (s === "revision") push({ id: `inv-${iv.id}-rev`, cat: "universidad", when: t, title: `Tu transferencia de ${iv.mes} está en revisión`, body: "Te avisaremos cuando la universidad la valide.", go: "materias" });
     if (["pronto", "pendiente", "vencida"].includes(s) || (s === "pagada" || s === "revision") && t >= iv.issue) {
       push({ id: `inv-${iv.id}-issued`, cat: "universidad", when: iv.issue, title: `Ya puedes pagar la factura de ${iv.mes}`, body: `Pronto pago hasta el ${fmtDW(iv.ppEnd)}: ${money(PRICE_PP * MATERIAS.length)} en lugar de ${money(PRICE_REG * MATERIAS.length)}.`, go: s === "pagada" ? "materias" : "caja" });
@@ -756,6 +761,9 @@ function buildNotifs() {
   push({ id: `food-pp-${isoD(t)}`, cat: "comida", when: t, title: "Pincho Pan · 10 % de descuento en el almuerzo del día", body: "Hoy de 11:30 a 13:00: $7,65 en lugar de $8,50. Retiro en la Feria Central.", go: "local" });
   push({ id: `food-believe-${isoD(t)}`, cat: "comida", when: addDays(t, -1), title: "Kiosco Believe · 2x1 en bebidas", body: "De 14:00 a 16:00. Válido en el kiosco.", go: "comida" });
   try { foodNotifs(t).forEach(push); } catch (err) {} // pedidos listos (módulo de comida)
+  try { pendRec.filter(r => r.estado === "aprobada" || r.estado === "rechazada").forEach(r => push(r.estado === "aprobada"
+    ? { id: `rec-ok-${r.id}`, cat: "estacionamiento", when: t, title: `Acreditamos tu recarga de ${money(r.amount)}`, body: "Tu Pago Móvil fue validado y el saldo ya está en tu wallet Nexo.", go: "recarga" }
+    : { id: `rec-rej-${r.id}`, cat: "estacionamiento", alert: true, when: t, title: `Rechazamos tu recarga de ${money(r.amount)}`, body: `${r.motivo}. Revisa los datos y regístrala de nuevo.`, go: "recarga" })); } catch (err) {} // pendRec se define más abajo
   // Soporte
   if (isDemo) push({ id: "tk-1048", cat: "soporte", when: addDays(t, -1), title: "Lucía respondió tu solicitud TK-1048", body: "Cobro duplicado de almuerzo: estamos revisando tu comprobante.", go: "soporte" });
   return list.filter(n => nPrefs[n.cat] !== false).sort((a, b) => b.when - a.when || (b.alert ? 1 : 0) - (a.alert ? 1 : 0));
@@ -1112,7 +1120,7 @@ document.getElementById("pmForm").addEventListener("submit", e => {
   }
   const v = id => document.getElementById(id).value.trim();
   const ref = v("pm-ref");
-  pendRec.push({ id: "r" + Date.now(), amount: rcAmount, ref, bank: v("pm-bank"), date: v("pm-date"), bs: parseAmt(v("pm-bs")), estado: "revision" }); savePend();
+  pendRec.push({ id: "r" + Date.now(), amount: rcAmount, ref, bank: v("pm-bank"), date: v("pm-date"), bs: parseAmt(v("pm-bs")), estado: "revision", sentAt: Date.now() }); savePend();
   addMovement("Recarga de wallet", `Pago móvil · Ref. ${ref.slice(-6)}`, "+" + money(rcAmount), "En revisión", "neutral", { icon: "smartphone", go: "recarga", goLabel: "Ver estado ›" });
   e.target.reset(); PM_FIELDS.forEach(id => pmShow(id, ""));
   toast(`Registramos tu Pago Móvil de ${money(rcAmount)}. Lo validaremos en un máximo de 24 horas hábiles.`);
@@ -2741,7 +2749,7 @@ function renderCeTicket() {
 
 /* Movimientos: transacciones de este navegador y registro de cambios */
 let mvTab = "tx";
-const AUDIT_TYPE = { rol: ["Roles", "ok"], soporte: ["Soporte", "neutral"], reembolso: ["Reembolso", "warn"], config: ["Configuración", "neutral"] };
+const AUDIT_TYPE = { caja: ["Caja", "warn"], rol: ["Roles", "ok"], soporte: ["Soporte", "neutral"], reembolso: ["Reembolso", "warn"], config: ["Configuración", "neutral"] };
 function allTransactions() {
   const out = [];
   try {
@@ -3461,7 +3469,7 @@ document.getElementById("utForm").addEventListener("submit", e => {
     box.hidden = false; (bad[0][0] === "ut-file" ? document.querySelector("#utForm label.upload") : document.getElementById(bad[0][0])).focus(); return;
   }
   const v = id => document.getElementById(id).value.trim(), paid = parseAmt(v("ut-m")), usdTotal = utUsd();
-  sel.forEach(iv => { const m = amountOf(iv); pagos[iv.id] = { estado: "revision", monto: m, pp: statusOf(iv) === "pronto", ref: v("ut-r"), bank: v("ut-b"), currency: utCur, paidAmount: utCur === "bs" ? Math.round(paid * m / usdTotal * 100) / 100 : m, bcvRate: utCur === "bs" ? bcvRate() : undefined, receipt: utFile.name, date: v("ut-f") }; });
+  sel.forEach(iv => { const m = amountOf(iv); pagos[iv.id] = { estado: "revision", monto: m, pp: statusOf(iv) === "pronto", ref: v("ut-r"), bank: v("ut-b"), currency: utCur, paidAmount: utCur === "bs" ? Math.round(paid * m / usdTotal * 100) / 100 : m, bcvRate: utCur === "bs" ? bcvRate() : undefined, receipt: utFile.name, date: v("ut-f"), sentAt: Date.now() }; });
   savePagos();
   addMovement(sel.map(iv => `Factura de ${iv.mes}`).join(" + "), `Universidad · Transferencia${utCur === "bs" ? ` en Bs. (${bsAmt(paid)})` : ""} · Ref. ${v("ut-r").slice(-6)}`, money(usdTotal), "En revisión", "neutral");
   utReset(); document.getElementById("utForm").hidden = true; document.querySelector("[data-ut-open]").hidden = false;
@@ -3469,6 +3477,128 @@ document.getElementById("utForm").addEventListener("submit", e => {
   showDebtNotice("Comprobante enviado.", "La factura queda en revisión y tu saldo se actualiza cuando la universidad valide la transferencia.");
   go("materias");
 });
+/* ---------- Caja: validar pagos en revisión (administración y creador) ----------
+   Lee de todas las cuentas: facturas universitarias (nexo-pagos:<correo>, estado "revision") y recargas de wallet
+   por Pago Móvil (nexo-pendrec:<correo>). Aprobar o rechazar actualiza los datos, el movimiento y el saldo del estudiante. */
+const VL_REASONS = ["El monto no coincide con el comprobante", "No encontramos la referencia en el banco", "El comprobante no se lee bien", "La transferencia llegó a otra cuenta"];
+const MES_DE = id => (MONTHS.find(m => m.id === id) || { mes: id }).mes;
+function seedCaja() {
+  try { if (localStorage.getItem("nexo-cajaseed")) return; localStorage.setItem("nexo-cajaseed", "1"); } catch (err) { return; }
+  const n = Date.now(), d = k => { const x = new Date(n - k * 864e5); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
+  const put = (key, fn) => { try { const v = fn(JSON.parse(localStorage.getItem(key) || "null")); localStorage.setItem(key, JSON.stringify(v)); } catch (err) {} };
+  put("nexo-pagos:sofia.diaz@correo.unimet.edu.ve", p => ({ ...(p || {}), nov: { estado: "revision", monto: 480, pp: false, ref: "0045671234", bank: "Banesco · 0134", currency: "usd", paidAmount: 480, receipt: "transferencia_noviembre.pdf", date: d(2), sentAt: n - 2 * 864e5, studentName: "Sofía Díaz" } }));
+  put("nexo-pagos:valeria.ruiz@correo.unimet.edu.ve", p => ({ ...(p || {}), nov: { estado: "revision", monto: 300, pp: true, ref: "7788123400", bank: "Banco de Venezuela · 0102", currency: "bs", paidAmount: Math.round(300 * bcvRate() * 100) / 100, bcvRate: bcvRate(), receipt: "pago_nov.jpg", date: d(1), sentAt: n - 864e5, studentName: "Valeria Ruiz" } }));
+  put("nexo-pendrec:luis.perez@correo.unimet.edu.ve", r => [...(r || []), { id: "r" + (n - 5 * 36e5), amount: 20, ref: "0098765432", bank: "Mercantil · 0105", date: d(0), bs: Math.round(20 * bcvRate() * 100) / 100, estado: "revision", sentAt: n - 5 * 36e5, studentName: "Luis Pérez" }]);
+}
+function cajaItems() {
+  const out = [];
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith("nexo-pagos:")) {
+        const email = k.slice(11), pg = JSON.parse(localStorage.getItem(k) || "{}") || {};
+        Object.entries(pg).forEach(([id, p]) => { if (p && ["revision", "pagada", "rechazada"].includes(p.estado) && (p.estado === "revision" || p.validatedAt || p.rejectedAt)) out.push({ kind: "factura", key: k, email, id, p, who: p.studentName || nameOf(email), usd: p.monto, title: `Factura de ${MES_DE(id)}`, sent: p.sentAt || (p.date ? new Date(p.date + "T12:00").getTime() : 0), done: p.estado !== "revision" }); });
+      }
+      if (k.startsWith("nexo-pendrec:")) {
+        const email = k.slice(13), list = JSON.parse(localStorage.getItem(k) || "[]") || [];
+        list.forEach(r => out.push({ kind: "recarga", key: k, email, id: r.id, p: { ...r, currency: "bs", paidAmount: r.bs, receipt: null }, who: r.studentName || nameOf(email), usd: r.amount, title: "Recarga de wallet · Pago Móvil", sent: r.sentAt || +String(r.id).slice(1) || 0, done: r.estado !== "revision" }));
+      }
+    });
+  } catch (err) {}
+  return out.sort((a, b) => b.sent - a.sent);
+}
+let vlTab = "pend", vlReject = null;
+function renderValidar() {
+  if (roleOf(account) === "creator") relabelForCreator();
+  seedCaja();
+  const all = cajaItems(), pend = all.filter(x => !x.done), today = day0(new Date()).getTime();
+  const doneToday = all.filter(x => x.done && ((x.p.validatedAt || x.p.rejectedAt || 0) >= today));
+  const k = (label, val, sub) => `<div class="card kpi static"><span class="small">${label}</span><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
+  document.getElementById("vlKpis").innerHTML = k("Por validar", pend.length, pend.length ? `El más antiguo: ${ago(Math.min(...pend.map(x => x.sent)))}` : "Todo al día")
+    + k("Monto por validar", money(pend.reduce((a, x) => a + x.usd, 0)), `${pend.filter(x => x.p.currency === "bs").length} en bolívares`)
+    + k("Revisados hoy", doneToday.length, `${doneToday.filter(x => x.p.estado === "pagada" || x.p.estado === "aprobada").length} aprobados · ${doneToday.filter(x => x.p.estado === "rechazada").length} rechazados`);
+  const tabs = [["pend", `Por validar · ${pend.length}`], ["factura", "Facturas"], ["recarga", "Recargas"], ["done", "Revisados"]];
+  document.getElementById("vlTabs").innerHTML = tabs.map(([t, l]) => `<button class="pill ${t === vlTab ? "ok" : "neutral"}" type="button" data-vl-tab="${t}">${l}</button>`).join("");
+  const list = all.filter(x => vlTab === "pend" ? !x.done : vlTab === "done" ? x.done : !x.done && x.kind === vlTab);
+  document.getElementById("vlList").innerHTML = list.map(x => {
+    const p = x.p, key = `${x.key}|${x.id}`, bs = p.currency === "bs";
+    const state = !x.done ? `<span class="pill warn">En revisión</span>` : p.estado === "rechazada" ? `<span class="pill bad">Rechazado</span>` : `<span class="pill ok">Aprobado</span>`;
+    const actions = x.done
+      ? `<p class="tiny">${p.estado === "rechazada" ? `Rechazado: ${esc(p.motivo)}` : "Aprobado"} · por ${esc(p.validatedBy || p.rejectedBy || "Caja")} · ${ago(p.validatedAt || p.rejectedAt)}</p>`
+      : vlReject === key
+        ? `<form class="stack s14 vl-rej" data-vl-reject-form="${key}"><label class="small" style="font-weight:600" for="vl-motivo">Motivo del rechazo</label><div class="input sel"><select id="vl-motivo">${VL_REASONS.map(r => `<option>${r}</option>`).join("")}<option value="otro">Otro motivo…</option></select><i data-lucide="chevron-down"></i></div>
+           <div class="input" id="vl-otro-wrap" hidden><input id="vl-otro" maxlength="120" placeholder="Escribe el motivo" aria-label="Otro motivo"></div>
+           <p class="tiny">El estudiante verá este motivo y podrá registrar el pago de nuevo.</p>
+           <div class="row"><button class="btn ghost" type="button" data-vl-no>Volver</button><button class="btn" type="submit" style="background:var(--danger);border-color:var(--danger)">Rechazar pago</button></div></form>`
+        : `<div class="row"><button class="btn ghost" type="button" data-vl-rej="${key}"><i data-lucide="circle-x"></i>Rechazar</button><button class="btn" type="button" data-vl-ok="${key}"><i data-lucide="badge-check"></i>Aprobar ${money(x.usd)}</button></div>`;
+    return `<div class="card vl-item">
+      <div class="row" style="align-items:flex-start"><div><b class="h3">${esc(x.who)}</b><p class="small">${esc(x.title)}${p.pp ? " · con pronto pago" : ""}</p></div>${state}</div>
+      <div class="vl-grid">
+        <div><span class="tiny">Monto</span><b>${money(x.usd)}</b>${bs ? `<span class="tiny">${bsAmt(p.paidAmount)}${p.bcvRate ? ` · tasa ${bsAmt(p.bcvRate)}` : ""}</span>` : ""}</div>
+        <div><span class="tiny">Método</span><b>${x.kind === "recarga" ? "Pago Móvil" : bs ? "Transferencia en Bs." : "Transferencia en USD"}</b><span class="tiny">${esc(p.bank || "—")}</span></div>
+        <div><span class="tiny">Referencia</span><b class="mono">${esc(p.ref || "—")}</b><span class="tiny">${p.date ? `Pagado el ${fmtD(new Date(p.date + "T12:00"))}` : ""}</span></div>
+        <div><span class="tiny">Comprobante</span>${p.receipt ? `<button class="link b" type="button" data-toast="Vista previa de ${esc(p.receipt)} no disponible en el prototipo." style="font-size:12px"><i data-lucide="file-text"></i> ${esc(p.receipt)}</button>` : `<b style="font-size:12px">Datos del Pago Móvil</b>`}<span class="tiny">Enviado ${ago(x.sent).toLowerCase()}</span></div>
+      </div>
+      ${actions}
+    </div>`;
+  }).join("") || `<div class="card" style="align-items:flex-start"><span class="ico lg"><i data-lucide="badge-check"></i></span><h2 class="h2">${vlTab === "done" ? "Aún no hay pagos revisados" : "No hay pagos por validar"}</h2><p class="small" style="font-size:13px">${vlTab === "done" ? "Los pagos que apruebes o rechaces aparecerán aquí." : "Cuando un estudiante registre una transferencia o un Pago Móvil, aparecerá aquí."}</p></div>`;
+  icons();
+}
+function relabelForCreator() {
+  // la sección usa el menú de administración; para el creador se reemplaza por el suyo
+  const sec = document.getElementById("validar");
+  if (sec.dataset.navFor === "creator") return;
+  const nav = STAFF_NAV.creator, mk = n => `<button type="button" data-go="${n[3]}" class="${n[0] === "validar" ? "on" : ""}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`;
+  const sideNav = sec.querySelector(".side .nav"); if (sideNav) sideNav.innerHTML = nav.map(mk).join("") + `<button type="button" class="mode-nav" data-mode-switch="usuario"><i data-lucide="user-round"></i>Usar Nexo como usuario</button>`;
+  const bar = sec.querySelector(".tabbar"); if (bar) bar.innerHTML = nav.map(mk).join("") + `<button type="button" data-logout><i data-lucide="log-out"></i>Salir</button>`;
+  sec.querySelectorAll(".side .user span:last-child").forEach(el => el.textContent = "Creador · Menú");
+  sec.querySelectorAll(".mbar .pill, .deskbar .acts .pill:not(.modebtn)").forEach(el => el.textContent = el.textContent.includes("Acceso") ? "Acceso: Creador" : "Creador");
+  const c = sec.querySelector(".deskbar .crumbs span"); if (c) c.innerHTML = "Gestión&nbsp;&nbsp;/&nbsp;&nbsp;Creador&nbsp;&nbsp;/&nbsp;&nbsp;Pagos por validar";
+  sec.dataset.navFor = "creator";
+}
+function vlUpdateMove(email, match, pill, cls) {
+  try { const k = "nexo-moves:" + email, mv = JSON.parse(localStorage.getItem(k) || "[]") || []; const m = mv.slice().reverse().find(x => x.pill === "En revisión" && match(x)); if (m) { m.pill = pill; m.pillCls = cls; localStorage.setItem(k, JSON.stringify(mv)); } } catch (err) {}
+}
+function vlDecide(key, ok, motivo) {
+  const i = key.lastIndexOf("|"), sk = key.slice(0, i), id = key.slice(i + 1), now = Date.now(), me = user.full;
+  const item = cajaItems().find(x => x.key === sk && x.id === id); if (!item) return;
+  const ref6 = (item.p.ref || "").slice(-6);
+  if (item.kind === "factura") {
+    const pg = JSON.parse(localStorage.getItem(sk) || "{}"), p = pg[id];
+    pg[id] = ok ? { ...p, estado: "pagada", fecha: fmtD(new Date(now)), via: p.currency === "bs" ? "Transferencia en Bs." : "Transferencia", validatedAt: now, validatedBy: me }
+                : { ...p, estado: "rechazada", motivo, rejectedAt: now, rejectedBy: me };
+    localStorage.setItem(sk, JSON.stringify(pg));
+    vlUpdateMove(item.email, m => m.title.includes(`Factura de ${MES_DE(id)}`) && (!ref6 || (m.detail || "").includes(ref6)), ok ? "Pagado" : "Rechazado", ok ? "ok" : "warn");
+    if (item.email === sessionEmail) { pagos = { ...pagos, [id]: pg[id] }; }
+  } else {
+    const list = JSON.parse(localStorage.getItem(sk) || "[]"), r = list.find(x => x.id === id);
+    Object.assign(r, ok ? { estado: "aprobada", validatedAt: now, validatedBy: me } : { estado: "rechazada", motivo, rejectedAt: now, rejectedBy: me });
+    localStorage.setItem(sk, JSON.stringify(list));
+    if (ok) {
+      const wk = "nexo-wallet:" + item.email; let w = parseFloat(localStorage.getItem(wk)); if (isNaN(w)) w = item.email === DEMO_EMAIL ? 40 : 0;
+      localStorage.setItem(wk, String(Math.round((w + item.usd) * 100) / 100));
+    }
+    vlUpdateMove(item.email, m => m.title === "Recarga de wallet" && (m.detail || "").includes(ref6), ok ? "Acreditada" : "Rechazada", ok ? "ok" : "warn");
+  }
+  logAudit("caja", ok ? `Aprobó ${item.title.toLowerCase()} de ${item.who} (${money(item.usd)}, ref. ${item.p.ref}).` : `Rechazó ${item.title.toLowerCase()} de ${item.who}: ${motivo}.`);
+  vlReject = null;
+  toast(ok ? `Aprobaste el pago de ${item.who} por ${money(item.usd)}.` : `Rechazaste el pago de ${item.who}. Le avisaremos el motivo.`);
+  renderValidar();
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-vl-tab]"); if (t) { vlTab = t.dataset.vlTab; vlReject = null; renderValidar(); return; }
+  const ok = e.target.closest("[data-vl-ok]"); if (ok) { vlDecide(ok.dataset.vlOk, true); return; }
+  const rj = e.target.closest("[data-vl-rej]"); if (rj) { vlReject = rj.dataset.vlRej; renderValidar(); document.getElementById("vl-motivo")?.focus(); return; }
+  if (e.target.closest("[data-vl-no]")) { vlReject = null; renderValidar(); }
+});
+document.addEventListener("change", e => { if (e.target.id === "vl-motivo") { const w = document.getElementById("vl-otro-wrap"); w.hidden = e.target.value !== "otro"; if (!w.hidden) document.getElementById("vl-otro").focus(); } });
+document.addEventListener("submit", e => {
+  const f = e.target; if (!f.matches("[data-vl-reject-form]")) return;
+  e.preventDefault();
+  const sel = document.getElementById("vl-motivo").value, otro = document.getElementById("vl-otro").value.trim();
+  if (sel === "otro" && otro.length < 5) { document.getElementById("vl-otro").focus(); toast("Escribe el motivo del rechazo."); return; }
+  vlDecide(f.dataset.vlRejectForm, false, sel === "otro" ? otro : sel);
+});
+try { renderNotifs(); } catch (err) {} // ya con todos los datos cargados (recargas, pedidos, pagos)
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();
   const carnet = f.querySelector("[data-digits]");

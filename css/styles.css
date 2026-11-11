@@ -699,3 +699,12 @@ button.tk-row.on{background:var(--mint-bg)}
 .opt:disabled{opacity:.55;cursor:not-allowed}
 @media (max-width:519px){#utForm .grid2{grid-template-columns:1fr}#utForm .ut-amt{display:none}}
 @media (min-width:1100px) and (max-width:1300px){#utForm .grid2{grid-template-columns:1fr}}
+
+/* ---------- Caja: pagos por validar ---------- */
+.vl-item{gap:12px}
+.vl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;border-radius:var(--r-sm);background:var(--bg)}
+.vl-grid > div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.vl-grid b{font-size:13px;overflow-wrap:anywhere}
+.vl-grid .link svg{vertical-align:-2px}
+.vl-rej{padding:12px;border-radius:var(--r-sm);background:var(--danger-bg)}
+@media (min-width:900px){.vl-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
