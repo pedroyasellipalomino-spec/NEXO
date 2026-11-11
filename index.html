@@ -88,6 +88,7 @@
         <p class="tiny">Cuenta de prueba: <b>ana.torres@correo.unimet.edu.ve</b> · contraseña <b style="white-space:nowrap">demo-nexo-01</b></p>
         <p class="tiny">Gestión: administradora <b>maria.vera@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-admin-01</b> — moderadora <b>lucia.rojas@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-mod-01</b></p>
         <p class="tiny">Creador: <b>diego.mendez@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-creador-01</b></p>
+        <p class="tiny">Comercio: <b>pinchopan@comercio.nexo</b> · <b style="white-space:nowrap">demo-local-01</b> (cada local tiene la suya: lapausa@, migrill@, teeb@…)</p>
       </form>
       <p class="center small">¿No tienes cuenta? <button class="link b" type="button" data-go="registro">Crear cuenta</button></p>
       <div class="secure"><i data-lucide="shield-check"></i><p>Tu información se protege con el acceso seguro de tu universidad.</p></div>
@@ -1239,6 +1240,26 @@
     <form class="card" id="cfForm" novalidate></form>
     <div class="stack" id="cfSide"></div>
   </div>
+</section>
+
+<!-- G10 · Comercio · Pedidos -->
+<section class="screen app" id="local-pedidos" data-staff="local" data-title="Pedidos" data-tab="local-pedidos" data-crumb="Comercio  /  Pedidos" hidden>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px"><h1 class="h1" id="lpTitle">Pedidos de hoy</h1><p class="lead" id="lpLead"></p></div>
+    <div id="lpPause" style="width:220px"></div>
+  </div>
+  <form class="card lp-code" id="lpCodeForm" novalidate>
+    <div class="row start" style="gap:12px;flex-wrap:wrap"><span class="ico"><i data-lucide="hand-platter"></i></span><div style="flex:1;min-width:180px"><b class="h3">Entregar con código</b><p class="small">Escribe los 4 dígitos que te muestra el estudiante.</p></div>
+      <div class="input" style="width:150px"><input inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000" aria-label="Código de retiro"></div><button class="btn" type="submit" style="width:auto;padding:0 20px">Entregar</button></div>
+  </form>
+  <div class="kpis" id="lpKpis"></div>
+  <div class="lp-board" id="lpBoard"></div>
+</section>
+
+<!-- G11 · Comercio · Menú y horario -->
+<section class="screen app" id="local-menu" data-staff="local" data-title="Menú y horario" data-tab="local-menu" data-crumb="Comercio  /  Menú y horario" hidden>
+  <div><h1 class="h1">Tu menú de hoy</h1><p class="lead" id="lmLead"></p></div>
+  <div class="cols" id="lmBody"></div>
 </section>
 
 <!-- 21 · Notificaciones -->

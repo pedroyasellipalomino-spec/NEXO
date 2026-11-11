@@ -11,7 +11,7 @@ Es un prototipo: no hay backend. Los datos viven en el navegador (localStorage/s
 - Un solo archivo para compartir: `npm run build` → `dist/nexo-prototipo.html` (CSS, JS e íconos adentro; `dist/` no se versiona)
 - Prueba de humo: `npm test` (necesita `pip install playwright` y `playwright install chromium`)
 
-Cuentas de prueba: estudiante `ana.torres@correo.unimet.edu.ve` / `demo-nexo-01` (carnet 20241010186); administradora `maria.vera@unimet.edu.ve` / `demo-admin-01`; moderadores `lucia.rojas@unimet.edu.ve` / `demo-mod-01` y `carlos.gil@unimet.edu.ve` / `demo-mod-02`; creador `diego.mendez@unimet.edu.ve` / `demo-creador-01`. Cualquier cuenta nueva que se registre empieza desde cero.
+Cuentas de prueba: estudiante `ana.torres@correo.unimet.edu.ve` / `demo-nexo-01` (carnet 20241010186); administradora `maria.vera@unimet.edu.ve` / `demo-admin-01`; moderadores `lucia.rojas@unimet.edu.ve` / `demo-mod-01` y `carlos.gil@unimet.edu.ve` / `demo-mod-02`; creador `diego.mendez@unimet.edu.ve` / `demo-creador-01`; comercios `<local>@comercio.nexo` / `demo-local-01` (pinchopan, lapausa, migrill, teeb, tienditaa1, tienditaa2, believe). Cualquier cuenta nueva que se registre empieza desde cero.
 
 ## Estructura
 
@@ -55,12 +55,13 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - `#factura` sin pedido elegido muestra la factura de ejemplo original (`FC_SAMPLE`).
 - Seguimiento (`#pedido`, `renderPedido`): al confirmar, el pedido guarda `paidAt`, `readyAt` (= pago + punto medio del `eta` del local, `prepMinutes`) y `code` (`pickupCode`, 4 dígitos). `orderStatus()`: preparando → listo (al pasar `readyAt`) → retirado (`pickedAt`, botón "Ya lo retiré"). `checkOrders()` corre cada 15 s: avisa con toast y `foodNotifs()` agrega la notificación (va a `#pedido` con `trackId`). En `#comida`, `#foodOrders` muestra los pedidos activos. Hay un enlace de prototipo para simular que ya está listo. `drawQR(canvas)` dibuja el QR ilustrativo.
 
-**Roles y soporte (Figma sección `7:79457` · 08 Roles y gestión).** Las cuentas tienen `role`: estudiante (por defecto), `creator`, `admin` o `mod` (`roleOf()`); `disabled` bloquea el login. Las cuentas de gestión de ejemplo están en `STAFF0`.
+**Roles y soporte (Figma sección `7:79457` · 08 Roles y gestión).** Las cuentas tienen `role`: estudiante (por defecto), `creator`, `admin`, `mod` o `local` (`roleOf()`); `disabled` bloquea el login. Las cuentas de gestión de ejemplo están en `STAFF0`.
 - Las pantallas de gestión llevan `data-staff="admin"|"mod"`: el marco usa `STAFF_NAV` (menú propio, botón Salir, sin campana). `show()` redirige según `STAFF_SCREENS`/`ROLE_HOME`: el estudiante no entra a gestión y el personal no entra a pantallas de estudiante. Al iniciar sesión cada rol cae en su inicio (`#gestion`, `#moderacion`, `#inicio`).
 - Administración: `#gestion` (indicadores, tabla filtrable, asignar moderador, exportar CSV, invitar), `#equipo` (activar/desactivar, cancelar invitaciones), `#caso` (ticket en solo lectura). Moderación: `#moderacion` (cola, conversación, responder, reembolsar/cancelar con confirmación, resolver/reabrir) y `#resueltos`.
 - Los tickets son **globales** en `localStorage["nexo-tickets"]` (no por cuenta), sembrados con `seedTickets()`. Las invitaciones en `nexo-invites`: quien se registra con un correo invitado entra como `mod`. Un reembolso agrega un movimiento a `nexo-moves:<correo del estudiante>`.
 - Creador (Figma `2:25763` y `2:25970`): `#creador` (indicadores, gráfico de ingresos por comisiones con tooltip y vista de tabla, compras por servicio; métricas de ejemplo en `PERIODS`, ingresos = volumen × comisión), `#creador-equipo` (equipo con menú ⋯ para cambiar rol/desactivar, invitar admin o moderador, centro de soporte con respuesta, reembolso, cancelación y resolver), `#movimientos` (transacciones de `nexo-orders:*` y reembolsos + registro de cambios) y `#config` (comisiones por servicio en `nexo-config`, restablecer datos de ejemplo). Movimientos y Configuración no tienen diseño en Figma.
 - Registro de auditoría global en `nexo-audit` con `logAudit(tipo, texto)`; las acciones de tickets compartidas son `ticketReply`, `ticketAction` y `ticketResolve`.
+- Comercio (`role: "local"`, la cuenta lleva `local: <id>`; sin diseño en Figma): `#local-pedidos` (tablero En preparación / Listos / Entregados hoy; marcar listo, demora +5 min, cancelar con reembolso al estudiante, entregar verificando el código de 4 dígitos, pausar pedidos) y `#local-menu` (productos agotados, pausa). El comercio lee y escribe los pedidos en `nexo-orders:<correo del estudiante>` (`allOrders`, `updateOrder`); siembra pedidos de ejemplo una vez por local (`nexo-localseed:<id>`). Agotados y pausa viven en `nexo-localstate` (global) y la vista del estudiante los respeta (no deja abrir, añadir ni pagar). Si el local no actúa, el pedido igual pasa a listo por tiempo. Un listener de `storage` refresca las pantallas cuando otra pestaña cambia pedidos, tickets o el estado de un local (dos pestañas con cuentas distintas: iniciar sesión sin "Recordar").
 - Estudiante: `#soporte` lista sus tickets (`renderSoporte`), crea solicitudes (`#supForm`, puede ligar un pedido de `nexo-orders`) y responde en la conversación.
 
 ## Cómo trabajar con el usuario
@@ -82,7 +83,7 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - Ingeniería Mecánica no tiene materias en `CARRERAS`: su flujograma en PDF tiene el texto convertido en curvas y no se pudo extraer.
 - El código `EI27` (Contrataciones Internacionales) viene así en el flujograma; parece incompleto.
 - Validación de Pago Móvil.
-- Comida: los menús y precios son de ejemplo (confirmar con cada local); falta la validación de los datos de transferencia y una vista para el local (marcar pedidos como listos desde el comercio).
+- Comida: los menús y precios son de ejemplo (confirmar con cada local); falta la validación de los datos de transferencia; el comercio no puede editar precios ni productos (solo agotar y pausar).
 - Gestión: el personal invitado hoy se registra con el formulario de estudiante (pide carnet).
 - Decidir si una cuenta nueva debe pagar las 3 facturas del trimestre (hoy septiembre y octubre salen como "No aplica").
 

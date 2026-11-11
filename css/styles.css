@@ -620,3 +620,25 @@ button.tk-row.on{background:var(--mint-bg)}
 .pickup.dim .pcode{color:var(--muted)}
 .pcode{font-size:40px;font-weight:700;letter-spacing:10px;padding-left:10px;font-variant-numeric:tabular-nums}
 @media (max-width:1099px){#pdBody.ready > :last-child{order:-1}}
+
+/* ---------- Comercio ---------- */
+.card.soldout{opacity:.55}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.lp-board{display:grid;gap:22px;align-items:start}
+.lp-card{gap:10px}
+.lp-card.ready{border-color:var(--brand)}
+.lp-card .pill svg{font-size:13px}
+.lp-card .note{display:block;margin-top:4px;padding:6px 8px;border-radius:6px;background:var(--warn-bg);color:var(--warn-fg);font-size:12px}
+.lp-done{padding:10px 0;border-top:1px solid var(--line);gap:10px;flex-wrap:wrap}
+.lp-done:first-child{border-top:0}
+.lp-empty{padding:14px;border:1px dashed var(--line);border-radius:var(--r-md);text-align:center}
+.lp-code .input input{font-size:20px;letter-spacing:6px;text-align:center;font-variant-numeric:tabular-nums}
+.bad-input{border-color:var(--danger)!important}
+.sec svg{vertical-align:-3px}
+.lm-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.lm-item .grow{flex:1;min-width:0}
+.lm-item b{font-size:13px}
+.lm-item.off b{color:var(--muted);text-decoration:line-through}
+@media (min-width:1100px){.lp-board{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (min-width:700px) and (max-width:1099px){.lp-board{grid-template-columns:1fr 1fr}.lp-board > :last-child{grid-column:1 / -1}}
+@media (max-width:699px){#lpPause{width:100%!important}}

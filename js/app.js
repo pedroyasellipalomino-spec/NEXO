@@ -41,10 +41,11 @@ const TABS = NAV.filter(n => n[0] !== "cuenta" && n[0] !== "perfil");
 const STAFF_NAV = {
   admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"]],
   mod: [["moderacion","inbox","Mis tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]],
+  local: [["local-pedidos","chef-hat","Pedidos","local-pedidos"], ["local-menu","book-open","Menú y horario","local-menu"]],
   creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["config","settings","Configuración","config"]]
 };
-const ROLE_LABEL = { creator: "Creador", admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
-const ROLE_HOME = { creator: "creador", admin: "gestion", mod: "moderacion", estudiante: "inicio" };
+const ROLE_LABEL = { local: "Comercio", creator: "Creador", admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
+const ROLE_HOME = { local: "local-pedidos", creator: "creador", admin: "gestion", mod: "moderacion", estudiante: "inicio" };
 
 document.querySelectorAll("[data-account]").forEach(el => el.append(document.getElementById("account-tpl").content.cloneNode(true)));
 
@@ -145,6 +146,9 @@ const STAFF0 = [
   { full: "Lucía Rojas", carnet: "", email: "lucia.rojas@unimet.edu.ve", role: "mod", pw: "demo-mod-01" },
   { full: "Carlos Gil", carnet: "", email: "carlos.gil@unimet.edu.ve", role: "mod", pw: "demo-mod-02" }
 ];
+/* Una cuenta por comercio (correo ilustrativo, misma contraseña de prueba) */
+[["pinchopan", "Pincho Pan"], ["lapausa", "La Pausa"], ["migrill", "Mi Punto Grill"], ["teeb", "TEEB"], ["tienditaa1", "La Tiendita Unimetana A1"], ["tienditaa2", "La Tiendita Unimetana A2"], ["believe", "Kiosco Believe"]]
+  .forEach(([id, full]) => STAFF0.push({ full, carnet: "", email: `${id}@comercio.nexo`, role: "local", local: id, pw: "demo-local-01" }));
 STAFF0.forEach(({ pw, ...a }) => { if (!accounts.some(x => x.email === a.email)) accounts.push({ ...a, pass: passKey(pw) }); });
 const roleOf = a => (a && a.role) || "estudiante";
 /* Invitaciones de moderación: quien se registra con un correo invitado entra como moderador */
@@ -190,7 +194,7 @@ function enterApp(email, remember, flash) {
 const screens = [...document.querySelectorAll("section.screen")].map(s => s.id);
 let current = null, previous = "tutorial";
 const PUBLIC = ["tutorial", "login", "registro", "ayuda"];
-const STAFF_SCREENS = { gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator" };
+const STAFF_SCREENS = { gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local" };
 function show(id) {
   if (!screens.includes(id)) id = sessionEmail ? "inicio" : "tutorial";
   if (!sessionEmail && !PUBLIC.includes(id)) { id = "login"; if (location.hash !== "#login") history.replaceState(null, "", "#login"); setTimeout(() => toast("Inicia sesión para continuar."), 0); }
@@ -225,6 +229,8 @@ function show(id) {
   if (id === "creador-equipo" && typeof renderCreadorEquipo === "function") renderCreadorEquipo();
   if (id === "movimientos" && typeof renderMovimientos === "function") renderMovimientos();
   if (id === "config" && typeof renderConfig === "function") renderConfig();
+  if (id === "local-pedidos" && typeof renderLocalPedidos === "function") renderLocalPedidos();
+  if (id === "local-menu" && typeof renderLocalMenu === "function") renderLocalMenu();
   if (id === "planes") { const s = document.querySelector("#planList .opt.plan.on"); if (s) try { updatePlan(s); } catch (err) {} }
 
   window.scrollTo(0, 0);
@@ -812,7 +818,7 @@ document.getElementById("loginForm").addEventListener("submit", e => {
     loginError("La contraseña no es correcta.", "Revísala e inténtalo de nuevo, o usa \"¿Olvidaste tu contraseña?\".", false);
     passEl.select(); return;
   }
-  enterApp(acc.email, document.getElementById("l-rem").checked, `Hola de nuevo, ${acc.full.split(" ")[0]}.`);
+  enterApp(acc.email, document.getElementById("l-rem").checked, (acc.role === "local" ? `Hola, equipo de ${acc.full}.` : `Hola de nuevo, ${acc.full.split(" ")[0]}.`));
 });
 document.getElementById("loginForm").addEventListener("input", () => { document.getElementById("loginError").hidden = true; document.querySelectorAll("#loginForm .field.bad").forEach(f => f.classList.remove("bad")); });
 document.getElementById("loginToSignup").addEventListener("click", () => {
@@ -1472,6 +1478,14 @@ const LOCALES = [
       { id: "mani", name: "Maní salado", desc: "Bolsa de 50 g.", price: 1.2, icon: "cookie" }] }] }
 ];
 const localById = id => LOCALES.find(l => l.id === id);
+/* Estado que maneja cada comercio: pedidos en pausa y productos agotados (global: lo ven todas las cuentas) */
+let localState = {};
+const loadLocalState = () => { try { localState = JSON.parse(localStorage.getItem("nexo-localstate") || "{}") || {}; } catch (err) { localState = {}; } };
+loadLocalState();
+const saveLocalState = () => { try { localStorage.setItem("nexo-localstate", JSON.stringify(localState)); } catch (err) {} };
+const lstate = id => localState[id] || (localState[id] = { paused: false, soldout: [] });
+const isPaused = id => !!(localState[id] && localState[id].paused);
+const isSoldOut = (lid, iid) => !!(localState[lid] && localState[lid].soldout.includes(iid));
 const itemsOf = l => l.cats.flatMap(c => c.items);
 const itemById = (l, id) => itemsOf(l).find(i => i.id === id);
 const normTxt = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -1517,7 +1531,7 @@ function renderFoodList() {
     const hit = q && itemsOf(l).find(i => normTxt(i.name + " " + i.desc).includes(q));
     const star = hit || itemsOf(l).find(i => i.tag) || itemsOf(l)[0];
     return `<div class="card svc" data-kind="${l.kind}">
-      <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="${l.icon}"></i></span><div><h3 class="h3">${esc(l.name)}</h3><p class="small">${l.place} · Retiro en ${l.eta}</p></div></div><span class="pill ok">Abierto</span></div>
+      <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="${l.icon}"></i></span><div><h3 class="h3">${esc(l.name)}</h3><p class="small">${l.place} · Retiro en ${l.eta}</p></div></div>${isPaused(l.id) ? `<span class="pill warn">Pausado</span>` : `<span class="pill ok">Abierto</span>`}</div>
       <div><b style="font-weight:600;font-size:14px">${hit ? "Coincide: " : ""}${esc(star.name)}</b><p class="small" style="font-size:13px">${esc(l.tagline)}</p></div>
       <div class="row"><span class="price">${money(star.price)}</span><span class="small">Hoy · ${l.hours}</span></div>
       <button class="btn${l.kind === "local" ? "" : " ghost"}" type="button" data-open-local="${l.id}"><i data-lucide="arrow-right"></i>${l.kind === "local" ? "Ver menú de " + esc(l.name) : "Ver kiosco"}</button>
@@ -1543,14 +1557,15 @@ function renderLocal() {
   const l = localById(curLocal);
   setFrame("local", l.name, ["Comida y kioscos", l.name]);
   document.getElementById("localHead").innerHTML = `<h1 class="h1">${esc(l.name)}</h1><p class="lead">${l.place} · ${esc(l.tagline)}</p>
-    <div class="chips" style="margin-top:12px"><span class="pill ok">Abierto</span><span class="pill neutral">Retiro en ${l.eta}</span><span class="pill neutral">${l.hours}</span></div>`;
+    <div class="chips" style="margin-top:12px">${isPaused(l.id) ? `<span class="pill warn">Pedidos en pausa</span>` : `<span class="pill ok">Abierto</span>`}<span class="pill neutral">Retiro en ${l.eta}</span><span class="pill neutral">${l.hours}</span></div>
+    ${isPaused(l.id) ? `<div class="notice warn" style="margin-top:12px"><i data-lucide="circle-pause"></i><p>${esc(l.name)} no está recibiendo pedidos en este momento. Puedes ver el menú y volver más tarde.</p></div>` : ""}`;
   const cats = ["Todos", ...l.cats.map(c => c.name)];
   if (!cats.includes(curCat)) curCat = "Todos";
   document.getElementById("localChips").innerHTML = cats.map(c => `<button class="pill ${c === curCat ? "ok" : "neutral"}" type="button" data-food-cat="${esc(c)}">${esc(c)}</button>`).join("");
   document.getElementById("localMenu").innerHTML = l.cats.filter(c => curCat === "Todos" || c.name === curCat).map(c => `<h2 class="h2">${esc(c.name)}</h2>` + c.items.map(it =>
-    `<button class="card row" type="button" data-open-item="${it.id}" style="text-align:left;flex-direction:row">
+    `<button class="card row${isSoldOut(l.id, it.id) ? " soldout" : ""}" type="button" data-open-item="${it.id}" style="text-align:left;flex-direction:row"${isSoldOut(l.id, it.id) ? ` aria-disabled="true"` : ""}>
       <span class="ico lg"><i data-lucide="${it.icon}"></i></span>
-      <div style="flex:1;min-width:0"><b class="h3">${esc(it.name)}</b><p class="small">${esc(it.desc)}</p><div class="row start" style="gap:8px;margin-top:4px"><b style="font-size:17px;font-weight:600">${money(it.price)}</b>${it.tag ? `<span class="pill ok">${it.tag}</span>` : ""}${it.opts ? `<span class="tiny">Con opciones</span>` : ""}</div></div>
+      <div style="flex:1;min-width:0"><b class="h3">${esc(it.name)}</b><p class="small">${esc(it.desc)}</p><div class="row start" style="gap:8px;margin-top:4px"><b style="font-size:17px;font-weight:600">${money(it.price)}</b>${isSoldOut(l.id, it.id) ? `<span class="pill neutral">Agotado</span>` : it.tag ? `<span class="pill ok">${it.tag}</span>` : ""}${it.opts ? `<span class="tiny">Con opciones</span>` : ""}</div></div>
       <span class="ico"><i data-lucide="chevron-right"></i></span>
     </button>`).join("")).join("");
   const cl = cartLocal(), mine = cl && cl.id === l.id && cart.lines.length;
@@ -1609,7 +1624,8 @@ function renderDetalle(note) {
           <div class="stack s14" style="gap:6px"><span class="small">Cantidad</span><span class="qty"><button type="button" aria-label="Quitar uno" data-det-qty="-1"><i data-lucide="minus"></i></button><span id="detQty">${detQty}</span><button type="button" aria-label="Agregar uno" data-det-qty="1"><i data-lucide="plus"></i></button></span></div>
           <div style="text-align:right"><span class="small">Total del producto</span><p style="font-size:25px;font-weight:600" class="mono" id="detTotal">${money(detUnit(it) * detQty)}</p></div>
         </div>
-        <button class="btn" type="button" id="detAdd"><i data-lucide="shopping-bag"></i>${editing ? "Guardar cambios" : other ? "Vaciar carrito y añadir" : "Añadir al carrito"} · <span id="detAddAmt">${money(detUnit(it) * detQty)}</span></button>
+        ${isPaused(l.id) || isSoldOut(l.id, it.id) ? `<div class="notice warn"><i data-lucide="circle-pause"></i><p>${isPaused(l.id) ? `${esc(l.name)} no está recibiendo pedidos ahora.` : "Este producto se agotó por hoy."}</p></div>` : ""}
+        <button class="btn" type="button" id="detAdd"${isPaused(l.id) || isSoldOut(l.id, it.id) ? " disabled" : ""}><i data-lucide="shopping-bag"></i>${editing ? "Guardar cambios" : other ? "Vaciar carrito y añadir" : "Añadir al carrito"} · <span id="detAddAmt">${money(detUnit(it) * detQty)}</span></button>
       </div>
     </div>`;
   icons();
@@ -1653,6 +1669,8 @@ function renderCarrito() {
   back.dataset.go = "local"; back.lastChild.textContent = "Volver al menú de " + l.name;
   curLocal = l.id; saveFoodNav();
   const total = cartTotal(), n = cartCount();
+  const soldNames = cart.lines.filter(x => isSoldOut(l.id, x.item)).map(x => (itemById(l, x.item) || {}).name);
+  const blocked = isPaused(l.id) || soldNames.length > 0;
   const defCard = cards.length ? cardLabel(cards[0]) : "Tarjeta de crédito o débito";
   body.innerHTML = `
     <div class="stack">
@@ -1693,7 +1711,8 @@ function renderCarrito() {
       <div class="sep"></div>
       <div class="kv total" style="font-size:18px"><span>Total a pagar</span><b style="font-size:27px">${money(total)}</b></div>
       <p class="small">Precios finales · Sin cargos extra</p>
-      <button class="btn" type="button" id="cartPay"><i data-lucide="arrow-right"></i>${payMethod === "card" ? "Pagar con tarjeta" : "Continuar con transferencia"} · ${money(total)}</button>
+      ${blocked ? `<div class="notice warn"><i data-lucide="circle-pause"></i><p>${isPaused(l.id) ? `${esc(l.name)} pausó los pedidos por ahora. Inténtalo más tarde.` : `Se agotó: ${soldNames.join(", ")}. Quítalo del carrito para continuar.`}</p></div>` : ""}
+      <button class="btn" type="button" id="cartPay"${blocked ? " disabled" : ""}><i data-lucide="arrow-right"></i>${payMethod === "card" ? "Pagar con tarjeta" : "Continuar con transferencia"} · ${money(total)}</button>
       <p class="tiny center"><i data-lucide="lock-keyhole"></i> ${payMethod === "card" ? "Prototipo: el cobro es simulado." : "Aún no se realizará ningún cobro."}</p>
     </div>`;
   icons();
@@ -1771,7 +1790,7 @@ document.addEventListener("click", e => {
   const fc = e.target.closest("[data-food-cat]");
   if (fc) { curCat = fc.dataset.foodCat; renderLocal(); return; }
   const oi = e.target.closest("[data-open-item]");
-  if (oi) { openItem(oi.dataset.openItem); go("detalle"); return; }
+  if (oi) { if (isSoldOut(curLocal, oi.dataset.openItem)) { toast("Este producto se agotó por hoy."); return; } openItem(oi.dataset.openItem); go("detalle"); return; }
   const dopt = e.target.closest("[data-det-opt]");
   if (dopt) { const [g, c] = dopt.dataset.detOpt.split(":").map(Number); detSel[g] = c; dopt.parentElement.querySelectorAll("[data-det-opt]").forEach(b => b.classList.toggle("on", b === dopt)); refreshDetTotal(); return; }
   const dq = e.target.closest("[data-det-qty]");
@@ -2394,7 +2413,8 @@ function allTransactions() {
       const email = k.slice("nexo-orders:".length);
       (JSON.parse(localStorage.getItem(k) || "[]") || []).forEach(o => {
         const l = localById(o.local);
-        out.push({ t: +o.id.slice(1) || 0, who: nameOf(email), concept: `Pedido ${o.num} · ${l ? l.name : ""}`, method: o.card || "Transferencia", amount: o.total, fee: o.total * rates.Comida / 100 });
+        out.push({ t: +o.id.slice(1) || 0, who: o.studentName || nameOf(email), concept: `Pedido ${o.num} · ${l ? l.name : ""}`, method: o.card || "Transferencia", amount: o.total, fee: o.total * rates.Comida / 100 });
+        if (o.cancelledAt) out.push({ t: o.cancelledAt, who: o.studentName || nameOf(email), concept: `Pedido cancelado por el local · ${o.num}`, method: o.card || "Transferencia", amount: -o.total, fee: null });
       });
     });
   } catch (err) {}
@@ -2512,14 +2532,17 @@ document.addEventListener("submit", e => {
 let trackId = null;
 function prepMinutes(l) { const n = ((l && l.eta) || "10").match(/\d+/g).map(Number); return Math.round(n.reduce((a, b) => a + b, 0) / n.length); }
 function pickupCode(o) { return String(1000 + ((+String(o.id).slice(1) || 0) * 7919) % 9000); }
-function orderStatus(o) { return !o.readyAt || o.pickedAt ? "retirado" : Date.now() >= o.readyAt ? "listo" : "preparando"; }
-const activeOrders = () => orders.filter(o => orderStatus(o) !== "retirado").sort((a, b) => b.paidAt - a.paidAt);
-const ORDER_STATE = { preparando: ["En preparación", "warn"], listo: ["Listo para retirar", "ok"], retirado: ["Retirado", "neutral"] };
+function orderStatus(o) { return o.cancelledAt ? "cancelado" : !o.readyAt || o.pickedAt ? "retirado" : Date.now() >= o.readyAt ? "listo" : "preparando"; }
+const activeOrders = () => orders.filter(o => ["preparando", "listo"].includes(orderStatus(o))).sort((a, b) => b.paidAt - a.paidAt);
+const ORDER_STATE = { preparando: ["En preparación", "warn"], listo: ["Listo para retirar", "ok"], retirado: ["Retirado", "neutral"], cancelado: ["Cancelado", "bad"] };
 function foodNotifs(t) {
   return orders.filter(o => orderStatus(o) === "listo").map(o => {
     const l = localById(o.local);
     return { id: `order-ready-${o.id}`, cat: "comida", alert: true, when: t, title: `Tu pedido de ${l.name} está listo`, body: `Muestra el código ${o.code} en el mostrador · ${l.place}.`, go: "pedido", order: o.id };
-  });
+  }).concat(orders.filter(o => o.cancelledAt && Date.now() - o.cancelledAt < 24 * 60 * MIN).map(o => {
+    const l = localById(o.local);
+    return { id: `order-cancel-${o.id}`, cat: "comida", alert: true, when: t, title: `${l.name} canceló tu pedido ${o.num}`, body: `Te devolvimos ${money(o.total)} a tu método de pago.`, go: "pedido", order: o.id };
+  }));
 }
 function renderPedido() {
   const body = document.getElementById("pdBody");
@@ -2534,9 +2557,10 @@ function renderPedido() {
   setFrame("pedido", "Tu pedido", ["Comida y kioscos", l.name, o.num]);
   const total = (o.readyAt || now) - (o.paidAt || now), left = Math.max(0, Math.ceil(((o.readyAt || now) - now) / MIN));
   const prog = st === "preparando" ? Math.min(96, Math.max(4, (now - o.paidAt) / total * 100)) : 100;
-  const title = st === "preparando" ? "Estamos preparando tu pedido" : st === "listo" ? "¡Tu pedido está listo!" : "Pedido retirado";
-  const lead = st === "preparando" ? `Listo aprox. a las ${hhmm(o.readyAt)} · ${left <= 1 ? "falta 1 min" : `faltan ${left} min`}`
+  const title = st === "preparando" ? "Estamos preparando tu pedido" : st === "listo" ? "¡Tu pedido está listo!" : st === "cancelado" ? `${l.name} canceló tu pedido` : "Pedido retirado";
+  const lead = st === "preparando" ? `Listo aprox. a las ${hhmm(o.readyAt)} · ${left <= 1 ? "falta 1 min" : `faltan ${left} min`}${o.delayMin ? ` · el local avisó una demora de ${o.delayMin} min` : ""}`
     : st === "listo" ? `Retíralo en el mostrador de ${l.name} · ${l.place}`
+    : st === "cancelado" ? `Te devolvimos ${money(o.total)} a ${o.card || "tu método de pago"}. Llega en 3 a 5 días hábiles.`
     : o.pickedAt ? `Lo retiraste a las ${hhmm(o.pickedAt)}. ¡Buen provecho!` : "Este pedido ya fue entregado.";
   const step = (done, on, label, time) => `<li class="${done ? "done" : ""}${on ? " on" : ""}"><span class="dot"></span><div><b>${label}</b>${time ? `<span class="tiny">${time}</span>` : ""}</div></li>`;
   const n = o.lines.reduce((a, x) => a + x.qty, 0);
@@ -2546,7 +2570,7 @@ function renderPedido() {
         <div class="row" style="align-items:flex-start"><span class="small">Pedido ${o.num} · ${esc(l.name)}</span><span class="pill ${ORDER_STATE[st][1]}">${ORDER_STATE[st][0]}</span></div>
         <div><h1 class="h1">${title}</h1><p class="lead">${lead}</p></div>
         ${st === "preparando" ? `<div class="track" role="progressbar" aria-label="Progreso de la preparación" aria-valuenow="${Math.round(prog)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${prog}%"></i></div>` : ""}
-        <ol class="steps-v">
+        <ol class="steps-v"${st === "cancelado" ? " hidden" : ""}>
           ${o.paidAt ? step(true, false, "Pago confirmado", hhmm(o.paidAt)) : ""}
           ${step(st !== "preparando", st === "preparando", "En preparación", o.paidAt ? `Desde las ${hhmm(o.paidAt)} · ${l.eta}` : "")}
           ${step(st === "retirado", st === "listo", "Listo para retirar", o.readyAt ? (st === "preparando" ? `Estimado: ${hhmm(o.readyAt)}` : hhmm(o.readyAt)) : "")}
@@ -2561,13 +2585,14 @@ function renderPedido() {
       </div>
     </div>
     <div class="stack">
-      <div class="card pickup${st === "listo" ? "" : " dim"}">
+      <div class="card pickup${st === "listo" ? "" : " dim"}"${st === "cancelado" ? " hidden" : ""}>
         <h2 class="h2">Código de retiro</h2>
         ${st === "listo" ? `<div class="qr"><canvas width="29" height="29" data-qr="${o.num}" role="img" aria-label="Código QR del pedido ${o.num}"></canvas></div>` : ""}
         <b class="pcode" aria-label="Código ${o.code.split("").join(" ")}">${o.code}</b>
         <p class="small" style="font-size:13px">${st === "listo" ? `Muéstralo en el mostrador de ${esc(l.name)}. Solo sirve para este pedido.` : st === "preparando" ? "Te avisaremos cuando esté listo. El código QR aparece en ese momento." : "Este código ya se usó."}</p>
       </div>
       <div class="card"><div class="row start"><i data-lucide="map-pin" style="color:var(--brand);font-size:20px"></i><b class="h3">${esc(l.name)}</b></div><p class="small" style="font-size:13px">${l.place} · Campus Central · Planta baja · Hoy ${l.hours}</p></div>
+      ${st === "cancelado" ? `<div class="notice warn"><i data-lucide="ban"></i><p>Si tienes dudas sobre la cancelación, escríbenos desde <button class="link b" type="button" data-go="soporte" style="font-size:12px">Soporte</button>.</p></div>` : ""}
       ${st === "preparando" ? `<div class="notice"><i data-lucide="flask-conical"></i><p>Prototipo: <button class="link b" type="button" data-sim-ready="${o.id}" style="font-size:12px">simular que el pedido ya está listo</button> para no esperar ${l.eta}.</p></div>` : ""}
       ${orders.length > 1 ? `<button class="link b" type="button" data-go="actividad">Ver todos mis pedidos en Actividad →</button>` : ""}
     </div>`;
@@ -2590,10 +2615,12 @@ function checkOrders() {
   let changed = false;
   orders.forEach(o => {
     if (orderStatus(o) === "listo" && !o.readyNotified) { o.readyNotified = true; changed = true; toast(`Tu pedido de ${localById(o.local).name} está listo. Código ${o.code}.`); }
+    if (o.cancelledAt && !o.cancelNotified) { o.cancelNotified = true; changed = true; toast(`${localById(o.local).name} canceló tu pedido. Te devolvimos ${money(o.total)}.`); }
   });
   if (changed) { saveOrders(); try { renderNotifs(); } catch (err) {} }
   if (current === "pedido") renderPedido();
   if (current === "comida") renderFoodOrders();
+  if (current === "local-pedidos" && typeof renderLocalPedidos === "function") renderLocalPedidos();
 }
 document.addEventListener("click", e => {
   const pk = e.target.closest("[data-picked]");
@@ -2603,6 +2630,174 @@ document.addEventListener("click", e => {
 });
 setInterval(checkOrders, 15000);
 setTimeout(checkOrders, 1200);
+
+/* ---------- Comercio: cada local recibe sus pedidos, los marca listos y los entrega con el código ----------
+   Los pedidos viven en la cuenta de cada estudiante (nexo-orders:<correo>); el local los lee y escribe ahí.
+   Si el local no hace nada, el pedido igual pasa a "listo" por tiempo (para que la vista del estudiante funcione sola). */
+const myLocal = () => account && account.local ? localById(account.local) : null;
+function allOrders() {
+  const out = [];
+  try {
+    Object.keys(localStorage).filter(k => k.startsWith("nexo-orders:")).forEach(k => {
+      const email = k.slice("nexo-orders:".length);
+      (JSON.parse(localStorage.getItem(k) || "[]") || []).forEach(o => out.push({ o, email }));
+    });
+  } catch (err) {}
+  return out;
+}
+function updateOrder(email, id, fn) {
+  const key = "nexo-orders:" + email;
+  try {
+    const list = JSON.parse(localStorage.getItem(key) || "[]") || [], o = list.find(x => x.id === id);
+    if (!o) return null;
+    fn(o); localStorage.setItem(key, JSON.stringify(list));
+    if (email === sessionEmail) orders = list;
+    return o;
+  } catch (err) { return null; }
+}
+// Pedidos de ejemplo para que el tablero del local no arranque vacío (una sola vez por local)
+function seedLocalOrders(l) {
+  const flag = "nexo-localseed:" + l.id;
+  try { if (localStorage.getItem(flag)) return; localStorage.setItem(flag, "1"); } catch (err) { return; }
+  const n = Date.now(), items = itemsOf(l), d = day0(simDate);
+  const mk = (email, name, idx, qty, paidAgo, extra) => {
+    const it = items[idx % items.length], id = "o" + (n - paidAgo * MIN), paidAt = n - paidAgo * MIN;
+    const o = { id, num: `${l.pref}-${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(900 + idx).padStart(4, "0")}`, local: l.id, method: "card",
+      date: fmtD(d), time: hhmm(paidAt), lines: [{ name: it.name, icon: it.icon, opts: (it.opts || []).map(g => `${g.name}: ${g.choices[0].l}`), note: idx === 1 ? "Sin cebolla, por favor" : "", qty, total: it.price * qty }],
+      total: it.price * qty, card: "Visa ···· 1190", paidAt, readyAt: paidAt + prepMinutes(l) * MIN, studentName: name, readyNotified: true, ...extra };
+    o.code = pickupCode(o);
+    const key = "nexo-orders:" + email;
+    try { const list = JSON.parse(localStorage.getItem(key) || "[]") || []; list.push(o); localStorage.setItem(key, JSON.stringify(list)); } catch (err) {}
+  };
+  mk("luis.perez@correo.unimet.edu.ve", "Luis Pérez", 0, 1, 3);
+  mk("valeria.ruiz@correo.unimet.edu.ve", "Valeria Ruiz", 1, 2, 6);
+  mk("sofia.diaz@correo.unimet.edu.ve", "Sofía Díaz", 2, 1, 18, { readyAt: n - 4 * MIN });
+  mk("mateo.silva@correo.unimet.edu.ve", "Mateo Silva", 3, 1, 50, { readyAt: n - 38 * MIN, pickedAt: n - 33 * MIN });
+}
+let lpConfirm = null, lpDeliver = null;
+function renderLocalPedidos() {
+  const l = myLocal(); if (!l) return;
+  seedLocalOrders(l);
+  const mine = allOrders().filter(x => x.o.local === l.id && x.o.readyAt), today = day0(new Date()).getTime();
+  const by = st => mine.filter(x => orderStatus(x.o) === st);
+  const prep = by("preparando").sort((a, b) => a.o.readyAt - b.o.readyAt), ready = by("listo").sort((a, b) => a.o.readyAt - b.o.readyAt);
+  const done = mine.filter(x => ["retirado", "cancelado"].includes(orderStatus(x.o)) && (x.o.pickedAt || x.o.cancelledAt || 0) >= today).sort((a, b) => (b.o.pickedAt || b.o.cancelledAt) - (a.o.pickedAt || a.o.cancelledAt));
+  const sales = mine.filter(x => x.o.paidAt >= today && !x.o.cancelledAt).reduce((a, x) => a + x.o.total, 0);
+  document.getElementById("lpTitle").textContent = isPaused(l.id) ? "Pedidos en pausa" : "Pedidos de hoy";
+  document.getElementById("lpLead").textContent = `${l.name} · ${l.place} · Hoy ${l.hours}`;
+  document.getElementById("lpPause").innerHTML = isPaused(l.id)
+    ? `<button class="btn" type="button" data-lp-pause="0"><i data-lucide="circle-play"></i>Reanudar pedidos</button>`
+    : `<button class="btn ghost" type="button" data-lp-pause="1"><i data-lucide="circle-pause"></i>Pausar pedidos</button>`;
+  const k = (label, val, sub) => `<div class="card kpi static"><span class="small">${label}</span><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
+  document.getElementById("lpKpis").innerHTML = k("En preparación", prep.length, prep.length ? `El próximo a las ${hhmm(prep[0].o.readyAt)}` : "Nada en cocina")
+    + k("Listos para retirar", ready.length, ready.length ? "Esperando al estudiante" : "Ninguno esperando")
+    + k("Ventas de hoy", money(sales), `${mine.filter(x => x.o.paidAt >= today && !x.o.cancelledAt).length} pedidos pagados`);
+  const lines = o => o.lines.map(x => `<p style="font-size:13px"><b>${x.qty} ×</b> ${esc(x.name)}${x.opts.length ? `<span class="tiny" style="display:block">${x.opts.map(esc).join(" · ")}</span>` : ""}${x.note ? `<span class="note">Nota: ${esc(x.note)}</span>` : ""}</p>`).join("");
+  const who = x => esc(x.o.studentName || nameOf(x.email));
+  const card = (x, st) => {
+    const o = x.o, left = Math.max(0, Math.ceil((o.readyAt - Date.now()) / MIN)), key = `${x.email}|${o.id}`;
+    const head = `<div class="row"><span class="tk-ref">${o.num}</span><span class="tiny">${who(x)} · ${o.time}</span></div>`;
+    const confirm = lpConfirm === key ? `<div class="confirm"><p>¿Cancelar el pedido y devolver ${money(o.total)} a ${esc(o.card || "su método de pago")}? Le avisaremos al estudiante.</p><div class="row"><button class="btn ghost" type="button" data-lp-no>Volver</button><button class="btn" type="button" data-lp-cancel-yes="${key}">Cancelar pedido</button></div></div>` : "";
+    if (st === "preparando") return `<div class="card lp-card">${head}${lines(o)}
+      <div class="row"><span class="pill ${left <= 2 ? "warn" : "neutral"}"><i data-lucide="timer"></i>&nbsp;${left <= 0 ? "Ya debería estar listo" : `Listo en ${left} min · ${hhmm(o.readyAt)}`}</span><b>${money(o.total)}</b></div>
+      ${o.delayMin ? `<p class="tiny">Avisaste una demora de ${o.delayMin} min.</p>` : ""}
+      ${confirm || `<button class="btn" type="button" data-lp-ready="${key}"><i data-lucide="package-check"></i>Marcar como listo</button>
+      <div class="row"><button class="link b" type="button" data-lp-delay="${key}">Avisar demora +5 min</button><button class="link" type="button" style="color:var(--danger)" data-lp-cancel="${key}">Cancelar pedido</button></div>`}</div>`;
+    if (st === "listo") return `<div class="card lp-card ready">${head}${lines(o)}
+      <div class="row"><span class="pill ok">Listo desde las ${hhmm(o.readyAt)}</span><b>${money(o.total)}</b></div>
+      ${lpDeliver === key ? `<form class="stack s14" data-lp-code="${key}"><label class="small" style="font-weight:600">Pide el código de 4 dígitos al estudiante</label><div class="row"><div class="input" style="flex:1"><input inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000" aria-label="Código de retiro"></div><button class="btn" type="submit" style="width:auto;padding:0 18px">Entregar</button></div><button class="link" type="button" data-lp-deliver="">Cerrar</button></form>`
+        : `<button class="btn" type="button" data-lp-deliver="${key}"><i data-lucide="hand-platter"></i>Entregar pedido</button>`}</div>`;
+    return `<div class="row lp-done"><div><span class="tk-ref">${o.num}</span> <span class="tiny">${who(x)}</span></div><span class="tiny">${o.cancelledAt ? `Cancelado · ${hhmm(o.cancelledAt)}` : `Entregado · ${hhmm(o.pickedAt)}`}</span><b class="${o.cancelledAt ? "neg" : ""}" style="font-size:12px">${o.cancelledAt ? "−" : ""}${money(o.total)}</b></div>`;
+  };
+  const col = (title, icon, list, st, empty) => `<div class="stack s14"><div class="row"><h2 class="sec"><i data-lucide="${icon}" style="color:var(--brand)"></i> ${title}</h2><span class="pill neutral">${list.length}</span></div>${list.map(x => card(x, st)).join("") || `<p class="small lp-empty">${empty}</p>`}</div>`;
+  document.getElementById("lpBoard").innerHTML = col("En preparación", "chef-hat", prep, "preparando", "No hay pedidos en cocina.") + col("Listos para retirar", "package-check", ready, "listo", "Nada esperando retiro.")
+    + `<div class="stack s14"><div class="row"><h2 class="sec"><i data-lucide="check" style="color:var(--brand)"></i> Entregados hoy</h2><span class="pill neutral">${done.length}</span></div><div class="card" style="gap:0">${done.map(x => card(x, "done")).join("") || `<p class="small">Todavía no entregas pedidos hoy.</p>`}</div></div>`;
+  icons();
+}
+function renderLocalMenu() {
+  const l = myLocal(); if (!l) return;
+  const st = lstate(l.id), n = st.soldout.length;
+  document.getElementById("lmLead").textContent = `${l.name} · ${l.tagline}`;
+  document.getElementById("lmBody").innerHTML = `
+    <div class="card">
+      <div class="row"><h2 class="h2">Productos</h2><span class="small">${n ? `${n} agotado${n === 1 ? "" : "s"}` : "Todo disponible"}</span></div>
+      <p class="small" style="font-size:13px">Marca lo que se terminó hoy. Los estudiantes lo verán como agotado y no podrán pedirlo.</p>
+      ${l.cats.map(c => `<h3 class="h3" style="margin-top:6px">${esc(c.name)}</h3>` + c.items.map(it => {
+        const off = st.soldout.includes(it.id);
+        return `<div class="lm-item${off ? " off" : ""}"><span class="ico"><i data-lucide="${it.icon}"></i></span><span class="grow"><b>${esc(it.name)}</b><span class="tiny" style="display:block">${money(it.price)}${off ? " · Agotado" : ""}</span></span><button class="switch" type="button" role="switch" aria-checked="${!off}" aria-label="${esc(it.name)} disponible" data-lm-item="${it.id}"></button></div>`;
+      }).join("")).join("")}
+    </div>
+    <div class="stack">
+      <div class="card"><h2 class="h2">Recepción de pedidos</h2>
+        <p class="small" style="font-size:13px">${isPaused(l.id) ? "Los pedidos están en pausa: los estudiantes ven tu menú, pero no pueden pagar." : `Estás recibiendo pedidos. Horario de hoy: ${l.hours}.`}</p>
+        <span class="pill ${isPaused(l.id) ? "warn" : "ok"}">${isPaused(l.id) ? "En pausa" : "Abierto"}</span>
+        ${isPaused(l.id) ? `<button class="btn" type="button" data-lp-pause="0"><i data-lucide="circle-play"></i>Reanudar pedidos</button>` : `<button class="btn ghost" type="button" data-lp-pause="1"><i data-lucide="circle-pause"></i>Pausar pedidos</button>`}
+        <p class="tiny">Úsalo si se acumulan pedidos o cierras antes de tiempo. Los pedidos ya pagados siguen en tu tablero.</p></div>
+      <div class="notice"><i data-lucide="info"></i><p>Tiempo de preparación que ven los estudiantes: ${l.eta}. Los precios y el menú los ajusta la administración de Nexo.</p></div>
+    </div>`;
+  icons();
+}
+function lpFind(key) { const i = key.indexOf("|"); return { email: key.slice(0, i), id: key.slice(i + 1) }; }
+document.addEventListener("click", e => {
+  const pz = e.target.closest("[data-lp-pause]");
+  if (pz) { const l = myLocal(), on = pz.dataset.lpPause === "1"; lstate(l.id).paused = on; saveLocalState(); toast(on ? "Pausaste los pedidos. Los estudiantes no podrán pagar hasta que los reanudes." : "Volviste a recibir pedidos."); current === "local-menu" ? renderLocalMenu() : renderLocalPedidos(); return; }
+  const rd = e.target.closest("[data-lp-ready]");
+  if (rd) { const { email, id } = lpFind(rd.dataset.lpReady); const o = updateOrder(email, id, o => { o.readyAt = Date.now(); o.readyMarked = true; }); if (o) toast(`${o.num} está listo. Le avisamos al estudiante.`); renderLocalPedidos(); return; }
+  const dl = e.target.closest("[data-lp-delay]");
+  if (dl) { const { email, id } = lpFind(dl.dataset.lpDelay); const o = updateOrder(email, id, o => { o.readyAt = Math.max(o.readyAt, Date.now()) + 5 * MIN; o.delayMin = (o.delayMin || 0) + 5; }); if (o) toast(`Avisamos una demora: ${o.num} queda para las ${hhmm(o.readyAt)}.`); renderLocalPedidos(); return; }
+  const cc = e.target.closest("[data-lp-cancel]"); if (cc) { lpConfirm = cc.dataset.lpCancel; renderLocalPedidos(); return; }
+  if (e.target.closest("[data-lp-no]")) { lpConfirm = null; renderLocalPedidos(); return; }
+  const cy = e.target.closest("[data-lp-cancel-yes]");
+  if (cy) {
+    const { email, id } = lpFind(cy.dataset.lpCancelYes), l = myLocal();
+    const o = updateOrder(email, id, o => { o.cancelledAt = Date.now(); });
+    if (o) {
+      pushStudentMove(email, { title: `Pedido cancelado · ${o.num}`, detail: `${l.name} · ${l.place}`, amount: "+" + money(o.total), pill: "Reembolsado", pillCls: "ok", date: fmtD(new Date()), icon: "rotate-ccw", go: "pedido", goLabel: "Ver pedido ›", order: o.id });
+      toast(`Cancelaste ${o.num} y devolvimos ${money(o.total)}.`);
+    }
+    lpConfirm = null; renderLocalPedidos(); return;
+  }
+  const dv = e.target.closest("[data-lp-deliver]");
+  if (dv) { lpDeliver = dv.dataset.lpDeliver || null; renderLocalPedidos(); const inp = document.querySelector("[data-lp-code] input"); if (inp) inp.focus(); return; }
+});
+document.addEventListener("click", e => {
+  const it = e.target.closest("[data-lm-item]");
+  if (it) {
+    const l = myLocal(), st = lstate(l.id), id = it.dataset.lmItem, name = itemById(l, id).name, avail = st.soldout.includes(id);
+    st.soldout = avail ? st.soldout.filter(x => x !== id) : [...st.soldout, id];
+    saveLocalState(); toast(avail ? `${name} vuelve a estar disponible.` : `${name} quedó como agotado.`); renderLocalMenu();
+  }
+});
+function deliverByCode(code, onlyKey) {
+  const l = myLocal();
+  const x = allOrders().find(x => x.o.local === l.id && orderStatus(x.o) === "listo" && x.o.code === code && (!onlyKey || `${x.email}|${x.o.id}` === onlyKey));
+  if (!x) return null;
+  return updateOrder(x.email, x.o.id, o => { o.pickedAt = Date.now(); o.readyNotified = true; });
+}
+document.addEventListener("submit", e => {
+  const f = e.target;
+  if (f.matches("[data-lp-code]") || f.id === "lpCodeForm") {
+    e.preventDefault();
+    const inp = f.querySelector("input"), code = inp.value.replace(/\D/g, "");
+    if (code.length !== 4) { inp.focus(); toast("El código tiene 4 dígitos."); return; }
+    const o = deliverByCode(code, f.dataset.lpCode || null);
+    if (!o) { inp.closest(".input").classList.add("bad-input"); inp.select(); toast(f.dataset.lpCode ? "Ese código no corresponde a este pedido." : "No hay ningún pedido listo con ese código."); return; }
+    lpDeliver = null; if (f.id === "lpCodeForm") f.reset();
+    toast(`Entregaste ${o.num}. ¡Listo!`); renderLocalPedidos();
+  }
+});
+document.addEventListener("input", e => { if (e.target.closest && e.target.closest(".bad-input")) e.target.closest(".bad-input").classList.remove("bad-input"); });
+/* Entre pestañas: si otra cuenta cambia pedidos o el estado de un local, esta pantalla se actualiza sola */
+window.addEventListener("storage", e => {
+  if (!e.key) return;
+  if (e.key === "nexo-localstate") loadLocalState();
+  if (e.key === K("nexo-orders")) { try { orders = JSON.parse(e.newValue || "[]") || []; } catch (err) {} }
+  if (e.key === "nexo-tickets") { try { tickets = JSON.parse(e.newValue || "[]") || tickets; } catch (err) {} }
+  if (!(e.key.startsWith("nexo-orders:") || e.key === "nexo-localstate" || e.key === "nexo-tickets")) return;
+  const r = { comida: () => { renderFoodList(); renderFoodOrders(); }, local: renderLocal, carrito: renderCarrito, pedido: renderPedido, soporte: renderSoporte, "local-pedidos": renderLocalPedidos, "local-menu": renderLocalMenu, gestion: renderGestion, moderacion: renderModeracion, "creador-equipo": renderCreadorEquipo }[current];
+  try { checkOrders(); } catch (err) {}
+  if (r && current !== "pedido" && current !== "comida") try { r(); } catch (err) {}
+});
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();
