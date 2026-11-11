@@ -208,6 +208,26 @@ async def main() -> int:
         await pg.wait_for_timeout(300)
         check("Agotado" in await pg.inner_text("#localMenu"), "el estudiante ve el producto agotado")
 
+        # personal invitado: activa su cuenta sin carnet con el enlace de la invitación
+        await login("maria.vera@unimet.edu.ve", "demo-admin-01")
+        await pg.goto(URL + "#equipo")
+        await pg.wait_for_timeout(300)
+        await pg.fill("#equipo [data-invite] input", "andrea.soto@unimet.edu.ve")
+        await pg.click("#equipo [data-invite] button[type=submit]")
+        await pg.wait_for_timeout(200)
+        token = await pg.evaluate("JSON.parse(localStorage.getItem('nexo-invites')).find(i => i.email === 'andrea.soto@unimet.edu.ve').token")
+        await pg.evaluate("localStorage.removeItem('nexo-session'); sessionStorage.removeItem('nexo-session')")
+        await pg.goto(URL + "#invitacion-" + token)
+        await pg.reload()
+        await pg.wait_for_timeout(300)
+        await pg.fill("#iv-name", "Andrea Soto")
+        await pg.fill("#iv-pass", "clave1234")
+        await pg.fill("#iv-pass2", "clave1234")
+        await pg.check("#iv-terms")
+        await pg.click("#ivForm button[type=submit]")
+        await pg.wait_for_timeout(800)
+        check(await pg.evaluate("location.hash") == "#moderacion", "la persona invitada activa su cuenta sin carnet y entra como moderadora")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 

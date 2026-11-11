@@ -193,9 +193,10 @@ function enterApp(email, remember, flash) {
 /* ---------- Navegación ---------- */
 const screens = [...document.querySelectorAll("section.screen")].map(s => s.id);
 let current = null, previous = "tutorial";
-const PUBLIC = ["tutorial", "login", "registro", "ayuda"];
+const PUBLIC = ["tutorial", "login", "registro", "ayuda", "invitacion"];
 const STAFF_SCREENS = { gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local" };
 function show(id) {
+  if (/^invitacion-[A-Z0-9]+$/.test(id)) { ivToken = id.slice(11); id = "invitacion"; }
   if (!screens.includes(id)) id = sessionEmail ? "inicio" : "tutorial";
   if (!sessionEmail && !PUBLIC.includes(id)) { id = "login"; if (location.hash !== "#login") history.replaceState(null, "", "#login"); setTimeout(() => toast("Inicia sesión para continuar."), 0); }
   if (sessionEmail && !PUBLIC.includes(id)) {
@@ -211,6 +212,7 @@ function show(id) {
   if (id === "perfil" && typeof openPerfil === "function") openPerfil();
   if (["materias", "caja", "tarjeta"].includes(id)) { let none = false; try { none = !MATERIAS.length; } catch (err) {} if (none) { insReturn = id; history.replaceState(null, "", "#inscripcion"); id = "inscripcion"; current = id; screens.forEach(s => { document.getElementById(s).hidden = s !== id; }); } }
   if (id === "inscripcion" && typeof openInscripcion === "function") openInscripcion();
+  if (id === "invitacion" && typeof renderInvitacion === "function") renderInvitacion();
   if (id === "comida" && typeof renderFoodList === "function") renderFoodList();
   if (id === "comida" && typeof renderFoodOrders === "function") try { renderFoodOrders(); } catch (err) {}
   if (id === "local" && typeof renderLocal === "function") renderLocal();
@@ -855,6 +857,7 @@ document.getElementById("registerForm").addEventListener("submit", e => {
   const full = cleanName(nameEl.value);
   const now = new Date();
   const inv = invites.find(i => i.email === email);
+  if (inv) { ivEmail = email; ivToken = null; go("invitacion"); toast("Ese correo tiene una invitación al equipo. Actívala aquí, sin carnet."); return; }
   accounts.push({ full, carnet: carnetEl.value, email, pass: passKey(passEl.value), created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`, ...(inv ? { role: inv.role } : {}) });
   saveAccounts();
   if (inv) { invites = invites.filter(i => i !== inv); saveInvites(); }
@@ -2004,11 +2007,11 @@ function renderEquipo() {
   const rows = teamRows();
   document.getElementById("eqTable").innerHTML = `<div class="tk-row tk-head eq"><span>Persona</span><span>Abiertos</span><span>Resueltos</span><span>Estado</span><span></span></div>` + (rows.map(r => {
     const open = tickets.filter(t => t.mod === r.email && isOpen(t)).length, done = tickets.filter(t => t.mod === r.email && !isOpen(t)).length;
-    const st = r.kind === "inv" ? `<span class="pill warn">Invitación pendiente</span>` : r.kind === "off" ? `<span class="pill neutral">Desactivado</span>` : `<span class="pill ok">Activo</span>`;
-    const act = r.kind === "inv" ? `<button class="link" type="button" data-inv-cancel="${r.email}">Cancelar invitación</button>`
+    const st = r.kind === "inv" ? (invExpired(invByEmail(r.email)) ? `<span class="pill bad">Invitación vencida</span>` : `<span class="pill warn">Invitación pendiente</span>`) : r.kind === "off" ? `<span class="pill neutral">Desactivado</span>` : `<span class="pill ok">Activo</span>`;
+    const act = r.kind === "inv" ? `<div class="stack" style="gap:6px"><button class="link b" type="button" data-inv-copy="${r.email}">Copiar enlace</button><button class="link" type="button" data-inv-cancel="${r.email}">Cancelar invitación</button></div>`
       : r.kind === "off" ? `<button class="link b" type="button" data-mod-on="${r.email}">Reactivar</button>`
       : `<button class="link" type="button" style="color:var(--danger)" data-mod-off="${r.email}">Desactivar</button>`;
-    return `<div class="tk-row eq"><div class="row start"><span class="avatar sm">${r.kind === "inv" ? `<i data-lucide="mail"></i>` : initialsOf(r.name)}</span><div style="min-width:0"><b style="font-size:13px">${esc(r.name)}</b><p class="tiny">${r.kind === "inv" ? "Invitado como moderador" : esc(r.email)}</p></div></div>
+    return `<div class="tk-row eq"><div class="row start"><span class="avatar sm">${r.kind === "inv" ? `<i data-lucide="mail"></i>` : initialsOf(r.name)}</span><div style="min-width:0"><b style="font-size:13px">${esc(r.name)}</b><p class="tiny">${r.kind === "inv" ? `Invitado como moderador · ${invNote(invByEmail(r.email))}` : esc(r.email)}</p></div></div>
       <div><span class="tk-lbl">Abiertos</span>${r.kind === "inv" ? "—" : open}</div><div><span class="tk-lbl">Resueltos</span>${r.kind === "inv" ? "—" : done}</div><div>${st}</div><div>${act}</div></div>`;
   }).join("") || `<p class="nempty" style="padding:18px">Aún no hay moderadores. Invita al primero.</p>`);
   document.getElementById("eqSide").innerHTML = inviteCard() + `<div class="notice"><i data-lucide="info"></i><p>Al desactivar a un moderador, sus tickets abiertos quedan sin asignar para que los repartas.</p></div>`;
@@ -2057,7 +2060,7 @@ function sendInvite(form) {
   if (acc && (acc.role === "mod" || acc.role === "admin")) return fail(acc.disabled ? "Esa persona ya es moderadora, pero está desactivada. Reactívala desde Moderadores." : "Esa persona ya forma parte del equipo de gestión.");
   if (invites.some(i => i.email === email)) return fail("Ya enviaste una invitación a ese correo.");
   if (acc) { acc.role = role; saveAccounts(); toast(`${acc.full} ya tenía cuenta: ahora es ${rl}.`); logAudit("rol", `Asignó a ${acc.full} como ${rl}.`); }
-  else { invites.push({ email, role, by: user.email, t: Date.now() }); saveInvites(); toast(`Invitación enviada a ${email}.`); logAudit("rol", `Invitó a ${email} como ${rl}.`); }
+  else { invites.push(newInvite(email, role)); saveInvites(); toast(`Invitación enviada a ${email}. También puedes copiar el enlace desde el equipo.`); logAudit("rol", `Invitó a ${email} como ${rl}.`); }
   if (current === "equipo") renderEquipo(); else if (current === "creador-equipo") renderCreadorEquipo(); else renderGestion();
 }
 
@@ -2351,12 +2354,12 @@ function renderCreadorEquipo() {
   const rows = staffRows();
   document.getElementById("ceTeam").innerHTML = `<div class="row"><h2 class="sec">Equipo de gestión</h2><button class="link b" type="button" data-mv-tab="audit">Ver registro de cambios ↗</button></div>`
     + (rows.map(r => {
-      const st = r.kind === "inv" ? `<span class="pill warn">Invitado</span>` : r.kind === "off" ? `<span class="pill neutral">Desactivado</span>` : `<span class="pill ok">Activo</span>`;
+      const st = r.kind === "inv" ? (invExpired(invByEmail(r.email)) ? `<span class="pill bad">Vencida</span>` : `<span class="pill warn">Invitado</span>`) : r.kind === "off" ? `<span class="pill neutral">Desactivado</span>` : `<span class="pill ok">Activo</span>`;
       const menu = ceMenu === r.email ? `<div class="menu">${r.kind === "inv"
-        ? `<button class="link" type="button" data-inv-cancel="${r.email}">Cancelar invitación</button>`
+        ? `<button class="link b" type="button" data-inv-copy="${r.email}">Copiar enlace de invitación</button><button class="link b" type="button" data-inv-renew="${r.email}">Reenviar (7 días más)</button><button class="link" type="button" data-inv-cancel="${r.email}">Cancelar invitación</button>`
         : `<button class="link b" type="button" data-ce-role="${r.email}">Cambiar a ${r.role === "admin" ? "moderador" : "administrador"}</button>${r.kind === "off" ? `<button class="link b" type="button" data-mod-on="${r.email}">Reactivar</button>` : `<button class="link" type="button" style="color:var(--danger)" data-mod-off="${r.email}">Desactivar</button>`}`}</div>` : "";
       return `<div class="member"><span class="avatar soft">${initialsOf(r.kind === "inv" ? r.email.split("@")[0].replace(/[._]/g, " ") : r.name)}</span>
-        <div class="who"><b>${esc(r.kind === "inv" ? r.email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : r.name)}</b><span class="tiny">${esc(r.email)}</span></div>
+        <div class="who"><b>${esc(r.kind === "inv" ? r.email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : r.name)}</b><span class="tiny">${esc(r.email)}${r.kind === "inv" ? ` · ${invNote(invByEmail(r.email))}` : ""}</span></div>
         <span class="pill neutral">${ROLE_LABEL[r.role]}</span>${st}
         <button class="dots" type="button" aria-label="Opciones de ${esc(r.name)}" aria-expanded="${ceMenu === r.email}" data-ce-menu="${r.email}"><i data-lucide="ellipsis"></i></button></div>${menu}`;
     }).join("") || `<p class="small">Aún no hay equipo de gestión. Invita a la primera persona.</p>`);
@@ -2797,6 +2800,109 @@ window.addEventListener("storage", e => {
   const r = { comida: () => { renderFoodList(); renderFoodOrders(); }, local: renderLocal, carrito: renderCarrito, pedido: renderPedido, soporte: renderSoporte, "local-pedidos": renderLocalPedidos, "local-menu": renderLocalMenu, gestion: renderGestion, moderacion: renderModeracion, "creador-equipo": renderCreadorEquipo }[current];
   try { checkOrders(); } catch (err) {}
   if (r && current !== "pedido" && current !== "comida") try { r(); } catch (err) {}
+});
+
+/* ---------- Invitaciones del equipo: enlace personal (#invitacion-TOKEN), vencen a los 7 días ----------
+   La persona invitada activa su cuenta sin carnet en #invitacion. También puede buscar su invitación por correo. */
+const INV_DAYS = 7;
+const genToken = () => Array.from({ length: 8 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
+function newInvite(email, role) { const t = Date.now(); return { email, role, by: user.email, byName: user.full, t, exp: t + INV_DAYS * 24 * HOUR, token: genToken() }; }
+// Invitaciones guardadas antes de esta función: se les da enlace y vencimiento
+if (invites.some(i => !i.token || !i.exp)) { invites.forEach(i => { if (!i.token) i.token = genToken(); if (!i.exp) i.exp = (i.t || Date.now()) + INV_DAYS * 24 * HOUR; }); saveInvites(); }
+const invExpired = i => Date.now() > i.exp;
+const inviteLink = i => location.href.split("#")[0] + "#invitacion-" + i.token;
+const invByEmail = e => invites.find(i => i.email === e);
+const invNote = i => !i ? "" : invExpired(i) ? `Venció el ${fmtD(new Date(i.exp))}` : `Vence el ${fmtD(new Date(i.exp))}`;
+const ROLE_CAN = { mod: "Responder tickets de estudiantes y ofrecer reembolsos o cancelaciones.", admin: "Asignar moderadores y consultar todos los tickets de soporte." };
+let ivToken = null, ivEmail = "", ivError = "";
+function renderInvitacion() {
+  const box = document.getElementById("ivBody");
+  const inv = ivToken ? invites.find(i => i.token === ivToken) : ivEmail ? invByEmail(ivEmail) : null;
+  const err = ivError ? `<div class="notice warn" role="alert"><i data-lucide="circle-alert"></i><p>${ivError}</p></div>` : "";
+  if (!inv) {
+    box.innerHTML = `<div><h1 class="h1">Activa tu cuenta del equipo</h1><p class="lead">${ivToken ? "Ese enlace de invitación ya no es válido: puede que se haya usado o cancelado." : "Escribe el correo al que te llegó la invitación."}</p></div>
+      <form class="card" id="ivFind" novalidate>
+        <div class="field"><label for="iv-find">Correo institucional</label><div class="input"><input id="iv-find" type="email" placeholder="nombre@unimet.edu.ve" autocomplete="email" value="${esc(ivEmail)}"><i data-lucide="mail"></i></div></div>
+        ${err}<button class="btn" type="submit"><i data-lucide="search"></i>Buscar mi invitación</button>
+      </form>
+      <p class="center small">¿Eres estudiante? <button class="link b" type="button" data-go="registro">Crea tu cuenta con tu carnet</button></p>`;
+    icons(); return;
+  }
+  const rl = ROLE_LABEL[inv.role];
+  if (invExpired(inv)) {
+    box.innerHTML = `<div><h1 class="h1">Tu invitación venció</h1><p class="lead">La invitación para ${esc(inv.email)} venció el ${fmtD(new Date(inv.exp))}.</p></div>
+      <div class="card"><p style="font-size:13px">Pídele a ${esc(inv.byName || "la administración de Nexo")} que te la reenvíe desde el equipo de gestión. Te llegará un enlace nuevo, válido por ${INV_DAYS} días.</p>
+      <button class="btn ghost" type="button" data-iv-other><i data-lucide="mail"></i>Buscar con otro correo</button></div>`;
+    icons(); return;
+  }
+  box.innerHTML = `<div><h1 class="h1">Activa tu cuenta</h1><p class="lead">${esc(inv.byName || "La administración de Nexo")} te invitó como <b>${rl.toLowerCase()}</b> de Nexo.</p></div>
+    <div class="notice"><i data-lucide="${inv.role === "admin" ? "shield-check" : "messages-square"}"></i><div><b>Acceso: ${rl}</b> ${ROLE_CAN[inv.role] || ""}</div></div>
+    <form class="card" id="ivForm" novalidate>
+      <div class="field"><label for="iv-mail">Correo institucional</label><div class="input"><input id="iv-mail" type="email" value="${esc(inv.email)}" readonly aria-readonly="true"><i data-lucide="lock"></i></div><p class="tiny">Es el correo de tu invitación. ${invNote(inv)}.</p></div>
+      <div class="field"><label for="iv-name">Nombre completo</label><div class="input"><input id="iv-name" type="text" placeholder="Ej.: Andrea Soto" autocomplete="name"><i data-lucide="user"></i></div></div>
+      <div class="field"><label for="iv-pass">Contraseña</label><div class="input"><input id="iv-pass" type="password" minlength="8" placeholder="Crea una contraseña" autocomplete="new-password"><button class="eye" type="button" data-eye="iv-pass" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div><p class="tiny">Mínimo 8 caracteres, con al menos un número.</p></div>
+      <div class="field"><label for="iv-pass2">Repite la contraseña</label><div class="input"><input id="iv-pass2" type="password" autocomplete="new-password"></div></div>
+      <label class="remember" for="iv-terms"><input id="iv-terms" type="checkbox">Acepto los términos de uso y la política de privacidad del equipo de Nexo.</label>
+      ${err}
+      <button class="btn" type="submit"><i data-lucide="user-check"></i>Activar cuenta</button>
+    </form>
+    <p class="center small">¿No eres tú? <button class="link b" type="button" data-iv-other>Buscar con otro correo</button></p>`;
+  icons();
+}
+document.addEventListener("submit", e => {
+  const f = e.target;
+  if (f.id === "ivFind") {
+    e.preventDefault();
+    const email = normEmail(document.getElementById("iv-find").value);
+    ivEmail = email; ivToken = null; ivError = "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) ivError = "Escribe un correo válido.";
+    else if (accounts.some(a => a.email === email)) ivError = `Ese correo ya tiene una cuenta. <button class="link b" type="button" data-go="login" style="font-size:12px;color:inherit;text-decoration:underline">Inicia sesión</button>.`;
+    else if (!invByEmail(email)) ivError = "No hay una invitación pendiente para ese correo. Pide a la administración de Nexo que te invite.";
+    renderInvitacion(); return;
+  }
+  if (f.id === "ivForm") {
+    e.preventDefault();
+    const inv = ivToken ? invites.find(i => i.token === ivToken) : invByEmail(ivEmail);
+    if (!inv || invExpired(inv)) { renderInvitacion(); return; }
+    const name = document.getElementById("iv-name"), p1 = document.getElementById("iv-pass"), p2 = document.getElementById("iv-pass2");
+    const fail = (msg, el) => { ivError = msg; const keep = { n: name.value, a: p1.value, b: p2.value, t: document.getElementById("iv-terms").checked }; renderInvitacion();
+      document.getElementById("iv-name").value = keep.n; document.getElementById("iv-pass").value = keep.a; document.getElementById("iv-pass2").value = keep.b; document.getElementById("iv-terms").checked = keep.t;
+      if (el) { const x = document.getElementById(el); x.closest(".field").classList.add("bad"); x.focus(); } };
+    if (!name.value.trim()) return fail("Escribe tu nombre completo.", "iv-name");
+    if (p1.value.length < 8 || !/\d/.test(p1.value)) return fail("La contraseña debe tener al menos 8 caracteres y un número.", "iv-pass");
+    if (p1.value !== p2.value) return fail("Las contraseñas no coinciden.", "iv-pass2");
+    if (!document.getElementById("iv-terms").checked) return fail("Acepta los términos de uso para continuar.", null);
+    if (accounts.some(a => a.email === inv.email)) return fail("Ese correo ya tiene una cuenta. Inicia sesión.", null);
+    const full = cleanName(name.value), now = new Date();
+    accounts.push({ full, carnet: "", email: inv.email, pass: passKey(p1.value), role: inv.role, created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}` });
+    saveAccounts();
+    invites = invites.filter(i => i !== inv); saveInvites();
+    audit.push({ t: Date.now(), who: full, role: inv.role, type: "rol", text: `Activó su cuenta de ${ROLE_LABEL[inv.role].toLowerCase()} (invitación de ${inv.byName || "la administración"}).` });
+    try { localStorage.setItem("nexo-audit", JSON.stringify(audit)); } catch (err) {}
+    ivError = ""; ivToken = null; ivEmail = "";
+    enterApp(inv.email, true, `Cuenta activada. Te damos la bienvenida al equipo, ${full.split(" ")[0]}.`);
+  }
+});
+document.addEventListener("input", e => { if (e.target.closest && e.target.closest("#ivForm .field.bad")) e.target.closest(".field").classList.remove("bad"); });
+document.addEventListener("click", e => {
+  if (e.target.closest("[data-iv-other]")) { ivToken = null; ivEmail = ""; ivError = ""; renderInvitacion(); return; }
+  if (e.target.closest('[data-go="invitacion"]')) { ivToken = null; ivError = ""; }
+  const cp = e.target.closest("[data-inv-copy]");
+  if (cp) {
+    const i = invByEmail(cp.dataset.invCopy); if (!i) return;
+    if (invExpired(i)) { toast("Esa invitación venció. Reenvíala para generar un enlace nuevo."); return; }
+    const link = inviteLink(i);
+    try { navigator.clipboard.writeText(link).then(() => toast(`Copiamos el enlace de ${i.email}. Envíaselo por correo.`), () => toast(link)); } catch (err) { toast(link); }
+    return;
+  }
+  const rn = e.target.closest("[data-inv-renew]");
+  if (rn) {
+    const i = invByEmail(rn.dataset.invRenew); if (!i) return;
+    i.exp = Date.now() + INV_DAYS * 24 * HOUR; i.token = genToken(); saveInvites();
+    logAudit("rol", `Reenvió la invitación de ${i.email}.`);
+    toast(`Reenviamos la invitación a ${i.email}. Vence el ${fmtD(new Date(i.exp))}.`);
+    ceMenu = null; if (current === "creador-equipo") renderCreadorEquipo(); else renderEquipo();
+  }
 });
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {

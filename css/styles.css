@@ -642,3 +642,4 @@ button.tk-row.on{background:var(--mint-bg)}
 @media (min-width:1100px){.lp-board{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (min-width:700px) and (max-width:1099px){.lp-board{grid-template-columns:1fr 1fr}.lp-board > :last-child{grid-column:1 / -1}}
 @media (max-width:699px){#lpPause{width:100%!important}}
+#ivBody{display:flex;flex-direction:column;gap:20px}

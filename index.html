@@ -91,6 +91,7 @@
         <p class="tiny">Comercio: <b>pinchopan@comercio.nexo</b> · <b style="white-space:nowrap">demo-local-01</b> (cada local tiene la suya: lapausa@, migrill@, teeb@…)</p>
       </form>
       <p class="center small">¿No tienes cuenta? <button class="link b" type="button" data-go="registro">Crear cuenta</button></p>
+      <p class="center small">¿Te invitaron al equipo de Nexo? <button class="link b" type="button" data-go="invitacion">Activa tu cuenta</button></p>
       <div class="secure"><i data-lucide="shield-check"></i><p>Tu información se protege con el acceso seguro de tu universidad.</p></div>
       <button class="link center" type="button" data-go="ayuda">¿No puedes entrar? Contactar a soporte</button>
     </div>
@@ -121,7 +122,25 @@
         <button class="btn" type="submit"><i data-lucide="user-plus"></i>Crear cuenta</button>
       </form>
       <p class="center small">¿Ya tienes cuenta? <button class="link b" type="button" data-go="login">Inicia sesión</button></p>
+      <p class="center small">¿Te invitaron al equipo de Nexo? <button class="link b" type="button" data-go="invitacion">Activa tu cuenta</button></p>
       <div class="secure"><i data-lucide="shield-check"></i><p>Tu información se protege con el acceso seguro de tu universidad.</p></div>
+    </div>
+  </main>
+</section>
+
+<!-- 3a · Activar cuenta del personal invitado (sin carnet) -->
+<section class="screen" id="invitacion" hidden>
+  <header class="topbar gutter">
+    <div class="brand"><span class="emblem"><i data-lucide="layers"></i></span>nexo</div>
+    <button class="link" type="button" data-go="ayuda">Soporte</button>
+  </header>
+  <main class="auth-wrap gutter">
+    <aside class="campus"><p class="tag">EQUIPO DE NEXO</p><h2>Ayuda a que el campus funcione.</h2>
+      <p>Las cuentas del equipo no usan carnet: se activan con la invitación que te envió la administración de Nexo.</p><p class="place">U. Metropolitana · Campus Central · Caracas</p></aside>
+    <div class="form-col">
+      <button class="link back" type="button" data-go="login"><i data-lucide="arrow-left"></i>Volver a iniciar sesión</button>
+      <div id="ivBody"></div>
+      <div class="secure"><i data-lucide="shield-check"></i><p>Las invitaciones son personales y vencen a los 7 días.</p></div>
     </div>
   </main>
 </section>
