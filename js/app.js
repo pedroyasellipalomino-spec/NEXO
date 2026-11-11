@@ -459,7 +459,7 @@ const ST = { externa: ["ok", "Pagada fuera de Nexo"], pagada: ["ok", "Pagada"], 
 function invLine(iv) {
   const s = statusOf(iv), p = pagos[iv.id];
   if (s === "pagada") return `Pagada el ${p.fecha} · ${p.via}${p.pp ? " · con pronto pago" : ""}`;
-  if (s === "revision") return `Transferencia en revisión · ${money(p.monto)}`;
+  if (s === "revision") return `Transferencia en revisión · ${p.currency === "bs" ? `${bsAmt(p.paidAmount)} (${money(p.monto)})` : money(p.monto)}${p.ref ? ` · Ref. ${p.ref.slice(-6)}` : ""}`;
   if (s === "externa") return "Indicaste que la pagaste fuera de Nexo · Puedes cambiarlo en Mis materias";
   if (s === "futura") return `Se emite el ${fmtDW(iv.issue)} · Pronto pago hasta el ${fmtDW(iv.ppEnd)}`;
   if (s === "pronto") return `Pronto pago hasta el ${fmtDW(iv.ppEnd)} · Luego ${money(PRICE_REG * MATERIAS.length)}`;
@@ -545,6 +545,7 @@ function renderDebt() {
   document.querySelectorAll('[data-pay="cta"]').forEach(el => el.textContent = `Pagar ${money(total)}`);
   document.querySelectorAll('[data-pay="lead"]').forEach(el => el.textContent = sel.length ? sel.map(iv => `Factura de ${iv.mes}`).join(" + ") + ` · ${money(total)}` : "No hay facturas por pagar");
   document.querySelectorAll("[data-pay-gate], [data-pay-card]").forEach(b => { b.disabled = !sel.length; b.style.opacity = sel.length ? "" : ".5"; });
+  try { utRefresh(); } catch (err) {} // formulario de transferencia (se define más abajo)
   if (typeof renderNotifs === "function" && document.getElementById("notifList")) try { renderNotifs(); } catch (err) {}
   try { lucide.createIcons(); } catch (err) {}
 }
@@ -698,17 +699,6 @@ document.addEventListener("click", e => {
     addMovement(sel.map(iv => `Factura de ${iv.mes}`).join(" + "), `Universidad · ${label}`, "−" + money(total), "Pagado", "ok");
     defaultSel(); renderDebt(); renderCards();
     showDebtNotice("Pago confirmado.", `Pagaste ${money(total)} con ${label}. Tu saldo ya está actualizado.${affNote}`);
-    go("materias");
-    return;
-  }
-  if (e.target.closest("[data-pay-transfer]")) {
-    const sel = activeInvoices().filter(iv => paySel.includes(iv.id) && payableInv().includes(iv)); if (!sel.length) return;
-    let total = 0;
-    sel.forEach(iv => { const m = amountOf(iv); total += m; pagos[iv.id] = { estado: "revision", monto: m, pp: statusOf(iv) === "pronto" }; });
-    savePagos();
-    addMovement(sel.map(iv => `Factura de ${iv.mes}`).join(" + "), "Universidad · Transferencia", money(total), "En revisión", "neutral");
-    defaultSel(); renderDebt();
-    showDebtNotice("Comprobante enviado.", "La factura queda en revisión y tu saldo se actualiza cuando la universidad valide la transferencia.");
     go("materias");
     return;
   }
@@ -3373,6 +3363,112 @@ function refreshBcvUI() {
 }
 refreshBcvUI();
 window.addEventListener("storage", e => { if (e.key === "nexo-bcv") { try { BCV = { ...BCV0, ...JSON.parse(e.newValue || "{}") }; } catch (err) {} refreshBcvUI(); } });
+/* ---------- Pago universitario por transferencia (Caja): USD exacto o Bs. a tasa BCV (−1 %/+5 %) ----------
+   Mismas reglas que el comprobante de comida; los datos se guardan en pagos[id] al quedar "En revisión". */
+let utCur = "usd", utFile = null;
+const UT_ACC = { usd: ["Cuenta corriente en divisas (USD)", "0105 0000 00 0000000000"], bs: ["Cuenta corriente en bolívares", "0105 0000 00 2222222222"] };
+const UT_FIELDS = ["ut-f", "ut-b", "ut-r", "ut-m", "ut-file"];
+const utSel = () => activeInvoices().filter(iv => paySel.includes(iv.id) && payableInv().includes(iv));
+const utUsd = () => utSel().reduce((a, iv) => a + amountOf(iv), 0);
+const utExpected = () => utCur === "usd" ? utUsd() : Math.round(utUsd() * bcvRate() * 100) / 100;
+const utFmt = n => utCur === "usd" ? money(n) : bsAmt(n);
+function utRefresh() {
+  document.querySelectorAll("[data-ut-cur]").forEach(b => { const on = b.dataset.utCur === utCur; b.classList.toggle("ok", on); b.classList.toggle("neutral", !on); b.setAttribute("aria-checked", String(on)); });
+  const [t, acc] = UT_ACC[utCur], exp = utExpected(), usd = utUsd();
+  const q = k => document.querySelector(`[data-ut="${k}"]`);
+  q("acctype").textContent = t; q("acc").textContent = acc; q("expect").textContent = utFmt(exp); q("cta").textContent = utFmt(exp);
+  q("ratenote").textContent = usd ? (utCur === "bs" ? `${money(usd)} a la tasa BCV del ${bcvDateTxt()} (${bsAmt(bcvRate())} por US$).` : `En bolívares serían ${bsOf(usd)} a la tasa BCV del ${bcvDateTxt()}.`) : "Elige arriba qué facturas vas a pagar.";
+  q("mlabel").textContent = `Monto transferido · ${utCur === "usd" ? "USD" : "Bs."}`;
+  q("mprefix").textContent = utCur === "usd" ? "$" : "Bs.";
+  q("mhint").innerHTML = `Debe ser ${utFmt(exp)}. <button class="link b" type="button" data-ut-fill style="font-size:11px">Usar este monto</button>`;
+}
+function utCheck(id) {
+  const v = (document.getElementById(id).value || "").trim();
+  if (id === "ut-f") {
+    if (!v) return "Indica la fecha de la transferencia.";
+    const days = Math.round((day0(new Date()) - day0(new Date(v + "T12:00"))) / 864e5);
+    if (days < 0) return "La fecha no puede ser posterior a hoy.";
+    if (days > PM_MAX_DAYS) return `Solo puedes registrar transferencias de los últimos ${PM_MAX_DAYS} días. Para una más antigua, escríbenos en Soporte.`;
+    return "";
+  }
+  if (id === "ut-b") return v ? "" : "Elige el banco desde el que transferiste.";
+  if (id === "ut-r") {
+    if (!v) return "Escribe el número de referencia de tu comprobante.";
+    if (v.length < 6) return "La referencia tiene al menos 6 dígitos. Cópiala completa de tu comprobante.";
+    const dup = Object.entries(pagos).find(([, p]) => p && p.ref === v);
+    return dup ? `Ya usaste esa referencia en la factura de ${(MONTHS.find(m => m.id === dup[0]) || { mes: dup[0] }).mes}. Si es otra transferencia, revisa el número.` : "";
+  }
+  if (id === "ut-m") {
+    const n = parseAmt(v), exp = utExpected();
+    if (!(n > 0)) return "Escribe el monto que transferiste.";
+    if (utCur === "usd") return Math.abs(n - exp) < 0.005 ? "" : n < exp ? `Transferiste ${money(n)}, pero el total es ${money(exp)} (faltan ${money(exp - n)}).` : `Transferiste ${money(n - exp)} de más. El total es ${money(exp)}: escribe el monto exacto de tu comprobante.`;
+    if (n < exp * PM_TOL_LOW) return `Ese monto equivale a ${money(n / bcvRate())}. El total es ${bsAmt(exp)} a tasa BCV (faltan ${bsAmt(exp - n)}).`;
+    if (n > exp * PM_TOL_HIGH) return `Transferiste ${bsAmt(n - exp)} de más. Escribe el monto exacto de tu comprobante.`;
+    return "";
+  }
+  if (id === "ut-file") {
+    if (!utFile) return "Adjunta el comprobante de tu banco (PDF, JPG o PNG).";
+    if (!/\.(pdf|jpe?g|png)$/i.test(utFile.name)) return "El comprobante debe ser PDF, JPG o PNG.";
+    if (utFile.size > 5 * 1024 * 1024) return `El archivo pesa ${(utFile.size / 1048576).toFixed(1).replace(".", ",")} MB. El máximo es 5 MB.`;
+    return "";
+  }
+  return "";
+}
+function utShow(id, msg) {
+  const field = document.getElementById(id).closest(".field");
+  let hint = field.querySelector("[data-ut-err]");
+  if (!hint) { hint = document.createElement("p"); hint.className = "tiny pm-err"; hint.dataset.utErr = id; hint.setAttribute("role", "alert"); field.append(hint); }
+  field.classList.toggle("bad", !!msg); hint.hidden = !msg; hint.textContent = msg || "";
+  if (id !== "ut-file") document.getElementById(id).setAttribute("aria-invalid", msg ? "true" : "false");
+}
+function utReset() {
+  utFile = null; document.getElementById("utForm").reset();
+  const t = new Date(); document.getElementById("ut-f").value = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  document.getElementById("utFileChip").hidden = true; UT_FIELDS.forEach(id => utShow(id, "")); document.getElementById("utError").hidden = true;
+}
+(() => { const src = document.getElementById("pm-bank"), dst = document.getElementById("ut-b"); [...src.options].slice(1).forEach(o => dst.add(new Option(o.text, o.value || o.text))); })();
+utReset(); utRefresh();
+document.getElementById("ut-r").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, ""); });
+document.getElementById("ut-m").addEventListener("input", e => { e.target.value = e.target.value.replace(/[^\d,.]/g, ""); });
+document.getElementById("utForm").addEventListener("input", e => { if (UT_FIELDS.includes(e.target.id)) utShow(e.target.id, ""); document.getElementById("utError").hidden = true; });
+document.getElementById("utForm").addEventListener("change", e => {
+  if (e.target.id === "ut-file") {
+    utFile = e.target.files[0] || null; document.getElementById("utFileChip").hidden = !utFile;
+    if (utFile) { document.querySelector('[data-ut="fname"]').textContent = utFile.name; document.querySelector('[data-ut="fsize"]').textContent = utFile.size < 1048576 ? Math.max(1, Math.round(utFile.size / 1024)) + " KB" : (utFile.size / 1048576).toFixed(1).replace(".", ",") + " MB"; }
+    utShow("ut-file", utCheck("ut-file")); return;
+  }
+  if (e.target.id === "ut-b" || e.target.id === "ut-f") utShow(e.target.id, utCheck(e.target.id));
+});
+document.getElementById("utForm").addEventListener("focusout", e => { if (["ut-r", "ut-m"].includes(e.target.id) && e.target.value.trim()) utShow(e.target.id, utCheck(e.target.id)); });
+document.getElementById("utForm").addEventListener("keydown", e => { if (e.target.matches("label.upload") && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); document.getElementById("ut-file").click(); } });
+document.getElementById("caja").addEventListener("click", e => {
+  const c = e.target.closest("[data-ut-cur]");
+  if (c) { utCur = c.dataset.utCur; utRefresh(); const m = document.getElementById("ut-m"); if (m.value) utShow("ut-m", utCheck("ut-m")); return; }
+  if (e.target.closest("[data-ut-open]")) { const f = document.getElementById("utForm"); f.hidden = false; e.target.closest("[data-ut-open]").hidden = true; utRefresh(); document.getElementById("ut-b").focus(); return; }
+  if (e.target.closest("[data-ut-fill]")) { const m = document.getElementById("ut-m"); m.value = utFmt(utExpected()).replace(/^\$|^Bs\. /, ""); utShow("ut-m", ""); m.focus(); return; }
+  if (e.target.closest("[data-ut-rmfile]")) { utFile = null; document.getElementById("ut-file").value = ""; document.getElementById("utFileChip").hidden = true; return; }
+  if (e.target.closest("[data-ut-copyacc]")) { const acc = UT_ACC[utCur][1]; try { navigator.clipboard.writeText(acc).then(() => toast("Número de cuenta copiado"), () => toast(acc)); } catch (err) { toast(acc); } }
+});
+document.getElementById("utForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const sel = utSel();
+  if (!sel.length) { toast("Elige qué facturas vas a pagar."); return; }
+  const errs = UT_FIELDS.map(id => [id, utCheck(id)]); errs.forEach(([id, m]) => utShow(id, m));
+  const bad = errs.filter(x => x[1]);
+  if (bad.length) {
+    const box = document.getElementById("utError");
+    box.querySelector('[data-ut="err"]').textContent = bad.length === 1 ? bad[0][1] : `Revisa los ${bad.length} datos marcados en rojo antes de enviar tu comprobante.`;
+    box.hidden = false; (bad[0][0] === "ut-file" ? document.querySelector("#utForm label.upload") : document.getElementById(bad[0][0])).focus(); return;
+  }
+  const v = id => document.getElementById(id).value.trim(), paid = parseAmt(v("ut-m")), usdTotal = utUsd();
+  sel.forEach(iv => { const m = amountOf(iv); pagos[iv.id] = { estado: "revision", monto: m, pp: statusOf(iv) === "pronto", ref: v("ut-r"), bank: v("ut-b"), currency: utCur, paidAmount: utCur === "bs" ? Math.round(paid * m / usdTotal * 100) / 100 : m, bcvRate: utCur === "bs" ? bcvRate() : undefined, receipt: utFile.name, date: v("ut-f") }; });
+  savePagos();
+  addMovement(sel.map(iv => `Factura de ${iv.mes}`).join(" + "), `Universidad · Transferencia${utCur === "bs" ? ` en Bs. (${bsAmt(paid)})` : ""} · Ref. ${v("ut-r").slice(-6)}`, money(usdTotal), "En revisión", "neutral");
+  utReset(); document.getElementById("utForm").hidden = true; document.querySelector("[data-ut-open]").hidden = false;
+  defaultSel(); renderDebt();
+  showDebtNotice("Comprobante enviado.", "La factura queda en revisión y tu saldo se actualiza cuando la universidad valide la transferencia.");
+  go("materias");
+});
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();
   const carnet = f.querySelector("[data-digits]");

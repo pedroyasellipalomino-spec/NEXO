@@ -697,3 +697,5 @@ button.tk-row.on{background:var(--mint-bg)}
 .fftag{gap:6px;cursor:pointer;border:0}
 .fftag svg{font-size:13px}
 .opt:disabled{opacity:.55;cursor:not-allowed}
+@media (max-width:519px){#utForm .grid2{grid-template-columns:1fr}#utForm .ut-amt{display:none}}
+@media (min-width:1100px) and (max-width:1300px){#utForm .grid2{grid-template-columns:1fr}}

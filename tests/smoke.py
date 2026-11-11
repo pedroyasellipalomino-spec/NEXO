@@ -337,6 +337,23 @@ async def main() -> int:
         await pg.wait_for_timeout(400)
         check("Tu pedido está programado" in await pg.inner_text("#pdBody"), "se puede programar el retiro de un pedido")
 
+        # pago universitario por transferencia en bolívares a tasa BCV
+        await login("ana.torres@correo.unimet.edu.ve", "demo-nexo-01")
+        await pg.goto(URL + "#caja")
+        await pg.wait_for_timeout(300)
+        await pg.click("[data-ut-open]")
+        await pg.click("#utForm button[type=submit]")
+        await pg.wait_for_timeout(150)
+        check(await pg.locator("#utForm .pm-err:visible").count() == 4, "la transferencia universitaria vacía marca sus errores")
+        await pg.click("[data-ut-cur=bs]")
+        await pg.select_option("#ut-b", index=3)
+        await pg.fill("#ut-r", "0055443322")
+        await pg.click("[data-ut-fill]")
+        await pg.set_input_files("#ut-file", tmp.name)
+        await pg.click("#utForm button[type=submit]")
+        await pg.wait_for_timeout(400)
+        check("Transferencia en revisión · Bs." in await pg.inner_text("#cuotasList"), "la factura universitaria pagada en bolívares queda en revisión")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 

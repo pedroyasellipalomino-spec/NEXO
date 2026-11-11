@@ -960,11 +960,28 @@
         <div class="card">
           <div class="row start"><i data-lucide="landmark" style="color:var(--brand)"></i><b style="font-size:15px">Transferencia bancaria</b></div>
           <b style="font-size:13px">Universidad Metropolitana</b>
-          <div class="kv"><span>Banco receptor</span><b>Mercantil</b></div>
-          <div class="copy"><span class="mono">0105 0000 00 0000000000</span><button class="link" type="button" aria-label="Copiar número de cuenta" data-copy="0105 0000 00 0000000000" data-copy-label="Número de cuenta copiado"><i data-lucide="copy"></i></button></div>
+          <div class="chips" id="utCur" role="radiogroup" aria-label="Moneda de la transferencia"><button class="pill ok" type="button" role="radio" aria-checked="true" data-ut-cur="usd">Dólares (USD)</button><button class="pill neutral" type="button" role="radio" aria-checked="false" data-ut-cur="bs">Bolívares (Bs.)</button></div>
+          <div class="kv"><span>Banco receptor</span><b>Mercantil · 0105</b></div>
+          <p class="small" data-ut="acctype">Cuenta corriente en divisas (USD)</p>
+          <div class="copy"><span class="mono" data-ut="acc">0105 0000 00 0000000000</span><button class="link" type="button" aria-label="Copiar número de cuenta" data-ut-copyacc><i data-lucide="copy"></i></button></div>
           <div class="kv"><span>RIF</span><b>J-00000000-1</b></div>
-          <p class="tiny">Datos bancarios ilustrativos. La cuota queda en revisión hasta que la universidad valide la transferencia.</p>
-          <button class="btn ghost" type="button" data-pay-transfer data-pay-gate><i data-lucide="upload"></i>Enviar comprobante a revisión</button>
+          <div class="kv total"><span>Importe a transferir</span><b data-ut="expect">$0,00</b></div>
+          <p class="tiny" data-ut="ratenote"></p>
+          <p class="tiny">Datos bancarios ilustrativos. La factura queda en revisión hasta que la universidad valide la transferencia.</p>
+          <button class="btn ghost" type="button" data-ut-open data-pay-gate><i data-lucide="upload"></i>Registrar mi transferencia</button>
+          <form class="stack s14" id="utForm" novalidate hidden>
+            <div class="grid2">
+              <div class="field"><label for="ut-f">Fecha de la transferencia</label><div class="input"><input id="ut-f" type="date"></div></div>
+              <div class="field"><label for="ut-b">Banco de origen</label><div class="input sel"><select id="ut-b"><option value="">Elige tu banco</option></select><i data-lucide="chevron-down"></i></div></div>
+              <div class="field"><label for="ut-r">Número de referencia</label><div class="input"><input id="ut-r" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="Ej.: 0031847265"></div></div>
+              <div class="field"><label for="ut-m" data-ut="mlabel">Monto transferido · USD</label><div class="input"><span style="color:var(--muted)" data-ut="mprefix">$</span><input id="ut-m" inputmode="decimal" autocomplete="off" placeholder="0,00"></div><p class="tiny" data-ut="mhint"></p></div>
+            </div>
+            <div class="field"><label class="upload" for="ut-file" tabindex="0" role="button"><i data-lucide="upload"></i>Adjuntar comprobante<span class="tiny" style="font-weight:400">PDF, JPG o PNG · Máximo 5 MB</span></label>
+              <input id="ut-file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" hidden>
+              <div class="file" id="utFileChip" hidden><i data-lucide="file-text"></i><div class="grow"><b style="font-size:13px" data-ut="fname"></b><p class="tiny" data-ut="fsize"></p></div><button class="link" type="button" aria-label="Quitar archivo" data-ut-rmfile><i data-lucide="x" style="color:var(--muted)"></i></button></div></div>
+            <div class="notice warn" id="utError" role="alert" hidden><i data-lucide="circle-alert"></i><p data-ut="err"></p></div>
+            <button class="btn" type="submit"><i data-lucide="send"></i>Enviar a revisión<span class="ut-amt">&nbsp;· <span data-ut="cta">$0,00</span></span></button>
+          </form>
         </div>
         <div class="card">
           <div class="row start"><i data-lucide="map-pin" style="color:var(--brand)"></i><b style="font-size:15px">Pagar en caja</b></div>
