@@ -375,25 +375,30 @@
       <div class="card">
         <h2 class="h2">1. Datos para transferir</h2>
         <b style="font-size:13px" data-ord="place">Pincho Pan · Feria Central</b>
-        <div class="kv"><span>Banco receptor</span><b>Mercantil</b></div>
-        <p class="small">Cuenta corriente · USD</p>
-        <div class="copy"><span class="mono">0105 0000 00 0000000000</span><button class="link" type="button" aria-label="Copiar número de cuenta" data-copy="0105 0000 00 0000000000" data-copy-label="Número de cuenta copiado"><i data-lucide="copy"></i></button></div>
+        <div class="field"><label>¿En qué moneda vas a transferir?</label>
+          <div class="chips" id="cpCur" role="radiogroup" aria-label="Moneda de la transferencia"><button class="pill ok" type="button" role="radio" aria-checked="true" data-cp-cur="usd">Dólares (USD)</button><button class="pill neutral" type="button" role="radio" aria-checked="false" data-cp-cur="bs">Bolívares (Bs.)</button></div></div>
+        <div class="kv"><span>Banco receptor</span><b>Mercantil · 0105</b></div>
+        <p class="small" data-cp="acctype">Cuenta corriente en divisas (USD)</p>
+        <div class="copy"><span class="mono" data-cp="acc">0105 0000 00 0000000000</span><button class="link" type="button" aria-label="Copiar número de cuenta" data-cp-copyacc><i data-lucide="copy"></i></button></div>
         <div class="kv"><span>RIF</span><b>J-00000000-2</b></div>
         <p class="tiny">Datos bancarios ilustrativos. Verifica la cuenta y la moneda con el comercio antes de transferir.</p>
-        <div class="kv total"><span>Importe del pedido</span><b data-ord="total">$8,50</b></div>
+        <div class="kv total"><span>Importe a transferir</span><b data-cp="expect">$8,50</b></div>
+        <p class="tiny" data-cp="ratenote"></p>
         <p class="tiny">Incluye tu carnet y el pedido <span data-ord="num">PP-261103-0186</span> en el concepto.</p>
       </div>
-      <form class="card" id="cpForm">
-        <div><h2 class="h2">2. Datos de tu transferencia</h2><p class="small" style="font-size:13px">Completa los datos tal como aparecen en tu comprobante.</p></div>
+      <form class="card" id="cpForm" novalidate>
+        <div><h2 class="h2">2. Datos de tu transferencia</h2><p class="small" style="font-size:13px">Escríbelos tal como aparecen en el comprobante de tu banco.</p></div>
         <div class="grid2">
-          <div class="field"><label for="cp-f">Fecha de transferencia</label><div class="input"><input id="cp-f" value="03 nov 2026"></div></div>
-          <div class="field"><label for="cp-b">Banco de origen</label><div class="input"><input id="cp-b" value="Banesco"></div></div>
-          <div class="field"><label for="cp-r">Número de referencia</label><div class="input"><input id="cp-r" value="0031847265"></div></div>
-          <div class="field"><label for="cp-m">Monto transferido · USD</label><div class="input"><input id="cp-m" value="$8,50" data-ord-val="total"></div></div>
+          <div class="field"><label for="cp-f">Fecha de la transferencia</label><div class="input"><input id="cp-f" type="date"></div></div>
+          <div class="field"><label for="cp-b">Banco de origen</label><div class="input sel"><select id="cp-b"><option value="">Elige tu banco</option></select><i data-lucide="chevron-down"></i></div></div>
+          <div class="field"><label for="cp-r">Número de referencia</label><div class="input"><input id="cp-r" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="Ej.: 0031847265"></div></div>
+          <div class="field"><label for="cp-m" data-cp="mlabel">Monto transferido · USD</label><div class="input"><span style="color:var(--muted)" data-cp="mprefix">$</span><input id="cp-m" inputmode="decimal" autocomplete="off" placeholder="0,00"></div><p class="tiny" data-cp="mhint"></p></div>
         </div>
-        <div class="upload"><i data-lucide="upload"></i>Adjuntar comprobante<span class="tiny" style="font-weight:400">PDF, JPG o PNG · Máximo 5 MB</span></div>
-        <div class="file"><i data-lucide="file-text"></i><div class="grow"><b style="font-size:13px">comprobante_0311.pdf</b><p class="tiny">248 KB · Listo para enviar</p></div><i data-lucide="x" style="color:var(--muted)"></i></div>
-        <button class="btn" type="submit"><i data-lucide="upload"></i>Enviar a revisión · <span data-ord="total">$8,50</span></button>
+        <div class="field"><label class="upload" for="cp-file" tabindex="0" role="button" aria-describedby="cp-file-help"><i data-lucide="upload"></i>Adjuntar comprobante<span class="tiny" style="font-weight:400" id="cp-file-help">PDF, JPG o PNG · Máximo 5 MB</span></label>
+          <input id="cp-file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" hidden>
+          <div class="file" id="cpFileChip" hidden><i data-lucide="file-text"></i><div class="grow"><b style="font-size:13px" data-cp="fname"></b><p class="tiny" data-cp="fsize"></p></div><button class="link" type="button" aria-label="Quitar archivo" data-cp-rmfile><i data-lucide="x" style="color:var(--muted)"></i></button></div></div>
+        <div class="notice warn" id="cpError" role="alert" hidden><i data-lucide="circle-alert"></i><p data-cp="err"></p></div>
+        <button class="btn" type="submit"><i data-lucide="upload"></i>Enviar a revisión · <span data-cp="cta">$8,50</span></button>
         <p class="tiny">Enviar el comprobante no confirma el pago ni emite una factura.</p>
       </form>
     </div>

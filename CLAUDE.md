@@ -52,7 +52,7 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 
 **Comida y kioscos.** Los menús salen de `LOCALES` en `app.js` (4 locales + 3 kioscos; cada uno con categorías → productos; `foodOpt()` define grupos de opciones de "elige una" con recargo). Las pantallas `#comida`, `#local`, `#detalle`, `#carrito` se pintan con `renderFoodList/renderLocal/renderDetalle/renderCarrito` desde `show()`; el local y el producto abiertos viven en `sessionStorage["nexo-food"]`.
 - Carrito por cuenta en `nexo-cart` (`{ local, lines:[{item, sel, qty, note}] }`): un solo local por pedido; al añadir de otro local se avisa y se vacía. La cuenta demo arranca con el almuerzo del día de Pincho Pan.
-- Pago con tarjeta (simulado) → crea el pedido y va a `#pedido` (seguimiento). Transferencia → `#comprobante` (borrador `draftOrder`) → al enviar, se confirma. Los pedidos se guardan en `nexo-orders` y se agregan a Actividad con `addMovement(..., { order })`; el botón lleva `data-order` para abrir esa factura.
+- Pago con tarjeta (simulado) → crea el pedido y va a `#pedido` (seguimiento). Transferencia → `#comprobante` (borrador `draftOrder`; moneda USD o Bs. con su cuenta destino; `cpCheck`/`cpShow` validan fecha no futura y de ≤7 días, banco, referencia de 6+ dígitos no usada en otro pedido, monto exacto en USD o en Bs. a tasa BCV con −1 %/+5 %, y archivo PDF/JPG/PNG de ≤5 MB) → al enviar, se confirma; el pedido guarda `ref`, `bank`, `currency`, `paidAmount`, `receipt` y `bcvRate`. Los pedidos se guardan en `nexo-orders` y se agregan a Actividad con `addMovement(..., { order })`; el botón lleva `data-order` para abrir esa factura.
 - `#factura` sin pedido elegido muestra la factura de ejemplo original (`FC_SAMPLE`).
 - Seguimiento (`#pedido`, `renderPedido`): al confirmar, el pedido guarda `paidAt`, `readyAt` (= pago + punto medio del `eta` del local, `prepMinutes`) y `code` (`pickupCode`, 4 dígitos). `orderStatus()`: preparando → listo (al pasar `readyAt`) → retirado (`pickedAt`, botón "Ya lo retiré"). `checkOrders()` corre cada 15 s: avisa con toast y `foodNotifs()` agrega la notificación (va a `#pedido` con `trackId`). En `#comida`, `#foodOrders` muestra los pedidos activos. Hay un enlace de prototipo para simular que ya está listo. `drawQR(canvas)` dibuja el QR ilustrativo.
 
@@ -87,7 +87,7 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 
 - Ingeniería Mecánica no tiene materias en `CARRERAS`: su flujograma en PDF tiene el texto convertido en curvas y no se pudo extraer.
 - El código `EI27` (Contrataciones Internacionales) viene así en el flujograma; parece incompleto.
-- Comida: los menús y precios son de ejemplo (confirmar con cada local); falta la validación de los datos de transferencia; el comercio no puede editar precios ni productos (solo agotar y pausar).
+- Comida: los menús y precios son de ejemplo (confirmar con cada local); el comercio no puede editar precios ni productos (solo agotar y pausar).
 - Invitaciones: el envío por correo es simulado (se copia el enlace).
 
 Fuente de materias: https://www.unimet.edu.ve/estudios/flujogramas-pregrado/

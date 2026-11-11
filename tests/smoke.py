@@ -6,6 +6,7 @@ Requiere: pip install playwright && playwright install chromium
 import asyncio
 import pathlib
 import sys
+import tempfile
 
 from playwright.async_api import async_playwright
 
@@ -270,6 +271,32 @@ async def main() -> int:
         await pg.click("#pmForm button[type=submit]")
         await pg.wait_for_timeout(300)
         check(await pg.evaluate("location.hash") == "#recarga", "Pago Móvil con datos válidos se registra")
+
+        # transferencia de comida: valida datos, acepta bolívares a tasa BCV y exige el comprobante
+        await pg.goto(URL + "#comida")
+        await pg.wait_for_timeout(200)
+        await pg.dispatch_event("[data-open-local='believe']", "click")
+        await pg.wait_for_timeout(200)
+        await pg.dispatch_event("[data-open-item='agua']", "click")
+        await pg.wait_for_timeout(200)
+        await pg.click("#detAdd")
+        await pg.wait_for_timeout(300)
+        await pg.click("[data-pay-method=transfer]")
+        await pg.click("#cartPay")
+        await pg.wait_for_timeout(300)
+        await pg.click("#cpForm button[type=submit]")
+        await pg.wait_for_timeout(200)
+        check(await pg.locator("#cpForm .pm-err:visible").count() == 4, "la transferencia vacía marca banco, referencia, monto y comprobante")
+        await pg.click("[data-cp-cur=bs]")
+        await pg.select_option("#cp-b", index=2)
+        await pg.fill("#cp-r", "0099887766")
+        await pg.click("[data-cp-fill]")
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp.write(b"%PDF-1.4 comprobante")
+        await pg.set_input_files("#cp-file", tmp.name)
+        await pg.click("#cpForm button[type=submit]")
+        await pg.wait_for_timeout(400)
+        check(await pg.evaluate("location.hash") == "#pedido", "la transferencia en bolívares con comprobante se envía")
 
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()

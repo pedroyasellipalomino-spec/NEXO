@@ -1866,6 +1866,8 @@ function renderComprobante() {
   document.querySelectorAll("#comprobante [data-ord=total]").forEach(e => e.textContent = money(o.total));
   document.querySelectorAll("#comprobante [data-ord=num]").forEach(e => e.textContent = o.num);
   document.querySelectorAll("#comprobante [data-ord-val=total]").forEach(e => e.value = money(o.total));
+  if (!document.getElementById("cp-f").value) cpReset();
+  cpRenderCurrency();
   document.getElementById("cpOrder").innerHTML = `<h3 class="h2">Tu pedido</h3><b style="font-size:13px">${esc(l.name)} · ${l.place}</b>${orderLines(o)}
     <div class="sep"></div>${orderTotals(o)}<p class="tiny">Pedido ${o.num} · Desde tu carrito</p><span class="pill warn">Sin confirmar</span>`;
   icons();
@@ -1888,7 +1890,7 @@ function renderFactura() {
     <p class="small">Factura F${o.num}</p><p class="small" style="margin-top:-10px">Pedido ${o.num}</p>
     <div class="sep"></div>${orderLines(o)}<div class="sep"></div>${orderTotals(o)}
     <p class="tiny">Precios finales en USD · Sin cargos extra</p><div class="sep"></div>
-    <div class="kv"><span>Método de pago</span><b>${card ? esc(o.card) : "Transferencia"}</b></div>${o.ref ? `<div class="kv"><span>Referencia</span><b>${esc(o.ref)}</b></div>` : ""}`;
+    <div class="kv"><span>Método de pago</span><b>${card ? esc(o.card) : "Transferencia"}</b></div>${o.ref ? `<div class="kv"><span>Referencia</span><b>${esc(o.ref)}</b></div>` : ""}${o.bank ? `<div class="kv"><span>Banco de origen</span><b>${esc(o.bank)}</b></div>` : ""}${o.currency === "bs" ? `<div class="kv"><span>Pagado en bolívares</span><b>${bsAmt(o.paidAmount)}</b></div><p class="tiny">Tasa BCV aplicada: ${bsAmt(o.bcvRate)} por US$.</p>` : ""}`;
   document.getElementById("fcPickup").innerHTML = `<h3 class="h2">Retira en ${esc(l.name)}</h3><p style="font-size:13px">${l.place} · Planta baja</p>
     <p class="small" style="font-size:13px">Preparación estimada: ${l.eta} desde la confirmación del pago.</p>
     <p class="small">Muestra el número de pedido ${o.num} en el mostrador.</p>
@@ -1938,12 +1940,105 @@ document.addEventListener("click", e => {
   const pg = e.target.closest('[data-go="pedido"]');
   if (pg) trackId = pg.dataset.order || null;
 });
+/* Validación del comprobante de transferencia (pedidos de comida). Moneda USD (monto exacto) o Bs. a tasa BCV (−1 %/+5 %). */
+let cpCur = "usd", cpFile = null;
+const CP_ACC = { usd: ["Cuenta corriente en divisas (USD)", "0105 0000 00 0000000000"], bs: ["Cuenta corriente en bolívares", "0105 0000 00 1111111111"] };
+const CP_FIELDS = ["cp-f", "cp-b", "cp-r", "cp-m", "cp-file"];
+const cpExpected = () => { const o = draftOrder; if (!o) return 0; return cpCur === "usd" ? o.total : Math.round(o.total * bcvRate() * 100) / 100; };
+const cpFmt = n => cpCur === "usd" ? money(n) : bsAmt(n);
+function cpRenderCurrency() {
+  if (!draftOrder) return;
+  document.querySelectorAll("[data-cp-cur]").forEach(b => { const on = b.dataset.cpCur === cpCur; b.classList.toggle("ok", on); b.classList.toggle("neutral", !on); b.setAttribute("aria-checked", String(on)); });
+  const [t, acc] = CP_ACC[cpCur], exp = cpExpected();
+  document.querySelector('[data-cp="acctype"]').textContent = t;
+  document.querySelector('[data-cp="acc"]').textContent = acc;
+  document.querySelector('[data-cp="expect"]').textContent = cpFmt(exp);
+  document.querySelector('[data-cp="ratenote"]').textContent = cpCur === "bs" ? `${money(draftOrder.total)} a la tasa BCV del ${bcvDateTxt()} (${bsAmt(bcvRate())} por US$).` : `En bolívares serían ${bsOf(draftOrder.total)} a la tasa BCV del ${bcvDateTxt()}.`;
+  document.querySelector('[data-cp="mlabel"]').textContent = `Monto transferido · ${cpCur === "usd" ? "USD" : "Bs."}`;
+  document.querySelector('[data-cp="mprefix"]').textContent = cpCur === "usd" ? "$" : "Bs.";
+  document.querySelector('[data-cp="mhint"]').innerHTML = `Debe ser ${cpFmt(exp)}. <button class="link b" type="button" data-cp-fill style="font-size:11px">Usar este monto</button>`;
+  document.querySelector('[data-cp="cta"]').textContent = cpFmt(exp);
+}
+function cpCheck(id) {
+  const el = document.getElementById(id), v = (el.value || "").trim();
+  if (id === "cp-f") {
+    if (!v) return "Indica la fecha de la transferencia.";
+    const days = Math.round((day0(new Date()) - day0(new Date(v + "T12:00"))) / 864e5);
+    if (days < 0) return "La fecha no puede ser posterior a hoy.";
+    if (days > PM_MAX_DAYS) return `Solo puedes registrar transferencias de los últimos ${PM_MAX_DAYS} días. Para una más antigua, escríbenos en Soporte.`;
+    return "";
+  }
+  if (id === "cp-b") return v ? "" : "Elige el banco desde el que transferiste.";
+  if (id === "cp-r") {
+    if (!v) return "Escribe el número de referencia de tu comprobante.";
+    if (v.length < 6) return "La referencia tiene al menos 6 dígitos. Cópiala completa de tu comprobante.";
+    const dup = orders.find(o => o.ref && o.ref === v);
+    return dup ? `Ya usaste esa referencia en el pedido ${dup.num}. Si es otra transferencia, revisa el número.` : "";
+  }
+  if (id === "cp-m") {
+    const n = parseAmt(v), exp = cpExpected();
+    if (!(n > 0)) return "Escribe el monto que transferiste.";
+    if (cpCur === "usd") return Math.abs(n - exp) < 0.005 ? "" : n < exp ? `Transferiste ${money(n)}, pero el pedido es de ${money(exp)} (faltan ${money(exp - n)}).` : `Transferiste ${money(n - exp)} de más. El pedido es de ${money(exp)}: escribe el monto exacto de tu comprobante.`;
+    if (n < exp * PM_TOL_LOW) return `Ese monto equivale a ${money(n / bcvRate())}. El pedido es de ${bsAmt(exp)} a tasa BCV (faltan ${bsAmt(exp - n)}).`;
+    if (n > exp * PM_TOL_HIGH) return `Transferiste ${bsAmt(n - exp)} de más. Escribe el monto exacto de tu comprobante.`;
+    return "";
+  }
+  if (id === "cp-file") {
+    if (!cpFile) return "Adjunta el comprobante de tu banco (PDF, JPG o PNG).";
+    if (!/\.(pdf|jpe?g|png)$/i.test(cpFile.name)) return "El comprobante debe ser PDF, JPG o PNG.";
+    if (cpFile.size > 5 * 1024 * 1024) return `El archivo pesa ${(cpFile.size / 1048576).toFixed(1).replace(".", ",")} MB. El máximo es 5 MB.`;
+    return "";
+  }
+  return "";
+}
+function cpShow(id, msg) {
+  const field = document.getElementById(id).closest(".field");
+  let hint = field.querySelector("[data-cp-err]");
+  if (!hint) { hint = document.createElement("p"); hint.className = "tiny pm-err"; hint.dataset.cpErr = id; hint.setAttribute("role", "alert"); field.append(hint); }
+  field.classList.toggle("bad", !!msg); hint.hidden = !msg; hint.textContent = msg || "";
+  if (id !== "cp-file") document.getElementById(id).setAttribute("aria-invalid", msg ? "true" : "false");
+}
+function cpReset() {
+  cpFile = null; document.getElementById("cpForm").reset();
+  const t = new Date(); document.getElementById("cp-f").value = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  document.getElementById("cpFileChip").hidden = true; CP_FIELDS.forEach(id => cpShow(id, "")); document.getElementById("cpError").hidden = true;
+}
+(() => { const src = document.getElementById("pm-bank"), dst = document.getElementById("cp-b"); [...src.options].slice(1).forEach(o => dst.add(new Option(o.text, o.value || o.text))); })();
+document.getElementById("cp-r").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, ""); });
+document.getElementById("cp-m").addEventListener("input", e => { e.target.value = e.target.value.replace(/[^\d,.]/g, ""); });
+document.getElementById("cpForm").addEventListener("input", e => { if (CP_FIELDS.includes(e.target.id)) cpShow(e.target.id, ""); document.getElementById("cpError").hidden = true; });
+document.getElementById("cpForm").addEventListener("change", e => {
+  if (e.target.id === "cp-file") {
+    cpFile = e.target.files[0] || null;
+    const chip = document.getElementById("cpFileChip"); chip.hidden = !cpFile;
+    if (cpFile) { document.querySelector('[data-cp="fname"]').textContent = cpFile.name; document.querySelector('[data-cp="fsize"]').textContent = `${cpFile.size < 1048576 ? Math.max(1, Math.round(cpFile.size / 1024)) + " KB" : (cpFile.size / 1048576).toFixed(1).replace(".", ",") + " MB"}`; }
+    cpShow("cp-file", cpCheck("cp-file")); return;
+  }
+  if (e.target.id === "cp-b" || e.target.id === "cp-f") cpShow(e.target.id, cpCheck(e.target.id));
+});
+document.getElementById("cpForm").addEventListener("focusout", e => { const id = e.target.id; if (["cp-r", "cp-m"].includes(id) && e.target.value.trim()) cpShow(id, cpCheck(id)); });
+document.getElementById("cpForm").addEventListener("keydown", e => { if (e.target.matches("label.upload") && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); document.getElementById("cp-file").click(); } });
+document.getElementById("comprobante").addEventListener("click", e => {
+  const c = e.target.closest("[data-cp-cur]");
+  if (c) { cpCur = c.dataset.cpCur; cpRenderCurrency(); const m = document.getElementById("cp-m"); if (m.value) cpShow("cp-m", cpCheck("cp-m")); return; }
+  if (e.target.closest("[data-cp-fill]")) { const m = document.getElementById("cp-m"); m.value = (cpCur === "usd" ? money(cpExpected()) : bsAmt(cpExpected())).replace(/^\$|^Bs\. /, ""); cpShow("cp-m", ""); m.focus(); return; }
+  if (e.target.closest("[data-cp-rmfile]")) { cpFile = null; document.getElementById("cp-file").value = ""; document.getElementById("cpFileChip").hidden = true; return; }
+  if (e.target.closest("[data-cp-copyacc]")) { const acc = CP_ACC[cpCur][1]; try { navigator.clipboard.writeText(acc).then(() => toast("Número de cuenta copiado"), () => toast(acc)); } catch (err) { toast(acc); } }
+});
 document.getElementById("cpForm").addEventListener("submit", e => {
   e.preventDefault();
-  const f = e.target, missing = [...f.querySelectorAll("input")].find(i => !i.value.trim());
-  if (missing) { missing.focus(); toast("Completa todos los campos para continuar."); return; }
   if (!draftOrder) { toast("Tu carrito está vacío. Elige productos antes de pagar."); go("comida"); return; }
-  const o = draftOrder; o.ref = document.getElementById("cp-r").value.trim(); draftOrder = null;
+  const errs = CP_FIELDS.map(id => [id, cpCheck(id)]);
+  errs.forEach(([id, m]) => cpShow(id, m));
+  const bad = errs.filter(x => x[1]);
+  if (bad.length) {
+    const box = document.getElementById("cpError");
+    box.querySelector('[data-cp="err"]').textContent = bad.length === 1 ? bad[0][1] : `Revisa los ${bad.length} datos marcados en rojo antes de enviar tu comprobante.`;
+    box.hidden = false; (bad[0][0] === "cp-file" ? document.querySelector("label.upload") : document.getElementById(bad[0][0])).focus(); return;
+  }
+  const o = draftOrder, v = id => document.getElementById(id).value.trim();
+  Object.assign(o, { ref: v("cp-r"), bank: v("cp-b"), currency: cpCur, paidAmount: parseAmt(v("cp-m")), receipt: cpFile.name, bcvRate: cpCur === "bs" ? bcvRate() : undefined });
+  draftOrder = null; cpReset();
   confirmOrder(o);
 });
 renderFoodList();
