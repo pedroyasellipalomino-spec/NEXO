@@ -54,6 +54,10 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - Pago con tarjeta (simulado) → crea el pedido y va a `#factura`. Transferencia → `#comprobante` (borrador `draftOrder`) → al enviar, se confirma. Los pedidos se guardan en `nexo-orders` y se agregan a Actividad con `addMovement(..., { order })`; el botón lleva `data-order` para abrir esa factura.
 - `#factura` sin pedido elegido muestra la factura de ejemplo original (`FC_SAMPLE`).
 
+## Cómo trabajar con el usuario
+
+- Cuando haya que elegir entre opciones (qué mejorar, decisiones de diseño, etc.), preséntalas siempre como un formulario de un clic (herramienta de preguntas con opciones), no como una lista en texto. Marca la recomendada.
+
 ## Convenciones
 
 - Textos de interfaz en español, tono cercano (tú). Montos con `money(n)` → `$1.234,56`.
