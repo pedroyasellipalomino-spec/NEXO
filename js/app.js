@@ -1005,12 +1005,13 @@ document.getElementById("afForm").addEventListener("submit", e => {
 function openPagoMovil() {
   const amt = money(rcAmount);
   document.querySelector('[data-pm="lead"]').textContent = `Recarga de ${amt} a tu wallet Nexo`;
-  document.querySelector('[data-pm="amount"]').textContent = `${amt} en bolívares, a la tasa BCV del día`;
+
   document.querySelector('[data-pm="concept"]').textContent = `Wallet ${user.carnet || user.email.split("@")[0]}`;
-  document.querySelector('[data-pm="bshint"]').textContent = `Debe equivaler a ${amt} a la tasa BCV del día del pago.`;
+  pmRefreshAmount();
   document.querySelector('[data-pm="cta"]').textContent = `Registrar pago de ${amt}`;
   const d = document.getElementById("pm-date"); if (!d.value) { const t = new Date(); d.value = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; }
   document.getElementById("pmError").hidden = true;
+  if (typeof PM_FIELDS !== "undefined") PM_FIELDS.forEach(id => { if (!document.getElementById(id).value) pmShow(id, ""); });
   go("pagomovil");
 }
 document.getElementById("pagomovil").addEventListener("click", e => {
@@ -1021,28 +1022,92 @@ document.getElementById("pagomovil").addEventListener("click", e => {
 document.getElementById("pm-phone").addEventListener("input", e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 4) v = v.slice(0, 4) + "-" + v.slice(4); e.target.value = v; });
 ["pm-ci", "pm-ref"].forEach(id => document.getElementById(id).addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, ""); }));
 document.getElementById("pm-bs").addEventListener("input", e => { e.target.value = e.target.value.replace(/[^\d,]/g, "").replace(/(,.*?),/g, "$1").replace(/(,\d{2}).+/, "$1"); });
-document.getElementById("pmForm").addEventListener("input", e => { e.target.closest(".field")?.classList.remove("bad"); document.getElementById("pmError").hidden = true; });
+/* Validación del Pago Móvil: todos los errores a la vez, cada uno bajo su campo; también al salir de cada campo.
+   BCV_REF es una tasa de referencia ilustrativa del prototipo (no es la tasa oficial). */
+const BCV_REF = 48.5, PM_TOL_LOW = 0.99, PM_TOL_HIGH = 1.05, PM_MAX_DAYS = 7;
+const bs = n => "Bs. " + money(n).slice(1);
+const pmExpected = () => Math.round(rcAmount * BCV_REF * 100) / 100;
+const PM_PREFIX = ["0412", "0414", "0416", "0422", "0424", "0426"];
+function pmCheck(id) {
+  const v = document.getElementById(id).value.trim();
+  if (id === "pm-bank") return v ? "" : "Elige el banco desde el que pagaste.";
+  if (id === "pm-phone") {
+    const d = v.replace(/\D/g, "");
+    if (!d) return "Escribe el teléfono desde el que hiciste el pago.";
+    if (d.length < 11) return `Faltan ${11 - d.length} ${11 - d.length === 1 ? "dígito" : "dígitos"}: el teléfono tiene 11 (por ejemplo, 0414-1234567).`;
+    if (!PM_PREFIX.includes(d.slice(0, 4))) return `${d.slice(0, 4)} no es un prefijo de celular. Usa 0412, 0414, 0416, 0422, 0424 o 0426.`;
+    return "";
+  }
+  if (id === "pm-ci") {
+    const t = document.getElementById("pm-cit").value;
+    if (!v) return t === "J" ? "Escribe el RIF del titular." : "Escribe la cédula del titular.";
+    if (t === "J") return v.length === 9 ? "" : "El RIF tiene 9 dígitos, sin letras ni guiones (por ejemplo, 123456789).";
+    const max = t === "E" ? 9 : 8;
+    return v.length >= 6 && v.length <= max ? "" : `La cédula ${t === "E" ? "de extranjero" : "venezolana"} tiene entre 6 y ${max} dígitos.`;
+  }
+  if (id === "pm-ref") {
+    if (!v) return "Escribe el número de referencia que aparece en tu comprobante.";
+    if (v.length < 6) return "La referencia tiene al menos 6 dígitos. Cópiala completa de tu comprobante.";
+    const dup = pendRec.find(r => r.ref === v || (r.ref.length >= 6 && v.length >= 6 && r.ref.slice(-6) === v.slice(-6) && r.bank === document.getElementById("pm-bank").value));
+    return dup ? `Ya registraste un pago con esa referencia${dup.date ? ` el ${fmtD(new Date(dup.date + "T12:00"))}` : ""}. Si es otro pago, revisa el número.` : "";
+  }
+  if (id === "pm-date") {
+    if (!v) return "Indica la fecha del pago.";
+    const d = new Date(v + "T12:00"), today = day0(new Date()), days = Math.round((today - day0(d)) / 864e5);
+    if (days < 0) return "La fecha no puede ser posterior a hoy.";
+    if (days > PM_MAX_DAYS) return `Solo puedes registrar pagos de los últimos ${PM_MAX_DAYS} días. Para uno más antiguo, escríbenos en Soporte.`;
+    return "";
+  }
+  if (id === "pm-bs") {
+    const n = parseAmt(v), exp = pmExpected();
+    if (!(n > 0)) return "Escribe el monto que pagaste en bolívares.";
+    if (n < exp * PM_TOL_LOW) return `Ese monto equivale a ${money(n / BCV_REF)}. Para recargar ${money(rcAmount)} debes pagar ${bs(exp)} (faltan ${bs(exp - n)}).`;
+    if (n > exp * PM_TOL_HIGH) return `Pagaste ${bs(n - exp)} de más. Escribe el monto exacto de tu comprobante o elige una recarga mayor.`;
+    return "";
+  }
+  return "";
+}
+const PM_FIELDS = ["pm-bank", "pm-phone", "pm-ci", "pm-ref", "pm-date", "pm-bs"];
+function pmShow(id, msg) {
+  const field = document.getElementById(id).closest(".field");
+  let hint = field.querySelector("[data-pm-err]");
+  if (!hint) { hint = document.createElement("p"); hint.className = "tiny pm-err"; hint.dataset.pmErr = id; hint.setAttribute("role", "alert"); field.append(hint); }
+  field.classList.toggle("bad", !!msg); hint.hidden = !msg; hint.textContent = msg || "";
+  document.getElementById(id).setAttribute("aria-invalid", msg ? "true" : "false");
+}
+function pmRefreshAmount() {
+  const exp = pmExpected();
+  document.querySelector('[data-pm="amount"]').textContent = `${bs(exp)} · equivale a ${money(rcAmount)}`;
+  document.querySelector('[data-pm="bshint"]').innerHTML = `Debe ser ${bs(exp)}: ${money(rcAmount)} a la tasa de referencia del prototipo (${bs(BCV_REF)} por US$). <button class="link b" type="button" data-pm-fill style="font-size:11px">Usar este monto</button>`;
+  document.querySelector('[data-pm="ratenote"]').textContent = `Tasa de referencia ilustrativa: ${bs(BCV_REF)} por US$. En la app real se usará la tasa BCV del día.`;
+}
+document.getElementById("pm-cit").addEventListener("change", e => {
+  const j = e.target.value === "J", lbl = document.querySelector('label[for="pm-ci"]'), inp = document.getElementById("pm-ci");
+  lbl.textContent = j ? "RIF del titular" : "Cédula del titular"; inp.placeholder = j ? "123456789" : "12345678";
+  if (inp.value) pmShow("pm-ci", pmCheck("pm-ci"));
+});
+document.getElementById("pmForm").addEventListener("input", e => {
+  const id = e.target.id; if (PM_FIELDS.includes(id)) pmShow(id, "");
+  document.getElementById("pmError").hidden = true;
+});
+document.getElementById("pmForm").addEventListener("change", e => { if (e.target.id === "pm-bank" || e.target.id === "pm-date") pmShow(e.target.id, pmCheck(e.target.id)); });
+document.getElementById("pmForm").addEventListener("focusout", e => { const id = e.target.id; if (PM_FIELDS.includes(id) && e.target.value.trim()) pmShow(id, pmCheck(id)); });
+document.getElementById("pmForm").addEventListener("click", e => { if (e.target.closest("[data-pm-fill]")) { const i = document.getElementById("pm-bs"); i.value = money(pmExpected()).slice(1); pmShow("pm-bs", ""); i.focus(); } });
 document.getElementById("pmForm").addEventListener("submit", e => {
   e.preventDefault();
-  const v = id => document.getElementById(id).value.trim();
-  const checks = [
-    ["pm-bank", !!v("pm-bank"), "Elige el banco desde el que pagaste."],
-    ["pm-phone", /^04(12|14|16|24|26|22)-\d{7}$/.test(v("pm-phone")), "Escribe el teléfono con el formato 0414-1234567."],
-    ["pm-ci", /^\d{6,9}$/.test(v("pm-ci")), "Escribe la cédula del titular, solo números."],
-    ["pm-ref", /^\d{6,12}$/.test(v("pm-ref")), "La referencia debe tener al menos 6 dígitos."],
-    ["pm-date", !!v("pm-date"), "Indica la fecha del pago."],
-    ["pm-bs", parseAmt(v("pm-bs")) > 0, "Escribe el monto que pagaste en bolívares."]
-  ];
-  const bad = checks.find(c => !c[1]);
-  if (bad) {
-    document.getElementById(bad[0]).closest(".field").classList.add("bad");
-    const box = document.getElementById("pmError"); box.querySelector('[data-pm="err"]').textContent = bad[2]; box.hidden = false;
-    document.getElementById(bad[0]).focus(); return;
+  const errs = PM_FIELDS.map(id => [id, pmCheck(id)]);
+  errs.forEach(([id, m]) => pmShow(id, m));
+  const bad = errs.filter(x => x[1]);
+  if (bad.length) {
+    const box = document.getElementById("pmError");
+    box.querySelector('[data-pm="err"]').textContent = bad.length === 1 ? bad[0][1] : `Revisa los ${bad.length} datos marcados en rojo antes de registrar tu pago.`;
+    box.hidden = false; document.getElementById(bad[0][0]).focus(); return;
   }
+  const v = id => document.getElementById(id).value.trim();
   const ref = v("pm-ref");
-  pendRec.push({ id: "r" + Date.now(), amount: rcAmount, ref, bank: v("pm-bank"), estado: "revision" }); savePend();
+  pendRec.push({ id: "r" + Date.now(), amount: rcAmount, ref, bank: v("pm-bank"), date: v("pm-date"), bs: parseAmt(v("pm-bs")), estado: "revision" }); savePend();
   addMovement("Recarga de wallet", `Pago móvil · Ref. ${ref.slice(-6)}`, "+" + money(rcAmount), "En revisión", "neutral", { icon: "smartphone", go: "recarga", goLabel: "Ver estado ›" });
-  e.target.reset();
+  e.target.reset(); PM_FIELDS.forEach(id => pmShow(id, ""));
   toast(`Registramos tu Pago Móvil de ${money(rcAmount)}. Lo validaremos en un máximo de 24 horas hábiles.`);
   renderRecarga(); go("recarga");
 });

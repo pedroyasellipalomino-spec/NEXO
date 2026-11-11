@@ -248,6 +248,28 @@ async def main() -> int:
         await pg.wait_for_timeout(300)
         check(await pg.evaluate("location.hash") == "#gestion", "vuelve al modo gestión")
 
+        # Pago Móvil: valida todos los datos a la vez y el monto según la tasa de referencia
+        await login("ana.torres@correo.unimet.edu.ve", "demo-nexo-01")
+        await pg.goto(URL + "#recarga")
+        await pg.wait_for_timeout(300)
+        await pg.evaluate("openPagoMovil()")
+        await pg.wait_for_timeout(300)
+        await pg.select_option("#pm-bank", index=2)
+        await pg.fill("#pm-phone", "02121234567")
+        await pg.fill("#pm-ci", "123")
+        await pg.fill("#pm-ref", "123")
+        await pg.fill("#pm-bs", "100")
+        await pg.click("#pmForm button[type=submit]")
+        await pg.wait_for_timeout(200)
+        check(await pg.locator(".pm-err:visible").count() == 4, "Pago Móvil marca cada dato inválido bajo su campo")
+        await pg.fill("#pm-phone", "04141234567")
+        await pg.fill("#pm-ci", "26123456")
+        await pg.fill("#pm-ref", "00456789")
+        await pg.click("[data-pm-fill]")
+        await pg.click("#pmForm button[type=submit]")
+        await pg.wait_for_timeout(300)
+        check(await pg.evaluate("location.hash") == "#recarga", "Pago Móvil con datos válidos se registra")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 

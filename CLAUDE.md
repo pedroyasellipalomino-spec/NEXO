@@ -48,7 +48,7 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - Antes de ver el estado de cuenta, el estudiante registra sus materias en `#inscripcion` (carrera + cantidad + nombre o código). `findSubject(texto, carrera)` resuelve nombre o código contra `MATDB` (sin importar acentos ni mayúsculas).
 - `simDate`: chips para simular fechas entre el 1 sep y el 30 nov.
 
-**Estacionamiento.** Wallet Nexo con recargas (tarjeta afiliada o Pago Móvil), registro de vehículo (marca, modelo, año, placa), planes (incluye bimestral y trimestral) pagados con saldo y verificación por código de 6 dígitos enviado al correo (simulado: 10 min de validez, reenvío a los 30 s, 3 intentos).
+**Estacionamiento.** Wallet Nexo con recargas (tarjeta afiliada o Pago Móvil; el formulario de Pago Móvil valida todo a la vez con `pmCheck`/`pmShow`: prefijo de celular, cédula V/E de 6–8/9 dígitos o RIF J de 9, referencia de 6+ dígitos y no repetida, fecha no futura y de los últimos 7 días, monto en Bs. = recarga × `BCV_REF` con tolerancia −1 %/+5 %; `BCV_REF` es una tasa ilustrativa), registro de vehículo (marca, modelo, año, placa), planes (incluye bimestral y trimestral) pagados con saldo y verificación por código de 6 dígitos enviado al correo (simulado: 10 min de validez, reenvío a los 30 s, 3 intentos).
 
 **Comida y kioscos.** Los menús salen de `LOCALES` en `app.js` (4 locales + 3 kioscos; cada uno con categorías → productos; `foodOpt()` define grupos de opciones de "elige una" con recargo). Las pantallas `#comida`, `#local`, `#detalle`, `#carrito` se pintan con `renderFoodList/renderLocal/renderDetalle/renderCarrito` desde `show()`; el local y el producto abiertos viven en `sessionStorage["nexo-food"]`.
 - Carrito por cuenta en `nexo-cart` (`{ local, lines:[{item, sel, qty, note}] }`): un solo local por pedido; al añadir de otro local se avisa y se vacía. La cuenta demo arranca con el almuerzo del día de Pincho Pan.
@@ -85,7 +85,6 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 
 - Ingeniería Mecánica no tiene materias en `CARRERAS`: su flujograma en PDF tiene el texto convertido en curvas y no se pudo extraer.
 - El código `EI27` (Contrataciones Internacionales) viene así en el flujograma; parece incompleto.
-- Validación de Pago Móvil.
 - Comida: los menús y precios son de ejemplo (confirmar con cada local); falta la validación de los datos de transferencia; el comercio no puede editar precios ni productos (solo agotar y pausar).
 - Invitaciones: el envío por correo es simulado (se copia el enlace).
 
