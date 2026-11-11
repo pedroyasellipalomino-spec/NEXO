@@ -696,3 +696,4 @@ button.tk-row.on{background:var(--mint-bg)}
 .ffopen{padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .fftag{gap:6px;cursor:pointer;border:0}
 .fftag svg{font-size:13px}
+.opt:disabled{opacity:.55;cursor:not-allowed}

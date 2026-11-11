@@ -24,6 +24,9 @@ async def main() -> int:
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=__import__("os").environ.get("CHROME_PATH") or None)
         pg = await b.new_page(viewport={"width": 1280, "height": 900})
+        # Hora fija dentro del horario de los locales (12:30) para que la prueba no dependa de la hora real
+        await pg.add_init_script("""(() => { const R = Date, base = new R(); base.setHours(12, 30, 0, 0); const off = base - R.now();
+          globalThis.Date = class extends R { constructor(...a) { if (a.length) super(...a); else super(R.now() + off); } static now() { return R.now() + off; } }; })()""")
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
 
@@ -317,6 +320,22 @@ async def main() -> int:
         await pg.goto(URL + "#factura")
         await pg.wait_for_timeout(300)
         check("Ana Torres" not in await pg.inner_text("#factura") and "Aún no tienes facturas" in await pg.inner_text("#fcCard"), "la factura vacía no muestra datos de otra cuenta")
+
+        # pedido programado: retiro más tarde, queda "Programado" y el comercio lo ve con su hora
+        await pg.goto(URL + "#comida")
+        await pg.wait_for_timeout(200)
+        await pg.dispatch_event("[data-open-local='lapausa']", "click")
+        await pg.wait_for_timeout(200)
+        await pg.dispatch_event("[data-open-item='golfeado']", "click")
+        await pg.wait_for_timeout(200)
+        await pg.click("#detAdd")
+        await pg.wait_for_timeout(300)
+        await pg.click("[data-pk-mode=sched]")
+        await pg.wait_for_timeout(150)
+        await pg.select_option("#pk-time", index=2)
+        await pg.click("#cartPay")
+        await pg.wait_for_timeout(400)
+        check("Tu pedido está programado" in await pg.inner_text("#pdBody"), "se puede programar el retiro de un pedido")
 
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()

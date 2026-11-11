@@ -1669,6 +1669,28 @@ function openState(l) {
   if (m >= toMin(a) && m < toMin(b)) return { open: true, label: "Abierto", cls: "ok" };
   return { open: false, label: m < toMin(a) ? `Abre a las ${a}` : "Cerrado por hoy", cls: "neutral" };
 }
+/* Retiro programado: franjas de 15 min dentro del horario del local, hoy (desde ahora + preparación) o mañana */
+const DAY_TXT = ["Hoy", "Mañana"];
+function pickupSlots(l, day) {
+  const [a, b] = l.hours.split("–"), prep = etaMax(l), now = new Date(), nowM = now.getHours() * 60 + now.getMinutes();
+  let start = toMin(a) + prep; if (day === 0) start = Math.max(start, nowM + prep);
+  start = Math.ceil(start / 15) * 15;
+  const out = []; for (let m = start; m <= toMin(b); m += 15) out.push(`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`);
+  return out;
+}
+function slotTime(day, hm) { const d = new Date(); d.setDate(d.getDate() + day); const [h, m] = hm.split(":").map(Number); d.setHours(h, m, 0, 0); return d.getTime(); }
+const whenTxt = t => { const d = new Date(t), today = day0(new Date()).getTime(), dd = day0(d).getTime(); return `${dd === today ? "hoy" : dd - today === 864e5 ? "mañana" : fmtD(d)} a las ${hhmm(t)}`; };
+function cartPickup(l) {
+  // devuelve el retiro elegido y corrige lo que ya no sea válido (local cerrado, franja pasada)
+  const open = openState(l).open, p = cart.pickup || { mode: open ? "asap" : "sched" };
+  if (!open) p.mode = "sched";
+  if (p.mode === "sched") {
+    let day = p.day ?? 0; if (!pickupSlots(l, day).length) day = 1;
+    const slots = pickupSlots(l, day); if (!slots.includes(p.time)) p.time = slots[0];
+    p.day = day;
+  }
+  cart.pickup = p; return p;
+}
 function foodMatches(l, q) {
   // productos que cumplen la búsqueda, el precio y el tipo
   const items = l.cats.flatMap(c => c.items.filter(it => !isSoldOut(l.id, it.id)
@@ -1759,7 +1781,7 @@ function renderLocal() {
   setFrame("local", l.name, ["Comida y kioscos", l.name]);
   document.getElementById("localHead").innerHTML = `<h1 class="h1">${esc(l.name)}</h1><p class="lead">${l.place} · ${esc(l.tagline)}</p>
     <div class="chips" style="margin-top:12px">${isPaused(l.id) ? `<span class="pill warn">Pedidos en pausa</span>` : `<span class="pill ${openState(l).cls}">${openState(l).label}</span>`}<span class="pill neutral">Retiro en ${l.eta}</span><span class="pill neutral">${l.hours}</span></div>
-    ${isPaused(l.id) ? `<div class="notice warn" style="margin-top:12px"><i data-lucide="circle-pause"></i><p>${esc(l.name)} no está recibiendo pedidos en este momento. Puedes ver el menú y volver más tarde.</p></div>` : !openState(l).open ? `<div class="notice" style="margin-top:12px"><i data-lucide="clock"></i><p>${esc(l.name)} atiende hoy de ${l.hours}. En el prototipo igual puedes hacer el pedido para probar el flujo.</p></div>` : ""}`;
+    ${isPaused(l.id) ? `<div class="notice warn" style="margin-top:12px"><i data-lucide="circle-pause"></i><p>${esc(l.name)} no está recibiendo pedidos en este momento. Puedes ver el menú y volver más tarde.</p></div>` : !openState(l).open ? `<div class="notice" style="margin-top:12px"><i data-lucide="clock"></i><p>${esc(l.name)} atiende de ${l.hours}. Puedes armar tu pedido y programar el retiro para cuando abra.</p></div>` : ""}`;
   const cats = ["Todos", ...l.cats.map(c => c.name)];
   if (!cats.includes(curCat)) curCat = "Todos";
   document.getElementById("localChips").innerHTML = cats.map(c => `<button class="pill ${c === curCat ? "ok" : "neutral"}" type="button" data-food-cat="${esc(c)}">${esc(c)}</button>`).join("");
@@ -1873,6 +1895,7 @@ function renderCarrito() {
   const total = cartTotal(), n = cartCount();
   const soldNames = cart.lines.filter(x => isSoldOut(l.id, x.item)).map(x => (itemById(l, x.item) || {}).name);
   const blocked = isPaused(l.id) || soldNames.length > 0;
+  const st = openState(l), pk = cartPickup(l); saveCart();
   const defCard = cards.length ? cardLabel(cards[0]) : "Tarjeta de crédito o débito";
   body.innerHTML = `
     <div class="stack">
@@ -1889,8 +1912,15 @@ function renderCarrito() {
       <div class="card">
         <div class="row start"><i data-lucide="map-pin" style="color:var(--brand);font-size:20px"></i><b class="h3">Retiro en el local</b></div>
         <div><p style="font-size:13px">${esc(l.name)} · ${l.place}</p><p class="small">Campus Central · Planta baja</p></div>
-        <div class="notice" style="color:var(--ink);font-weight:600;font-size:13px"><i data-lucide="clock" style="color:var(--brand)"></i><span style="flex:1">Lo antes posible · ${l.eta}</span></div>
-        <p class="small">El tiempo de preparación comienza al confirmar tu pago.</p>
+        <div class="stack s14" style="gap:8px" role="radiogroup" aria-label="Cuándo retiras">
+          <button class="opt${pk.mode === "asap" ? " on" : ""}" type="button" role="radio" aria-checked="${pk.mode === "asap"}" data-pk-mode="asap"${st.open ? "" : " disabled"}><span class="dot"></span><span class="grow">Lo antes posible · ${l.eta}<br><span class="small" style="font-weight:400">${st.open ? "Empiezan a prepararlo al confirmar tu pago." : `No disponible: ${esc(l.name)} está ${st.label.toLowerCase()}.`}</span></span></button>
+          <button class="opt${pk.mode === "sched" ? " on" : ""}" type="button" role="radio" aria-checked="${pk.mode === "sched"}" data-pk-mode="sched"><span class="dot"></span><span class="grow">Programar el retiro<br><span class="small" style="font-weight:400">Elige el día y la hora; lo tendrán listo para entonces.</span></span></button>
+        </div>
+        ${pk.mode === "sched" ? `<div class="grid2">
+          <div class="field"><label for="pk-day">Día</label><div class="input sel"><select id="pk-day">${[0, 1].filter(d => pickupSlots(l, d).length).map(d => `<option value="${d}"${pk.day === d ? " selected" : ""}>${DAY_TXT[d]}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
+          <div class="field"><label for="pk-time">Hora de retiro</label><div class="input sel"><select id="pk-time">${pickupSlots(l, pk.day).map(t => `<option${pk.time === t ? " selected" : ""}>${t}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
+        </div>
+        <p class="small">Lo retiras ${whenTxt(slotTime(pk.day, pk.time))}. Empezarán a prepararlo ${etaMax(l)} min antes; te avisamos cuando esté listo.</p>` : ""}
       </div>
       <div class="card">
         <div><h3 class="h2">¿Cómo quieres pagar?</h3><p class="small" style="font-size:13px">Elige un método para continuar.</p></div>
@@ -1915,13 +1945,17 @@ function renderCarrito() {
       <div class="kv"><span>En bolívares · tasa BCV ${bcvDateTxt()}</span><b>${bsOf(total)}</b></div>
       <p class="small">Precios finales · Sin cargos extra</p>
       ${blocked ? `<div class="notice warn"><i data-lucide="circle-pause"></i><p>${isPaused(l.id) ? `${esc(l.name)} pausó los pedidos por ahora. Inténtalo más tarde.` : `Se agotó: ${soldNames.join(", ")}. Quítalo del carrito para continuar.`}</p></div>` : ""}
-      <button class="btn" type="button" id="cartPay"${blocked ? " disabled" : ""}><i data-lucide="arrow-right"></i>${payMethod === "card" ? "Pagar con tarjeta" : "Continuar con transferencia"} · ${money(total)}</button>
+      <button class="btn" type="button" id="cartPay"${blocked ? " disabled" : ""}><i data-lucide="${pk.mode === "sched" ? "calendar-clock" : "arrow-right"}"></i>${pk.mode === "sched" ? (payMethod === "card" ? "Programar y pagar" : "Programar y transferir") : payMethod === "card" ? "Pagar con tarjeta" : "Continuar con transferencia"} · ${money(total)}</button>
       <p class="tiny center"><i data-lucide="lock-keyhole"></i> ${payMethod === "card" ? "Prototipo: el cobro es simulado." : "Aún no se realizará ningún cobro."}</p>
     </div>`;
   icons();
 }
 
 /* Pedidos: se crean al pagar y se muestran en comprobante y factura */
+document.addEventListener("change", e => {
+  if (e.target.id === "pk-day") { cart.pickup = { ...cart.pickup, day: +e.target.value, time: null }; saveCart(); renderCarrito(); }
+  if (e.target.id === "pk-time") { cart.pickup = { ...cart.pickup, time: e.target.value }; saveCart(); renderCarrito(); }
+});
 function newOrder(method) {
   const l = cartLocal(), now = new Date(), d = day0(simDate);
   const num = `${l.pref}-${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(orders.length + 1).padStart(4, "0")}`;
@@ -1931,14 +1965,17 @@ function newOrder(method) {
 }
 let draftOrder = null;
 function confirmOrder(o) {
-  o.paidAt = Date.now(); o.readyAt = o.paidAt + prepMinutes(localById(o.local)) * MIN; o.code = pickupCode(o);
+  const lo = localById(o.local), pk = cart.pickup && cart.local === o.local ? cartPickup(lo) : { mode: "asap" };
+  o.paidAt = Date.now(); o.code = pickupCode(o);
+  if (pk.mode === "sched") { o.scheduledFor = slotTime(pk.day, pk.time); o.readyAt = o.scheduledFor; o.prepStart = o.scheduledFor - etaMax(lo) * MIN; }
+  else o.readyAt = o.paidAt + prepMinutes(lo) * MIN;
   orders.push(o); saveOrders();
   cart = { local: null, lines: [] }; saveCart();
   curOrder = o.id;
   const l = localById(o.local), n = o.lines.reduce((a, x) => a + x.qty, 0);
   addMovement(o.lines.length === 1 ? o.lines[0].name : `Pedido · ${plural(n, "producto", "productos")}`, `${l.name} · ${l.place}`, "−" + money(o.total), "Pagado", "ok",
     { icon: "utensils", go: "pedido", goLabel: "Ver pedido ›", order: o.id, date: `${o.date} · ${o.time}` });
-  trackId = o.id; toast("Pago confirmado. Ya están preparando tu pedido.");
+  trackId = o.id; toast(o.scheduledFor ? `Pago confirmado. Tu pedido quedó programado para ${whenTxt(o.scheduledFor)}.` : "Pago confirmado. Ya están preparando tu pedido.");
   go("pedido");
 }
 const orderLines = o => o.lines.map(x => `<div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="${x.icon}"></i></div><div><b style="font-size:13px">${esc(x.name)}</b>${x.opts.map(t => `<p class="small">${esc(t)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}<p class="small">Cantidad ${x.qty} · ${money(x.total)}</p></div></div>`).join("");
@@ -2025,6 +2062,8 @@ document.addEventListener("click", e => {
   if (ce) { const i = +ce.dataset.cartEdit; curLocal = cart.local; openItem(cart.lines[i].item, i); go("detalle"); return; }
   const pm = e.target.closest("[data-pay-method]");
   if (pm) { payMethod = pm.dataset.payMethod; renderCarrito(); return; }
+  const pkm = e.target.closest("[data-pk-mode]");
+  if (pkm && !pkm.disabled) { cart.pickup = { ...(cart.pickup || {}), mode: pkm.dataset.pkMode }; saveCart(); renderCarrito(); return; }
   if (e.target.closest("#cartPay")) {
     if (payMethod === "card") confirmOrder(newOrder("card"));
     else { draftOrder = newOrder("transfer"); go("comprobante"); }
@@ -2859,9 +2898,9 @@ document.addEventListener("submit", e => {
 let trackId = null;
 function prepMinutes(l) { const n = ((l && l.eta) || "10").match(/\d+/g).map(Number); return Math.round(n.reduce((a, b) => a + b, 0) / n.length); }
 function pickupCode(o) { return String(1000 + ((+String(o.id).slice(1) || 0) * 7919) % 9000); }
-function orderStatus(o) { return o.cancelledAt ? "cancelado" : !o.readyAt || o.pickedAt ? "retirado" : Date.now() >= o.readyAt ? "listo" : "preparando"; }
-const activeOrders = () => orders.filter(o => ["preparando", "listo"].includes(orderStatus(o))).sort((a, b) => b.paidAt - a.paidAt);
-const ORDER_STATE = { preparando: ["En preparación", "warn"], listo: ["Listo para retirar", "ok"], retirado: ["Retirado", "neutral"], cancelado: ["Cancelado", "bad"] };
+function orderStatus(o) { return o.cancelledAt ? "cancelado" : !o.readyAt || o.pickedAt ? "retirado" : Date.now() >= o.readyAt ? "listo" : o.prepStart && Date.now() < o.prepStart ? "programado" : "preparando"; }
+const activeOrders = () => orders.filter(o => ["programado", "preparando", "listo"].includes(orderStatus(o))).sort((a, b) => b.paidAt - a.paidAt);
+const ORDER_STATE = { programado: ["Programado", "neutral"], preparando: ["En preparación", "warn"], listo: ["Listo para retirar", "ok"], retirado: ["Retirado", "neutral"], cancelado: ["Cancelado", "bad"] };
 function foodNotifs(t) {
   return orders.filter(o => orderStatus(o) === "listo").map(o => {
     const l = localById(o.local);
@@ -2883,9 +2922,10 @@ function renderPedido() {
   body.classList.toggle("ready", st === "listo");
   setFrame("pedido", "Tu pedido", ["Comida y kioscos", l.name, o.num]);
   const total = (o.readyAt || now) - (o.paidAt || now), left = Math.max(0, Math.ceil(((o.readyAt || now) - now) / MIN));
-  const prog = st === "preparando" ? Math.min(96, Math.max(4, (now - o.paidAt) / total * 100)) : 100;
-  const title = st === "preparando" ? "Estamos preparando tu pedido" : st === "listo" ? "¡Tu pedido está listo!" : st === "cancelado" ? `${l.name} canceló tu pedido` : "Pedido retirado";
-  const lead = st === "preparando" ? `Listo aprox. a las ${hhmm(o.readyAt)} · ${left <= 1 ? "falta 1 min" : `faltan ${left} min`}${o.delayMin ? ` · el local avisó una demora de ${o.delayMin} min` : ""}`
+  const from = o.prepStart || o.paidAt, prog = st === "preparando" ? Math.min(96, Math.max(4, (now - from) / ((o.readyAt || now) - from) * 100)) : 100;
+  const title = st === "programado" ? "Tu pedido está programado" : st === "preparando" ? "Estamos preparando tu pedido" : st === "listo" ? "¡Tu pedido está listo!" : st === "cancelado" ? `${l.name} canceló tu pedido` : "Pedido retirado";
+  const lead = st === "programado" ? `Lo retiras ${whenTxt(o.readyAt)}. Empezarán a prepararlo a las ${hhmm(o.prepStart)}.`
+    : st === "preparando" ? `Listo aprox. a las ${hhmm(o.readyAt)} · ${left <= 1 ? "falta 1 min" : `faltan ${left} min`}${o.delayMin ? ` · el local avisó una demora de ${o.delayMin} min` : ""}`
     : st === "listo" ? `Retíralo en el mostrador de ${l.name} · ${l.place}`
     : st === "cancelado" ? `Te devolvimos ${money(o.total)} a ${o.card || "tu método de pago"}. Llega en 3 a 5 días hábiles.`
     : o.pickedAt ? `Lo retiraste a las ${hhmm(o.pickedAt)}. ¡Buen provecho!` : "Este pedido ya fue entregado.";
@@ -2899,8 +2939,9 @@ function renderPedido() {
         ${st === "preparando" ? `<div class="track" role="progressbar" aria-label="Progreso de la preparación" aria-valuenow="${Math.round(prog)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${prog}%"></i></div>` : ""}
         <ol class="steps-v"${st === "cancelado" ? " hidden" : ""}>
           ${o.paidAt ? step(true, false, "Pago confirmado", hhmm(o.paidAt)) : ""}
-          ${step(st !== "preparando", st === "preparando", "En preparación", o.paidAt ? `Desde las ${hhmm(o.paidAt)} · ${l.eta}` : "")}
-          ${step(st === "retirado", st === "listo", "Listo para retirar", o.readyAt ? (st === "preparando" ? `Estimado: ${hhmm(o.readyAt)}` : hhmm(o.readyAt)) : "")}
+          ${o.scheduledFor ? step(st !== "programado", st === "programado", "Programado", `Retiro ${whenTxt(o.scheduledFor)}`) : ""}
+          ${step(!["programado", "preparando"].includes(st), st === "preparando", "En preparación", o.prepStart ? (st === "programado" ? `Desde las ${hhmm(o.prepStart)}` : `Desde las ${hhmm(o.prepStart)} · ${l.eta}`) : o.paidAt ? `Desde las ${hhmm(o.paidAt)} · ${l.eta}` : "")}
+          ${step(st === "retirado", st === "listo", "Listo para retirar", o.readyAt ? (["programado", "preparando"].includes(st) ? `Estimado: ${hhmm(o.readyAt)}` : hhmm(o.readyAt)) : "")}
           ${step(st === "retirado", false, "Retirado", o.pickedAt ? hhmm(o.pickedAt) : "")}
         </ol>
         ${st === "listo" ? `<button class="btn" type="button" data-picked="${o.id}"><i data-lucide="check"></i>Ya lo retiré</button>` : ""}
@@ -2916,11 +2957,11 @@ function renderPedido() {
         <h2 class="h2">Código de retiro</h2>
         ${st === "listo" ? `<div class="qr"><canvas width="29" height="29" data-qr="${o.num}" role="img" aria-label="Código QR del pedido ${o.num}"></canvas></div>` : ""}
         <b class="pcode" aria-label="Código ${o.code.split("").join(" ")}">${o.code}</b>
-        <p class="small" style="font-size:13px">${st === "listo" ? `Muéstralo en el mostrador de ${esc(l.name)}. Solo sirve para este pedido.` : st === "preparando" ? "Te avisaremos cuando esté listo. El código QR aparece en ese momento." : "Este código ya se usó."}</p>
+        <p class="small" style="font-size:13px">${st === "listo" ? `Muéstralo en el mostrador de ${esc(l.name)}. Solo sirve para este pedido.` : ["programado", "preparando"].includes(st) ? "Te avisaremos cuando esté listo. El código QR aparece en ese momento." : "Este código ya se usó."}</p>
       </div>
       <div class="card"><div class="row start"><i data-lucide="map-pin" style="color:var(--brand);font-size:20px"></i><b class="h3">${esc(l.name)}</b></div><p class="small" style="font-size:13px">${l.place} · Campus Central · Planta baja · Hoy ${l.hours}</p></div>
       ${st === "cancelado" ? `<div class="notice warn"><i data-lucide="ban"></i><p>Si tienes dudas sobre la cancelación, escríbenos desde <button class="link b" type="button" data-go="soporte" style="font-size:12px">Soporte</button>.</p></div>` : ""}
-      ${st === "preparando" ? `<div class="notice"><i data-lucide="flask-conical"></i><p>Prototipo: <button class="link b" type="button" data-sim-ready="${o.id}" style="font-size:12px">simular que el pedido ya está listo</button> para no esperar ${l.eta}.</p></div>` : ""}
+      ${["programado", "preparando"].includes(st) ? `<div class="notice"><i data-lucide="flask-conical"></i><p>Prototipo: <button class="link b" type="button" data-sim-ready="${o.id}" style="font-size:12px">simular que el pedido ya está listo</button> para no esperar ${l.eta}.</p></div>` : ""}
       ${orders.length > 1 ? `<button class="link b" type="button" data-go="actividad">Ver todos mis pedidos en Actividad →</button>` : ""}
     </div>`;
   body.querySelectorAll("canvas[data-qr]").forEach(drawQR);
@@ -2931,8 +2972,8 @@ function renderFoodOrders() {
   box.hidden = !act.length;
   box.innerHTML = act.map(o => {
     const l = localById(o.local), st = orderStatus(o);
-    return `<div class="card${st === "listo" ? " sel" : ""}"><div class="row"><h3 class="h3">${st === "listo" ? "Tu pedido está listo" : "Tu pedido en curso"}</h3><span class="pill ${ORDER_STATE[st][1]}">${ORDER_STATE[st][0]}</span></div>
-      <p class="small" style="font-size:13px">${esc(l.name)} · ${st === "listo" ? `Código ${o.code}` : `Listo aprox. a las ${hhmm(o.readyAt)}`}</p>
+    return `<div class="card${st === "listo" ? " sel" : ""}"><div class="row"><h3 class="h3">${st === "listo" ? "Tu pedido está listo" : st === "programado" ? "Tu pedido programado" : "Tu pedido en curso"}</h3><span class="pill ${ORDER_STATE[st][1]}">${ORDER_STATE[st][0]}</span></div>
+      <p class="small" style="font-size:13px">${esc(l.name)} · ${st === "listo" ? `Código ${o.code}` : st === "programado" ? `Retiro ${whenTxt(o.readyAt)}` : `Listo aprox. a las ${hhmm(o.readyAt)}`}</p>
       <button class="btn${st === "listo" ? "" : " ghost"}" type="button" data-go="pedido" data-order="${o.id}"><i data-lucide="${st === "listo" ? "qr-code" : "clock"}"></i>${st === "listo" ? "Ver código de retiro" : "Ver pedido"}</button></div>`;
   }).join("");
   icons();
@@ -2941,6 +2982,7 @@ function renderFoodOrders() {
 function checkOrders() {
   let changed = false;
   orders.forEach(o => {
+    if (o.prepStart && orderStatus(o) === "preparando" && !o.prepNotified) { o.prepNotified = true; changed = true; toast(`${localById(o.local).name} empezó a preparar tu pedido programado.`); }
     if (orderStatus(o) === "listo" && !o.readyNotified) { o.readyNotified = true; changed = true; toast(`Tu pedido de ${localById(o.local).name} está listo. Código ${o.code}.`); }
     if (o.cancelledAt && !o.cancelNotified) { o.cancelNotified = true; changed = true; toast(`${localById(o.local).name} canceló tu pedido. Te devolvimos ${money(o.total)}.`); }
   });
@@ -2953,7 +2995,7 @@ document.addEventListener("click", e => {
   const pk = e.target.closest("[data-picked]");
   if (pk) { const o = orders.find(x => x.id === pk.dataset.picked); o.pickedAt = Date.now(); o.readyNotified = true; saveOrders(); toast("¡Buen provecho! Marcamos tu pedido como retirado."); try { renderNotifs(); } catch (err) {} renderPedido(); return; }
   const sr = e.target.closest("[data-sim-ready]");
-  if (sr) { const o = orders.find(x => x.id === sr.dataset.simReady); o.readyAt = Date.now(); saveOrders(); checkOrders(); }
+  if (sr) { const o = orders.find(x => x.id === sr.dataset.simReady); o.readyAt = Date.now(); if (o.prepStart) { o.prepStart = Date.now() - MIN; o.prepNotified = true; } saveOrders(); checkOrders(); }
 });
 setInterval(checkOrders, 15000);
 setTimeout(checkOrders, 1200);
@@ -3007,7 +3049,7 @@ function renderLocalPedidos() {
   seedLocalOrders(l);
   const mine = allOrders().filter(x => x.o.local === l.id && x.o.readyAt), today = day0(new Date()).getTime();
   const by = st => mine.filter(x => orderStatus(x.o) === st);
-  const prep = by("preparando").sort((a, b) => a.o.readyAt - b.o.readyAt), ready = by("listo").sort((a, b) => a.o.readyAt - b.o.readyAt);
+  const prep = [...by("preparando"), ...by("programado")].sort((a, b) => a.o.readyAt - b.o.readyAt), ready = by("listo").sort((a, b) => a.o.readyAt - b.o.readyAt);
   const done = mine.filter(x => ["retirado", "cancelado"].includes(orderStatus(x.o)) && (x.o.pickedAt || x.o.cancelledAt || 0) >= today).sort((a, b) => (b.o.pickedAt || b.o.cancelledAt) - (a.o.pickedAt || a.o.cancelledAt));
   const sales = mine.filter(x => x.o.paidAt >= today && !x.o.cancelledAt).reduce((a, x) => a + x.o.total, 0);
   document.getElementById("lpTitle").textContent = isPaused(l.id) ? "Pedidos en pausa" : "Pedidos de hoy";
@@ -3025,6 +3067,10 @@ function renderLocalPedidos() {
     const o = x.o, left = Math.max(0, Math.ceil((o.readyAt - Date.now()) / MIN)), key = `${x.email}|${o.id}`;
     const head = `<div class="row"><span class="tk-ref">${o.num}</span><span class="tiny">${who(x)} · ${o.time}</span></div>`;
     const confirm = lpConfirm === key ? `<div class="confirm"><p>¿Cancelar el pedido y devolver ${money(o.total)} a ${esc(o.card || "su método de pago")}? Le avisaremos al estudiante.</p><div class="row"><button class="btn ghost" type="button" data-lp-no>Volver</button><button class="btn" type="button" data-lp-cancel-yes="${key}">Cancelar pedido</button></div></div>` : "";
+    if (st === "preparando" && orderStatus(o) === "programado") return `<div class="card lp-card sched">${head}${lines(o)}
+      <div class="row"><span class="pill neutral"><i data-lucide="calendar-clock"></i>&nbsp;Programado · retiro ${whenTxt(o.readyAt)}</span><b>${money(o.total)}</b></div>
+      <p class="tiny">Empieza a prepararlo a las ${hhmm(o.prepStart)}.</p>
+      ${confirm || `<div class="row"><button class="link b" type="button" data-lp-ready="${key}">Ya está listo</button><button class="link" type="button" style="color:var(--danger)" data-lp-cancel="${key}">Cancelar pedido</button></div>`}</div>`;
     if (st === "preparando") return `<div class="card lp-card">${head}${lines(o)}
       <div class="row"><span class="pill ${left <= 2 ? "warn" : "neutral"}"><i data-lucide="timer"></i>&nbsp;${left <= 0 ? "Ya debería estar listo" : `Listo en ${left} min · ${hhmm(o.readyAt)}`}</span><b>${money(o.total)}</b></div>
       ${o.delayMin ? `<p class="tiny">Avisaste una demora de ${o.delayMin} min.</p>` : ""}
