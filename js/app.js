@@ -63,8 +63,8 @@ document.querySelectorAll("section.app").forEach(sec => {
     <div class="inst"><b>U. Metropolitana</b><span>Campus Central · Caracas</span></div>
     <nav class="nav">${nav.map(n => `<button type="button" data-go="${n[3]}" class="${n[0]===tab?'on':''}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`).join("")}</nav>
     ${staff
-      ? `<div class="profile"><p class="tag">ESPACIO DE GESTIÓN</p><div class="user"><span class="avatar" data-user="initials">AT</span><div><b data-user="full">Ana Torres</b><span>${ROLE_LABEL[staff]}</span></div></div></div>`
-      : `<div class="profile"><p class="tag">ESPACIO DE ESTUDIANTE</p><button class="user userbtn" type="button" data-go="perfil" aria-label="Abrir mi cuenta"><span class="avatar" data-user="initials">AT</span><div><b data-user="full">Ana Torres</b><span>Ver mi cuenta</span></div></button></div>`}
+      ? `<div class="profile"><p class="tag">ESPACIO DE GESTIÓN</p><button class="user userbtn" type="button" data-usermenu aria-haspopup="menu" aria-label="Abrir el menú de usuario"><span class="avatar" data-user="initials">AT</span><div><b data-user="full">Ana Torres</b><span>${ROLE_LABEL[staff]} · Menú</span></div></button></div>`
+      : `<div class="profile"><p class="tag" data-space-tag>ESPACIO DE ESTUDIANTE</p><button class="user userbtn" type="button" data-usermenu aria-haspopup="menu" aria-label="Abrir el menú de usuario"><span class="avatar" data-user="initials">AT</span><div><b data-user="full">Ana Torres</b><span>Mi cuenta · Menú</span></div></button></div>`}
     <button class="logout" type="button" data-logout><i data-lucide="log-out"></i>Cerrar sesión</button>`;
 
   const main = document.createElement("div");
@@ -73,11 +73,11 @@ document.querySelectorAll("section.app").forEach(sec => {
     ? `<button class="title" type="button" data-go="${back}"><i data-lucide="arrow-left"></i>${title}</button>`
     : `<button class="brand" type="button" data-go="${home}"><span class="emblem"><i data-lucide="layers"></i></span>nexo</button>`;
   const macts = staff
-    ? `<span class="pill ok">${ROLE_LABEL[staff]}</span><button class="avatarbtn" type="button" aria-label="Cerrar sesión" title="Cerrar sesión" data-logout><i data-lucide="log-out"></i></button>`
-    : `<button class="bellbtn" type="button" aria-label="Notificaciones" data-go="notificaciones"><i data-lucide="bell"></i><span class="nbadge" data-notif-badge hidden></span></button><button class="avatarbtn" type="button" aria-label="Mi cuenta" data-go="perfil"><span data-user="initials">AT</span></button>`;
+    ? `<span class="pill ok">${ROLE_LABEL[staff]}</span><button class="avatarbtn" type="button" aria-label="Menú de usuario" aria-haspopup="menu" data-usermenu><span data-user="initials">AT</span></button>`
+    : `<button class="bellbtn" type="button" aria-label="Notificaciones" data-go="notificaciones"><i data-lucide="bell"></i><span class="nbadge" data-notif-badge hidden></span></button><button class="avatarbtn" type="button" aria-label="Menú de usuario" aria-haspopup="menu" data-usermenu><span data-user="initials">AT</span></button>`;
   const dacts = staff
-    ? `<span class="pill ok">Acceso: ${ROLE_LABEL[staff]}</span><span>ES</span>`
-    : `<span class="pill ok">Trimestre sep–nov 2026</span><button class="bellbtn desk" type="button" aria-label="Notificaciones" data-go="notificaciones"><i data-lucide="bell"></i><span class="nbadge" data-notif-badge hidden></span></button><span>ES</span>`;
+    ? `<span class="pill ok">Acceso: ${ROLE_LABEL[staff]}</span><button class="avatarbtn" type="button" aria-label="Menú de usuario" aria-haspopup="menu" data-usermenu><span data-user="initials">AT</span></button>`
+    : `<span class="pill ok" data-trim-pill>Trimestre sep–nov 2026</span><button class="bellbtn desk" type="button" aria-label="Notificaciones" data-go="notificaciones"><i data-lucide="bell"></i><span class="nbadge" data-notif-badge hidden></span></button><button class="avatarbtn" type="button" aria-label="Menú de usuario" aria-haspopup="menu" data-usermenu><span data-user="initials">AT</span></button>`;
   const crumbBase = staff ? "" : "Mi campus&nbsp;&nbsp;/&nbsp;&nbsp;";
   main.innerHTML = `
     <header class="mbar gutter">${left}<div class="mbar-acts">${macts}</div></header>
@@ -186,7 +186,9 @@ function applyUser() {
 function enterApp(email, remember, flash) {
   setSession(email, remember);
   try { sessionStorage.setItem("nexo-flash", flash); } catch (err) {}
-  history.replaceState(null, "", "#" + ROLE_HOME[roleOf(accounts.find(a => a.email === email))]);
+  const r = roleOf(accounts.find(a => a.email === email));
+  let mode = null; try { mode = localStorage.getItem("nexo-mode:" + email); } catch (err) {}
+  history.replaceState(null, "", "#" + (["creator", "admin", "mod"].includes(r) && mode === "usuario" ? "inicio" : ROLE_HOME[r]));
   location.reload();
 }
 
@@ -201,7 +203,13 @@ function show(id) {
   if (!sessionEmail && !PUBLIC.includes(id)) { id = "login"; if (location.hash !== "#login") history.replaceState(null, "", "#login"); setTimeout(() => toast("Inicia sesión para continuar."), 0); }
   if (sessionEmail && !PUBLIC.includes(id)) {
     const role = roleOf(account), need = STAFF_SCREENS[id];
-    if (role === "estudiante" ? need : need !== role) { id = ROLE_HOME[role]; history.replaceState(null, "", "#" + id); }
+    const dual = ["creator", "admin", "mod"].includes(role); // el personal puede usar Nexo como usuario
+    if (role === "estudiante" ? need : dual ? (need && need !== role) : need !== role) { id = ROLE_HOME[role]; history.replaceState(null, "", "#" + id); }
+    if (!need && !account?.carnet && ["materias", "caja", "tarjeta", "inscripcion", "revision"].includes(id)) {
+      id = "inicio"; history.replaceState(null, "", "#inicio");
+      setTimeout(() => toast("El estado de cuenta universitario es para cuentas de estudiante con carnet."), 0);
+    }
+    if (dual) { try { localStorage.setItem(K("nexo-mode"), need ? "gestion" : "usuario"); } catch (err) {} }
   }
   if (current && current !== id) previous = current;
   current = id;
@@ -998,7 +1006,7 @@ function openPagoMovil() {
   const amt = money(rcAmount);
   document.querySelector('[data-pm="lead"]').textContent = `Recarga de ${amt} a tu wallet Nexo`;
   document.querySelector('[data-pm="amount"]').textContent = `${amt} en bolívares, a la tasa BCV del día`;
-  document.querySelector('[data-pm="concept"]').textContent = `Wallet ${user.carnet}`;
+  document.querySelector('[data-pm="concept"]').textContent = `Wallet ${user.carnet || user.email.split("@")[0]}`;
   document.querySelector('[data-pm="bshint"]').textContent = `Debe equivaler a ${amt} a la tasa BCV del día del pago.`;
   document.querySelector('[data-pm="cta"]').textContent = `Registrar pago de ${amt}`;
   const d = document.getElementById("pm-date"); if (!d.value) { const t = new Date(); d.value = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; }
@@ -1007,7 +1015,7 @@ function openPagoMovil() {
 }
 document.getElementById("pagomovil").addEventListener("click", e => {
   if (!e.target.closest("[data-pm-copyconcept]")) return;
-  const txt = `Wallet ${user.carnet}`;
+  const txt = `Wallet ${user.carnet || user.email.split("@")[0]}`;
   try { navigator.clipboard.writeText(txt).then(() => toast("Concepto copiado"), () => toast(txt)); } catch (err) { toast(txt); }
 });
 document.getElementById("pm-phone").addEventListener("input", e => { let v = e.target.value.replace(/\D/g, "").slice(0, 11); if (v.length > 4) v = v.slice(0, 4) + "-" + v.slice(4); e.target.value = v; });
@@ -1238,7 +1246,7 @@ function openPerfil() {
   const acc = account || {};
   document.getElementById("pf-name").value = user.full;
   document.getElementById("pf-mail").value = user.email;
-  document.getElementById("pf-carnet").value = user.carnet;
+  document.getElementById("pf-carnet").value = user.carnet || "Sin carnet · cuenta del equipo de Nexo";
   document.getElementById("pf-mailpass").value = "";
   document.querySelector('#perfil [data-pf="mailpass"]').hidden = true;
   const ci = acc.ci || "";
@@ -1793,7 +1801,7 @@ function renderFactura() {
   document.getElementById("fcCard").innerHTML = `<h2 class="h2">Factura de comida</h2>
     <div class="row start"><span class="ico"><i data-lucide="store"></i></span><div><b style="font-size:17px;font-weight:600">${esc(l.name)}</b><p class="small" style="font-size:13px">${l.place} · Campus Central</p></div></div>
     <span class="pill ok">Pagado · Confirmado</span><div class="sep"></div>
-    <b style="font-size:13px">${esc(user.full)} · ${esc(user.carnet)}</b>
+    <b style="font-size:13px">${esc(user.full)} · ${esc(user.carnet || user.email)}</b>
     <div class="kv"><span>Fecha de emisión</span><b>${o.date} · ${o.time}</b></div>
     <p class="small">Factura F${o.num}</p><p class="small" style="margin-top:-10px">Pedido ${o.num}</p>
     <div class="sep"></div>${orderLines(o)}<div class="sep"></div>${orderTotals(o)}
@@ -2928,6 +2936,96 @@ document.addEventListener("click", e => {
     ceMenu = null; if (current === "creador-equipo") renderCreadorEquipo(); else renderEquipo();
   }
 });
+
+/* ---------- Menú de usuario y cambio de modo ----------
+   El avatar (barra móvil, barra de escritorio y menú lateral) abre este menú. Administración, moderación y el creador
+   pueden pasar de su espacio de gestión a usar Nexo como cualquier usuario (pedir comida, estacionamiento, canchas). */
+const DUAL = ["creator", "admin", "mod"].includes(roleOf(account));
+const inStaffScreen = () => !!STAFF_SCREENS[current];
+const HOME_LABEL = { creator: "Resumen de Nexo", admin: "Tickets abiertos", mod: "Mis tickets", local: "Pedidos del local" };
+function userMenuHTML() {
+  const role = roleOf(account), staffNow = inStaffScreen();
+  const item = (attrs, icon, label, sub = "") => `<button class="um-item" type="button" role="menuitem" ${attrs}><i data-lucide="${icon}"></i><span class="grow">${label}${sub ? `<span class="tiny">${sub}</span>` : ""}</span></button>`;
+  const roleTxt = role === "estudiante" ? (user.carnet ? `Carnet ${user.carnet}` : "Estudiante") : role === "local" ? "Comercio" : ROLE_LABEL[role];
+  return `<div class="um-head"><span class="avatar">${esc(initialsOf(user.full))}</span><div style="min-width:0"><b>${esc(user.full)}</b><span class="tiny">${esc(user.email)}</span><span class="pill ${role === "estudiante" ? "neutral" : "ok"}" style="margin-top:6px">${roleTxt}</span></div></div>
+    ${DUAL ? `<div class="um-modes" role="group" aria-label="Modo de uso">
+      <button type="button" class="${staffNow ? "on" : ""}" data-um-mode="gestion" aria-pressed="${staffNow}"><i data-lucide="shield-check"></i><span><b>Modo gestión</b><span class="tiny">${HOME_LABEL[role]}</span></span></button>
+      <button type="button" class="${staffNow ? "" : "on"}" data-um-mode="usuario" aria-pressed="${!staffNow}"><i data-lucide="user-round"></i><span><b>Modo usuario</b><span class="tiny">Usar Nexo con tu cuenta</span></span></button>
+    </div>` : ""}
+    <div class="um-list">
+      ${role !== "local" ? item(`data-um-go="perfil"`, "user-round", "Mi cuenta", "Datos personales y seguridad") : ""}
+      ${role === "estudiante" || (DUAL && !staffNow) ? item(`data-um-go="notificaciones"`, "bell", "Notificaciones") + item(`data-um-go="actividad"`, "receipt-text", "Mi actividad") : ""}
+      ${role === "estudiante" || (DUAL && !staffNow) ? item(`data-um-go="soporte"`, "message-circle", "Ayuda y soporte") : ""}
+    </div>
+    <div class="um-list">${item(`data-logout`, "log-out", "Cerrar sesión")}</div>`;
+}
+let umOpen = null;
+function openUserMenu(btn) {
+  closeUserMenu();
+  const m = document.createElement("div");
+  m.className = "usermenu"; m.setAttribute("role", "menu"); m.setAttribute("aria-label", "Menú de usuario");
+  m.innerHTML = userMenuHTML();
+  document.body.append(m);
+  const r = btn.getBoundingClientRect(), mobile = innerWidth < 700;
+  if (mobile) m.classList.add("sheet");
+  else {
+    const w = 300, left = Math.min(Math.max(12, r.right - w), innerWidth - w - 12);
+    const below = r.bottom + 8, up = r.top > innerHeight / 2;
+    m.style.left = (r.left < 260 ? Math.max(12, r.left) : left) + "px";
+    if (up) m.style.bottom = (innerHeight - r.top + 8) + "px"; else m.style.top = below + "px";
+  }
+  const shade = document.createElement("div"); shade.className = "um-shade"; document.body.append(shade);
+  umOpen = { m, shade, btn }; btn.setAttribute("aria-expanded", "true");
+  icons();
+  const first = m.querySelector("button"); if (first) first.focus();
+}
+function closeUserMenu() {
+  if (!umOpen) return;
+  umOpen.m.remove(); umOpen.shade.remove(); umOpen.btn.setAttribute("aria-expanded", "false");
+  const b = umOpen.btn; umOpen = null; if (document.body.contains(b)) b.focus({ preventScroll: true });
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-usermenu]");
+  if (t) { e.preventDefault(); umOpen && umOpen.btn === t ? closeUserMenu() : openUserMenu(t); return; }
+  if (umOpen && e.target.closest(".um-shade")) { closeUserMenu(); return; }
+  const g = e.target.closest("[data-um-go]");
+  if (g) { closeUserMenu(); go(g.dataset.umGo); return; }
+  const md = e.target.closest("[data-um-mode], [data-mode-switch]");
+  if (md) {
+    const to = md.dataset.umMode || md.dataset.modeSwitch;
+    closeUserMenu();
+    if (to === "gestion") { go(ROLE_HOME[roleOf(account)]); toast("Volviste al modo gestión."); }
+    else { go("inicio"); toast("Estás en modo usuario: usa Nexo con tu cuenta. Vuelve a gestión desde tu avatar."); }
+  }
+});
+document.addEventListener("keydown", e => {
+  if (!umOpen) return;
+  if (e.key === "Escape") { closeUserMenu(); return; }
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    const b = [...umOpen.m.querySelectorAll("button")], i = b.indexOf(document.activeElement);
+    b[(i + (e.key === "ArrowDown" ? 1 : -1) + b.length) % b.length].focus(); e.preventDefault();
+  }
+});
+window.addEventListener("hashchange", closeUserMenu);
+/* En modo usuario, el personal ve un acceso directo de vuelta a gestión; las cuentas sin carnet no ven el estado de cuenta universitario */
+if (DUAL) {
+  document.querySelectorAll("section.app:not([data-staff])").forEach(sec => {
+    const acts = sec.querySelector(".deskbar .acts");
+    if (acts) acts.insertAdjacentHTML("afterbegin", `<button class="pill ok modebtn" type="button" data-mode-switch="gestion"><i data-lucide="shield-check"></i>Ir a gestión</button>`);
+    const tag = sec.querySelector("[data-space-tag]"); if (tag) tag.textContent = "MODO USUARIO";
+    const nav = sec.querySelector(".side .nav");
+    if (nav) nav.insertAdjacentHTML("beforeend", `<button type="button" class="mode-nav" data-mode-switch="gestion"><i data-lucide="shield-check"></i>Volver a gestión</button>`);
+  });
+  document.querySelectorAll("section.app[data-staff]").forEach(sec => {
+    const nav = sec.querySelector(".side .nav");
+    if (nav) nav.insertAdjacentHTML("beforeend", `<button type="button" class="mode-nav" data-mode-switch="usuario"><i data-lucide="user-round"></i>Usar Nexo como usuario</button>`);
+  });
+}
+if (account && !account.carnet) {
+  document.querySelectorAll('section.app:not([data-staff]) .side .nav [data-go="materias"]').forEach(b => b.remove());
+  document.querySelectorAll("section.app:not([data-staff]) [data-trim-pill]").forEach(p => p.remove());
+  document.querySelectorAll('#inicio [data-go="materias"], #inicio [data-go="caja"]').forEach(el => { (el.closest(".card") || el).hidden = true; });
+}
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();

@@ -647,3 +647,30 @@ button.tk-row.on{background:var(--mint-bg)}
 .paidset legend{font-size:13px;font-weight:600;padding:0 6px;margin-left:-6px}
 .paidm{display:flex;align-items:center;gap:10px;width:100%}
 .paidm .grow{flex:1}
+
+/* ---------- Menú de usuario y cambio de modo ---------- */
+.avatarbtn{cursor:pointer}
+.avatarbtn:hover{filter:brightness(1.1)}
+.um-shade{position:fixed;inset:0;z-index:40;background:transparent}
+.usermenu{position:fixed;z-index:41;width:300px;max-height:calc(100vh - 24px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:0 14px 40px rgba(10,48,46,.18);padding:8px;display:flex;flex-direction:column;gap:6px;animation:in .14s ease}
+.usermenu.sheet{left:0;right:0;bottom:0;width:auto;border-radius:18px 18px 0 0;padding:12px 12px calc(16px + env(safe-area-inset-bottom,0px))}
+.usermenu.sheet ~ .um-shade,.um-shade:has(+ .usermenu.sheet){background:rgba(10,30,30,.35)}
+.um-head{display:flex;gap:12px;align-items:flex-start;padding:10px 10px 12px;border-bottom:1px solid var(--line)}
+.um-head .avatar{width:40px;height:40px;color:#fff;font-size:13px;flex-shrink:0}
+.um-head b{display:block;font-size:14px}
+.um-head .tiny{display:block;overflow:hidden;text-overflow:ellipsis}
+.um-modes{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px 2px}
+.um-modes button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);text-align:left;font:inherit;color:inherit;cursor:pointer}
+.um-modes button svg{font-size:18px;color:var(--brand)}
+.um-modes button b{display:block;font-size:12px}
+.um-modes button .tiny{display:block;line-height:1.3}
+.um-modes button.on{border-color:var(--brand);background:var(--mint-bg)}
+.um-list{display:flex;flex-direction:column;border-top:1px solid var(--line);padding-top:6px}
+.um-item{display:flex;align-items:center;gap:12px;padding:10px;border:0;background:none;border-radius:var(--r-sm);text-align:left;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}
+.um-item svg{font-size:18px;color:var(--brand);flex-shrink:0}
+.um-item .grow{flex:1;min-width:0}
+.um-item .tiny{display:block}
+.um-item:hover,.um-item:focus-visible,.um-modes button:hover{background:var(--bg)}
+.modebtn{border:0;cursor:pointer;gap:6px;font:inherit;font-size:11px;font-weight:600}
+.modebtn svg{font-size:13px;color:var(--brand)}
+.nav .mode-nav{margin-top:14px;border:1px dashed rgba(255,255,255,.25)}
