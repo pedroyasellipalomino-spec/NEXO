@@ -140,6 +140,12 @@ function show(id) {
   if (id === "perfil" && typeof openPerfil === "function") openPerfil();
   if (["materias", "caja", "tarjeta"].includes(id)) { let none = false; try { none = !MATERIAS.length; } catch (err) {} if (none) { insReturn = id; history.replaceState(null, "", "#inscripcion"); id = "inscripcion"; current = id; screens.forEach(s => { document.getElementById(s).hidden = s !== id; }); } }
   if (id === "inscripcion" && typeof openInscripcion === "function") openInscripcion();
+  if (id === "comida" && typeof renderFoodList === "function") renderFoodList();
+  if (id === "local" && typeof renderLocal === "function") renderLocal();
+  if (id === "detalle" && typeof renderDetalle === "function") renderDetalle(document.getElementById("d-note") ? document.getElementById("d-note").value : "");
+  if (id === "carrito" && typeof renderCarrito === "function") renderCarrito();
+  if (id === "comprobante" && typeof renderComprobante === "function") renderComprobante();
+  if (id === "factura" && typeof renderFactura === "function") renderFactura();
   if (id === "planes") { const s = document.querySelector("#planList .opt.plan.on"); if (s) try { updatePlan(s); } catch (err) {} }
 
   window.scrollTo(0, 0);
@@ -443,7 +449,7 @@ function drawMovement(m) {
   const el = document.createElement("div");
   el.className = "move"; if (m.id) el.dataset.mv = m.id;
   el.innerHTML = `<span class="ico"><i data-lucide="${m.icon || "graduation-cap"}"></i></span><div class="info"><b>${m.title}</b><span>${m.detail}</span><br><span>${m.date}</span></div>
-    <div class="mv-actions"><span class="amt${m.amount.startsWith("+") ? " pos" : ""}">${m.amount}</span><span class="pill ${m.pillCls}">${m.pill}</span><button class="link b" type="button" data-go="${m.go || "materias"}" style="font-size:12px">${m.goLabel || "Ver estado de cuenta ›"}</button></div>`;
+    <div class="mv-actions"><span class="amt${m.amount.startsWith("+") ? " pos" : ""}">${m.amount}</span><span class="pill ${m.pillCls}">${m.pill}</span><button class="link b" type="button" data-go="${m.go || "materias"}"${m.order ? ` data-order="${m.order}"` : ""} style="font-size:12px">${m.goLabel || "Ver estado de cuenta ›"}</button></div>`;
   card.querySelector("h2").after(el);
 }
 function addMovement(title, detail, amount, pill, pillCls, extra = {}) {
@@ -1280,6 +1286,440 @@ document.getElementById("insForm").addEventListener("submit", e => {
   go(wasEmpty ? insReturn : "materias");
 });
 renderMatList();
+/* ---------- Comida y kioscos: menús, carrito y pedidos ---------- */
+// Cada local tiene categorías con productos. Las opciones son grupos de "elige una";
+// el primer valor es el predeterminado y `p` es el recargo en USD.
+const foodOpt = (name, note, choices) => ({ name, note, choices: choices.map(c => Array.isArray(c) ? { l: c[0], p: c[1] } : { l: c, p: 0 }) });
+const TAMANO = foodOpt("Tamaño", "Elige uno · Obligatorio", ["Pequeño", ["Grande", 0.5]]);
+const LOCALES = [
+  { id: "pinchopan", kind: "local", name: "Pincho Pan", icon: "sandwich", place: "Feria Central", eta: "10–15 min", hours: "11:30–15:00",
+    tagline: "Pinchos, sándwiches y almuerzos caseros.", pref: "PP", cats: [
+    { name: "Almuerzos", items: [
+      { id: "almuerzo", name: "Almuerzo del día", desc: "Pollo a la plancha, arroz y ensalada. Incluye bebida natural.", price: 8.5, icon: "utensils", tag: "Más pedido", opts: [
+        foodOpt("Guarnición", "Elige una · Obligatorio", ["Arroz y ensalada", "Solo ensalada"]),
+        foodOpt("Bebida natural", "Elige una · Incluida en tu almuerzo", ["Limonada", "Jugo de papelón"])] },
+      { id: "pincho", name: "Pincho mixto con papas", desc: "Pollo y res a la parrilla con papas fritas.", price: 7, icon: "beef", opts: [
+        foodOpt("Salsa", "Elige una", ["Ajo", "Tártara", "Sin salsa"])] }] },
+    { name: "Meriendas", items: [
+      { id: "wrap", name: "Wrap de pollo", desc: "Pollo a la plancha, lechuga y tomate.", price: 5, icon: "sandwich" },
+      { id: "sandjq", name: "Sándwich de jamón y queso", desc: "Tostado al momento.", price: 4, icon: "sandwich", opts: [
+        foodOpt("Pan", "Elige uno", ["Blanco", "Integral"])] }] },
+    { name: "Bebidas", items: [
+      { id: "limonada", name: "Limonada natural", desc: "Preparada al momento · 350 ml.", price: 2, icon: "cup-soda" },
+      { id: "papelon", name: "Papelón con limón", desc: "Bien frío · 350 ml.", price: 2, icon: "cup-soda" }] }] },
+  { id: "lapausa", kind: "local", name: "La Pausa", icon: "coffee", place: "Feria Central", eta: "5–10 min", hours: "7:00–16:00",
+    tagline: "Café, desayunos y dulces.", pref: "LP", cats: [
+    { name: "Café", items: [
+      { id: "guayoyo", name: "Café guayoyo", desc: "Café colado, suave.", price: 1.5, icon: "coffee", tag: "Más pedido", opts: [TAMANO] },
+      { id: "marron", name: "Marrón", desc: "Café con leche al estilo venezolano.", price: 2, icon: "coffee", opts: [TAMANO,
+        foodOpt("Leche", "Elige una", ["Completa", "Descremada", ["Almendras", 0.5]])] },
+      { id: "capuchino", name: "Capuchino", desc: "Espresso, leche y espuma.", price: 2.8, icon: "coffee", opts: [TAMANO] }] },
+    { name: "Desayunos", items: [
+      { id: "reina", name: "Arepa reina pepiada", desc: "Pollo, aguacate y mayonesa.", price: 3.5, icon: "sandwich" },
+      { id: "empanada", name: "Empanada de queso", desc: "Recién frita.", price: 2, icon: "croissant" },
+      { id: "cachito", name: "Cachito de jamón", desc: "Horneado en la mañana.", price: 2.2, icon: "croissant" }] },
+    { name: "Dulces", items: [
+      { id: "golfeado", name: "Golfeado", desc: "Con queso de mano.", price: 2.5, icon: "cookie" },
+      { id: "torta", name: "Torta de chocolate", desc: "Porción individual.", price: 3, icon: "cake-slice" }] }] },
+  { id: "migrill", kind: "local", name: "Mi Punto Grill", icon: "beef", place: "Feria Central", eta: "15–20 min", hours: "11:00–16:00",
+    tagline: "Parrilla, hamburguesas y pollo a la brasa.", pref: "MG", cats: [
+    { name: "Platos", items: [
+      { id: "parrilla", name: "Parrilla de res", desc: "Carne de res a la parrilla con un contorno.", price: 11, icon: "beef", tag: "Más pedido", opts: [
+        foodOpt("Término", "Elige uno · Obligatorio", ["Tres cuartos", "Bien cocida"]),
+        foodOpt("Contorno", "Elige uno", ["Yuca frita", "Papas fritas", "Ensalada"])] },
+      { id: "brasa", name: "Pollo a la brasa (1/4)", desc: "Con un contorno a elección.", price: 7.5, icon: "drumstick", opts: [
+        foodOpt("Contorno", "Elige uno", ["Yuca frita", "Papas fritas", "Ensalada"])] }] },
+    { name: "Hamburguesas", items: [
+      { id: "clasica", name: "Hamburguesa clásica", desc: "Carne de res, queso, lechuga y tomate.", price: 6.5, icon: "beef", opts: [
+        foodOpt("Extra", "Opcional", ["Sin extra", ["Tocineta", 1], ["Queso extra", 0.75]])] },
+      { id: "hpollo", name: "Hamburguesa de pollo", desc: "Pechuga empanizada y salsa de la casa.", price: 6, icon: "drumstick" }] },
+    { name: "Bebidas", items: [
+      { id: "refresco", name: "Refresco 355 ml", desc: "Lata, varios sabores.", price: 1.5, icon: "cup-soda" },
+      { id: "agua", name: "Agua mineral 600 ml", desc: "Sin gas.", price: 1, icon: "glass-water" }] }] },
+  { id: "teeb", kind: "local", name: "TEEB", icon: "salad", place: "Feria Central", eta: "10–15 min", hours: "10:00–16:00",
+    tagline: "Bowls, ensaladas y opciones saludables.", pref: "TB", cats: [
+    { name: "Bowls", items: [
+      { id: "teriyaki", name: "Bowl de pollo teriyaki", desc: "Pollo, vegetales salteados y ajonjolí.", price: 8, icon: "salad", tag: "Más pedido", opts: [
+        foodOpt("Base", "Elige una · Obligatorio", ["Arroz", ["Quinoa", 1]])] },
+      { id: "veggie", name: "Bowl vegetariano", desc: "Garbanzos, aguacate, tomate y maíz.", price: 7, icon: "salad", opts: [
+        foodOpt("Base", "Elige una · Obligatorio", ["Arroz", ["Quinoa", 1]])] }] },
+    { name: "Ensaladas", items: [
+      { id: "cesar", name: "César con pollo", desc: "Lechuga romana, parmesano y crutones.", price: 6.5, icon: "salad" },
+      { id: "atun", name: "Ensalada de atún", desc: "Atún, huevo, papa y vegetales.", price: 6.5, icon: "salad" }] },
+    { name: "Bebidas", items: [
+      { id: "tefrio", name: "Té frío de durazno", desc: "Hecho en casa · 400 ml.", price: 2, icon: "cup-soda" },
+      { id: "batido", name: "Batido verde", desc: "Piña, espinaca y jengibre.", price: 3, icon: "cup-soda" }] }] },
+  { id: "tienditaa1", kind: "kiosco", name: "La Tiendita Unimetana A1", icon: "store", place: "Campus Central", eta: "5 min", hours: "7:00–17:00",
+    tagline: "Café, bebidas y meriendas para llevar.", pref: "A1", cats: [
+    { name: "Café", items: [
+      { id: "negro", name: "Café negro", desc: "Recién colado.", price: 1.5, icon: "coffee", opts: [TAMANO] },
+      { id: "conleche", name: "Café con leche", desc: "Leche completa.", price: 1.8, icon: "coffee", opts: [TAMANO] }] },
+    { name: "Meriendas", items: [
+      { id: "tequenos", name: "Tequeños (3)", desc: "Con salsa de ajo.", price: 2.5, icon: "cookie" },
+      { id: "galletas", name: "Galletas", desc: "Paquete individual.", price: 1.2, icon: "cookie" }] },
+    { name: "Bebidas", items: [
+      { id: "agua", name: "Agua 600 ml", desc: "Sin gas.", price: 1, icon: "glass-water" },
+      { id: "refresco", name: "Refresco 355 ml", desc: "Lata, varios sabores.", price: 1.5, icon: "cup-soda" }] }] },
+  { id: "tienditaa2", kind: "kiosco", name: "La Tiendita Unimetana A2", icon: "store", place: "Campus Central", eta: "5 min", hours: "7:00–17:00",
+    tagline: "Café, bebidas y meriendas.", pref: "A2", cats: [
+    { name: "Café", items: [
+      { id: "negro", name: "Café negro", desc: "Recién colado.", price: 1.5, icon: "coffee", opts: [TAMANO] },
+      { id: "marron", name: "Marrón", desc: "Café con leche al estilo venezolano.", price: 2, icon: "coffee", opts: [TAMANO] }] },
+    { name: "Meriendas", items: [
+      { id: "cachito", name: "Cachito de jamón", desc: "Horneado en la mañana.", price: 2.2, icon: "croissant" },
+      { id: "pastelito", name: "Pastelito de queso", desc: "Hojaldre con queso blanco.", price: 1.8, icon: "croissant" }] },
+    { name: "Bebidas", items: [
+      { id: "jugo", name: "Jugo pasteurizado", desc: "Durazno o naranja · 250 ml.", price: 1.5, icon: "cup-soda" },
+      { id: "agua", name: "Agua 600 ml", desc: "Sin gas.", price: 1, icon: "glass-water" }] }] },
+  { id: "believe", kind: "kiosco", name: "Kiosco Believe", icon: "cup-soda", place: "Campus Central", eta: "5 min", hours: "7:30–16:30",
+    tagline: "Bebidas y snacks.", pref: "KB", cats: [
+    { name: "Bebidas", items: [
+      { id: "refresco", name: "Refresco 355 ml", desc: "Lata, varios sabores.", price: 1.5, icon: "cup-soda" },
+      { id: "tefrio", name: "Té frío", desc: "Limón o durazno · 500 ml.", price: 1.8, icon: "cup-soda" },
+      { id: "energizante", name: "Bebida energizante", desc: "Lata de 250 ml.", price: 3, icon: "zap" },
+      { id: "agua", name: "Agua 600 ml", desc: "Sin gas.", price: 1, icon: "glass-water" }] },
+    { name: "Snacks", items: [
+      { id: "papitas", name: "Papitas", desc: "Bolsa individual.", price: 1.5, icon: "cookie" },
+      { id: "chocolate", name: "Chocolate", desc: "Barra de 40 g.", price: 1.8, icon: "candy" },
+      { id: "mani", name: "Maní salado", desc: "Bolsa de 50 g.", price: 1.2, icon: "cookie" }] }] }
+];
+const localById = id => LOCALES.find(l => l.id === id);
+const itemsOf = l => l.cats.flatMap(c => c.items);
+const itemById = (l, id) => itemsOf(l).find(i => i.id === id);
+const normTxt = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+function setFrame(secId, title, crumb) {
+  const sec = document.getElementById(secId);
+  const t = sec.querySelector(".mbar .title");
+  if (t) t.lastChild.textContent = title;
+  const c = sec.querySelector(".deskbar .crumbs span");
+  if (c) c.innerHTML = "Mi campus&nbsp;&nbsp;/&nbsp;&nbsp;" + crumb.map(esc).join("&nbsp;&nbsp;/&nbsp;&nbsp;");
+}
+const icons = () => { try { lucide.createIcons(); } catch (err) {} };
+
+// Estado: local abierto, producto abierto, carrito y pedidos (por cuenta)
+let curLocal = "pinchopan", curItem = null, curCat = "Todos", curOrder = null, editLine = null;
+try { const s = JSON.parse(sessionStorage.getItem("nexo-food") || "null"); if (s) { if (localById(s.l)) curLocal = s.l; curItem = s.i || null; editLine = s.e ?? null; } } catch (err) {}
+const saveFoodNav = () => { try { sessionStorage.setItem("nexo-food", JSON.stringify({ l: curLocal, i: curItem, e: editLine })); } catch (err) {} };
+const CART0 = isDemo ? { local: "pinchopan", lines: [{ item: "almuerzo", sel: [0, 0], qty: 1, note: "" }] } : { local: null, lines: [] };
+let cart = null, orders = [];
+try { cart = JSON.parse(localStorage.getItem(K("nexo-cart")) || "null"); orders = JSON.parse(localStorage.getItem(K("nexo-orders")) || "[]") || []; } catch (err) {}
+if (!cart || !Array.isArray(cart.lines)) cart = JSON.parse(JSON.stringify(CART0));
+const saveCart = () => { try { localStorage.setItem(K("nexo-cart"), JSON.stringify(cart)); } catch (err) {} };
+const saveOrders = () => { try { localStorage.setItem(K("nexo-orders"), JSON.stringify(orders)); } catch (err) {} };
+
+// Precio y descripción de una línea del carrito
+function lineInfo(l, line) {
+  const it = itemById(l, line.item);
+  if (!it) return null;
+  const chosen = (it.opts || []).map((g, gi) => g.choices[line.sel[gi] || 0] || g.choices[0]);
+  const unit = it.price + chosen.reduce((a, c) => a + c.p, 0);
+  return { it, unit, total: unit * line.qty, opts: (it.opts || []).map((g, gi) => `${g.name}: ${chosen[gi].l}`) };
+}
+const cartLocal = () => cart.local && localById(cart.local);
+const cartCount = () => cart.lines.reduce((a, x) => a + x.qty, 0);
+const cartTotal = () => { const l = cartLocal(); return l ? cart.lines.reduce((a, x) => a + ((lineInfo(l, x) || { total: 0 }).total), 0) : 0; };
+const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+
+/* Lista de locales y kioscos */
+function renderFoodList() {
+  const q = normTxt((document.getElementById("c-search") || {}).value || "").trim();
+  const match = l => !q || normTxt(l.name + " " + l.tagline).includes(q) || itemsOf(l).some(i => normTxt(i.name + " " + i.desc).includes(q));
+  const card = l => {
+    const hit = q && itemsOf(l).find(i => normTxt(i.name + " " + i.desc).includes(q));
+    const star = hit || itemsOf(l).find(i => i.tag) || itemsOf(l)[0];
+    return `<div class="card svc" data-kind="${l.kind}">
+      <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="${l.icon}"></i></span><div><h3 class="h3">${esc(l.name)}</h3><p class="small">${l.place} · Retiro en ${l.eta}</p></div></div><span class="pill ok">Abierto</span></div>
+      <div><b style="font-weight:600;font-size:14px">${hit ? "Coincide: " : ""}${esc(star.name)}</b><p class="small" style="font-size:13px">${esc(l.tagline)}</p></div>
+      <div class="row"><span class="price">${money(star.price)}</span><span class="small">Hoy · ${l.hours}</span></div>
+      <button class="btn${l.kind === "local" ? "" : " ghost"}" type="button" data-open-local="${l.id}"><i data-lucide="arrow-right"></i>${l.kind === "local" ? "Ver menú de " + esc(l.name) : "Ver kiosco"}</button>
+    </div>`;
+  };
+  const locs = LOCALES.filter(l => l.kind === "local" && match(l)), kios = LOCALES.filter(l => l.kind === "kiosco" && match(l));
+  document.getElementById("foodLocales").innerHTML = locs.map(card).join("");
+  document.getElementById("foodKioscos").innerHTML = kios.map(card).join("");
+  document.getElementById("foodLocalCount").textContent = `${plural(locs.length, "local", "locales")} · Feria Central`;
+  document.getElementById("foodKioscoCount").textContent = `${plural(kios.length, "kiosco", "kioscos")} · Campus Central`;
+  document.getElementById("foodLocales").closest("[data-group]").classList.toggle("q-empty", !locs.length);
+  document.getElementById("foodKioscos").closest("[data-group]").classList.toggle("q-empty", !kios.length);
+  document.getElementById("foodEmpty").hidden = locs.length + kios.length > 0;
+  const cc = document.getElementById("foodCartCard"), cl = cartLocal();
+  cc.hidden = !cl || !cart.lines.length;
+  if (!cc.hidden) cc.innerHTML = `<h3 class="h3">Tu carrito</h3><p class="small" style="font-size:13px">${plural(cartCount(), "producto", "productos")} · ${esc(cl.name)}</p>
+    <button class="btn ghost" type="button" data-go="carrito"><i data-lucide="shopping-bag"></i>Ver carrito · ${money(cartTotal())}</button>`;
+  icons();
+}
+
+/* Menú de un local */
+function renderLocal() {
+  const l = localById(curLocal);
+  setFrame("local", l.name, ["Comida y kioscos", l.name]);
+  document.getElementById("localHead").innerHTML = `<h1 class="h1">${esc(l.name)}</h1><p class="lead">${l.place} · ${esc(l.tagline)}</p>
+    <div class="chips" style="margin-top:12px"><span class="pill ok">Abierto</span><span class="pill neutral">Retiro en ${l.eta}</span><span class="pill neutral">${l.hours}</span></div>`;
+  const cats = ["Todos", ...l.cats.map(c => c.name)];
+  if (!cats.includes(curCat)) curCat = "Todos";
+  document.getElementById("localChips").innerHTML = cats.map(c => `<button class="pill ${c === curCat ? "ok" : "neutral"}" type="button" data-food-cat="${esc(c)}">${esc(c)}</button>`).join("");
+  document.getElementById("localMenu").innerHTML = l.cats.filter(c => curCat === "Todos" || c.name === curCat).map(c => `<h2 class="h2">${esc(c.name)}</h2>` + c.items.map(it =>
+    `<button class="card row" type="button" data-open-item="${it.id}" style="text-align:left;flex-direction:row">
+      <span class="ico lg"><i data-lucide="${it.icon}"></i></span>
+      <div style="flex:1;min-width:0"><b class="h3">${esc(it.name)}</b><p class="small">${esc(it.desc)}</p><div class="row start" style="gap:8px;margin-top:4px"><b style="font-size:17px;font-weight:600">${money(it.price)}</b>${it.tag ? `<span class="pill ok">${it.tag}</span>` : ""}${it.opts ? `<span class="tiny">Con opciones</span>` : ""}</div></div>
+      <span class="ico"><i data-lucide="chevron-right"></i></span>
+    </button>`).join("")).join("");
+  const cl = cartLocal(), mine = cl && cl.id === l.id && cart.lines.length;
+  document.getElementById("localSide").innerHTML = `
+    <div class="card"><i data-lucide="map-pin" style="color:var(--brand);font-size:22px"></i><h3 class="sec" style="font-weight:600">Pide y retira</h3>
+      <p class="small" style="font-size:13px">${esc(l.name)} · ${l.place}</p><div class="sep"></div>
+      <p style="font-size:13px">Hoy · ${l.hours}</p><p style="font-size:13px">Preparación en ${l.eta}</p>
+      <p style="color:var(--brand);font-weight:600;font-size:13px">Sin cargos extra</p></div>
+    ${mine ? `<div class="card"><h3 class="h3">Tu carrito</h3><p class="small" style="font-size:13px">${plural(cartCount(), "producto", "productos")} · ${money(cartTotal())}</p>
+      <button class="btn" type="button" data-go="carrito"><i data-lucide="shopping-bag"></i>Ir al carrito · ${money(cartTotal())}</button></div>`
+      : `<div class="card"><h3 class="h3">A tu gusto</h3><p class="small" style="font-size:13px">Elige las opciones de cada producto antes de añadirlo al carrito.</p><p class="small">¿Tienes alguna alergia? Consulta con el local antes de pedir.</p></div>`}`;
+  icons();
+}
+
+/* Detalle de un producto */
+let detSel = [], detQty = 1;
+function openItem(itemId, line = null) {
+  curItem = itemId; editLine = line;
+  const l = localById(curLocal), it = itemById(l, itemId);
+  const src = line !== null && cart.lines[line];
+  detSel = (it.opts || []).map((g, gi) => src ? (src.sel[gi] || 0) : 0);
+  detQty = src ? src.qty : 1;
+  saveFoodNav();
+  renderDetalle(src ? src.note : "");
+}
+function detUnit(it) { return it.price + (it.opts || []).reduce((a, g, gi) => a + g.choices[detSel[gi]].p, 0); }
+function renderDetalle(note) {
+  const l = localById(curLocal), it = curItem && itemById(l, curItem);
+  if (!it) { go("local"); return; }
+  if (detSel.length !== (it.opts || []).length) detSel = (it.opts || []).map(() => 0);
+  setFrame("detalle", it.name, [l.name, it.name]);
+  document.getElementById("detBack").lastChild.textContent = "Volver al menú de " + l.name;
+  const other = cartLocal() && cart.local !== l.id && cart.lines.length ? cartLocal() : null;
+  const editing = editLine !== null;
+  document.getElementById("detBody").innerHTML = `
+    <div class="stack s14">
+      <div class="thumb"><i data-lucide="${it.icon}"></i></div>
+      <div class="chips"><span class="pill ok">Disponible hoy</span><span class="pill neutral">${l.eta}</span></div>
+      <div><h1 class="h1">${esc(it.name)}</h1><p class="lead">${esc(it.desc)}</p></div>
+      <p style="font-size:30px" class="mono">${money(it.price)}</p>
+      <p class="small" style="font-size:13px">${esc(l.name)} · ${l.place}</p>
+      <div class="notice" style="background:var(--surface);border:1px solid var(--line);color:var(--muted)"><i data-lucide="info" style="color:var(--brand)"></i><p>Preparado al momento. Si tienes alergias o restricciones alimentarias, consulta con el local antes de comprar.</p></div>
+    </div>
+    <div class="stack s14">
+      ${it.opts ? `<h2 class="h2" style="font-size:20px">Elige tus opciones</h2>` + it.opts.map((g, gi) => `<div class="card">
+        <div><b class="h3">${esc(g.name)}</b><p class="small">${esc(g.note)}</p></div>
+        ${g.choices.map((c, ci) => `<button class="opt${detSel[gi] === ci ? " on" : ""}" type="button" data-det-opt="${gi}:${ci}"><span class="dot"></span><span class="grow">${esc(c.l)}</span><span class="small">+${money(c.p)}</span></button>`).join("")}
+      </div>`).join("") : ""}
+      <div class="card">
+        <label for="d-note" style="font-weight:600">Indicaciones · Opcional</label>
+        <div class="input" style="flex-direction:column;align-items:stretch;padding:12px"><textarea id="d-note" rows="2" maxlength="120" placeholder="Ej.: aderezo aparte">${esc(note || "")}</textarea><span class="tiny" style="text-align:right" id="d-note-count">${(note || "").length} / 120 caracteres</span></div>
+      </div>
+      <div class="card">
+        ${other ? `<div class="notice" style="font-size:13px"><i data-lucide="info"></i><p>Tu carrito tiene productos de <b>${esc(other.name)}</b>. Cada pedido se retira en un solo local, así que al añadir este producto se vaciará tu carrito.</p></div>` : ""}
+        <div class="row">
+          <div class="stack s14" style="gap:6px"><span class="small">Cantidad</span><span class="qty"><button type="button" aria-label="Quitar uno" data-det-qty="-1"><i data-lucide="minus"></i></button><span id="detQty">${detQty}</span><button type="button" aria-label="Agregar uno" data-det-qty="1"><i data-lucide="plus"></i></button></span></div>
+          <div style="text-align:right"><span class="small">Total del producto</span><p style="font-size:25px;font-weight:600" class="mono" id="detTotal">${money(detUnit(it) * detQty)}</p></div>
+        </div>
+        <button class="btn" type="button" id="detAdd"><i data-lucide="shopping-bag"></i>${editing ? "Guardar cambios" : other ? "Vaciar carrito y añadir" : "Añadir al carrito"} · <span id="detAddAmt">${money(detUnit(it) * detQty)}</span></button>
+      </div>
+    </div>`;
+  icons();
+}
+function refreshDetTotal() {
+  const it = itemById(localById(curLocal), curItem), t = money(detUnit(it) * detQty);
+  document.getElementById("detQty").textContent = detQty;
+  document.getElementById("detTotal").textContent = t;
+  document.getElementById("detAddAmt").textContent = t;
+}
+function addFromDetalle() {
+  const note = document.getElementById("d-note").value.trim();
+  const line = { item: curItem, sel: detSel.slice(), qty: detQty, note };
+  const name = itemById(localById(curLocal), curItem).name;
+  if (editLine !== null && cart.local === curLocal && cart.lines[editLine]) {
+    cart.lines[editLine] = line;
+    toast("Actualizamos tu carrito.");
+  } else {
+    if (cart.local !== curLocal) cart = { local: curLocal, lines: [] };
+    const same = cart.lines.find(x => x.item === line.item && x.note === line.note && x.sel.join() === line.sel.join());
+    if (same) same.qty = Math.min(20, same.qty + line.qty); else cart.lines.push(line);
+    toast(`Añadimos ${name} a tu carrito.`);
+  }
+  editLine = null; saveFoodNav(); saveCart(); go("carrito");
+}
+
+/* Carrito y pago */
+let payMethod = "card";
+function renderCarrito() {
+  const l = cartLocal(), body = document.getElementById("cartBody");
+  const back = document.getElementById("cartBack");
+  if (!l || !cart.lines.length) {
+    setFrame("carrito", "Carrito y pago", ["Comida y kioscos", "Carrito y pago"]);
+    back.dataset.go = "comida"; back.lastChild.textContent = "Volver a comida y kioscos";
+    body.innerHTML = `<div class="card" style="align-items:flex-start"><span class="ico lg"><i data-lucide="shopping-bag"></i></span><h2 class="h2">Tu carrito está vacío</h2>
+      <p class="small" style="font-size:13px">Elige un local o kiosco y añade lo que quieras pedir.</p>
+      <button class="btn" type="button" data-go="comida" style="max-width:320px"><i data-lucide="utensils"></i>Ver comida y kioscos</button></div>`;
+    icons(); return;
+  }
+  setFrame("carrito", "Carrito y pago", ["Comida y kioscos", l.name, "Carrito y pago"]);
+  back.dataset.go = "local"; back.lastChild.textContent = "Volver al menú de " + l.name;
+  curLocal = l.id; saveFoodNav();
+  const total = cartTotal(), n = cartCount();
+  const defCard = cards.length ? cardLabel(cards[0]) : "Tarjeta de crédito o débito";
+  body.innerHTML = `
+    <div class="stack">
+      <div class="card">
+        <div class="row start"><i data-lucide="store" style="color:var(--brand);font-size:20px"></i><b class="h3">${esc(l.name)}</b></div>
+        <p class="small" style="margin-top:-8px">${l.place} · ${plural(n, "producto", "productos")}</p>
+        ${cart.lines.map((x, i) => { const li = lineInfo(l, x); if (!li) return ""; return `<div class="sep"></div>
+          <div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="${li.it.icon}"></i></div>
+            <div><b style="font-size:15px;font-weight:600">${esc(li.it.name)}</b>${li.opts.map(o => `<p class="small">${esc(o)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}<p class="mono" style="font-weight:600;margin-top:2px">${money(li.total)}</p></div></div>
+          <div class="row"><span class="qty"><button type="button" aria-label="Quitar uno" data-cart-qty="${i}:-1"><i data-lucide="minus"></i></button>${x.qty}<button type="button" aria-label="Agregar uno" data-cart-qty="${i}:1"><i data-lucide="plus"></i></button></span>
+            <div class="row" style="gap:16px"><button class="link b" type="button" data-cart-edit="${i}" style="font-size:12px">Editar</button><button class="link" type="button" style="color:var(--muted);font-size:12px" data-cart-del="${i}">Eliminar</button></div></div>`; }).join("")}
+        <button class="link" type="button" data-go="local">+ Seguir comprando en ${esc(l.name)}</button>
+      </div>
+      <div class="card">
+        <div class="row start"><i data-lucide="map-pin" style="color:var(--brand);font-size:20px"></i><b class="h3">Retiro en el local</b></div>
+        <div><p style="font-size:13px">${esc(l.name)} · ${l.place}</p><p class="small">Campus Central · Planta baja</p></div>
+        <div class="notice" style="color:var(--ink);font-weight:600;font-size:13px"><i data-lucide="clock" style="color:var(--brand)"></i><span style="flex:1">Lo antes posible · ${l.eta}</span></div>
+        <p class="small">El tiempo de preparación comienza al confirmar tu pago.</p>
+      </div>
+      <div class="card">
+        <div><h3 class="h2">¿Cómo quieres pagar?</h3><p class="small" style="font-size:13px">Elige un método para continuar.</p></div>
+        <button class="card${payMethod === "card" ? " sel" : ""}" type="button" data-pay-method="card" style="text-align:left;${payMethod === "card" ? "border-color:var(--brand)" : ""}">
+          <div class="row start"><span class="opt${payMethod === "card" ? " on" : ""}" style="padding:0;border:0;background:none;width:auto"><span class="dot"></span></span><i data-lucide="credit-card" style="color:var(--brand)"></i><b>Tarjeta</b></div>
+          <p style="font-size:13px">${esc(defCard)}</p><p class="small">Pago simulado: no se hará ningún cobro real.</p>
+        </button>
+        <button class="card${payMethod === "transfer" ? " sel" : ""}" type="button" data-pay-method="transfer" style="text-align:left;${payMethod === "transfer" ? "border-color:var(--brand)" : ""}">
+          <div class="row start"><span class="opt${payMethod === "transfer" ? " on" : ""}" style="padding:0;border:0;background:none;width:auto"><span class="dot"></span></span><i data-lucide="landmark" style="color:var(--brand)"></i><b>Transferencia bancaria</b></div>
+          <p class="small">Consulta los datos bancarios y carga tu comprobante. El pedido se confirma al validar el pago.</p>
+        </button>
+      </div>
+    </div>
+    <div class="card">
+      <div><h3 class="h2">Resumen del pedido</h3><p class="small">${plural(n, "producto", "productos")} · ${esc(l.name)}</p></div>
+      <div class="sep"></div>
+      <div class="kv"><span>Subtotal · ${plural(n, "producto", "productos")}</span><b>${money(total)}</b></div>
+      <div class="kv"><span>Cargos adicionales</span><b>$0,00</b></div>
+      <div class="kv"><span>Retiro en el local</span><b class="pos">Gratis</b></div>
+      <div class="sep"></div>
+      <div class="kv total" style="font-size:18px"><span>Total a pagar</span><b style="font-size:27px">${money(total)}</b></div>
+      <p class="small">Precios finales · Sin cargos extra</p>
+      <button class="btn" type="button" id="cartPay"><i data-lucide="arrow-right"></i>${payMethod === "card" ? "Pagar con tarjeta" : "Continuar con transferencia"} · ${money(total)}</button>
+      <p class="tiny center"><i data-lucide="lock-keyhole"></i> ${payMethod === "card" ? "Prototipo: el cobro es simulado." : "Aún no se realizará ningún cobro."}</p>
+    </div>`;
+  icons();
+}
+
+/* Pedidos: se crean al pagar y se muestran en comprobante y factura */
+function newOrder(method) {
+  const l = cartLocal(), now = new Date(), d = day0(simDate);
+  const num = `${l.pref}-${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(orders.length + 1).padStart(4, "0")}`;
+  return { id: "o" + now.getTime(), num, local: l.id, method, date: fmtD(d), time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+    lines: cart.lines.map(x => { const li = lineInfo(l, x); return { name: li.it.name, icon: li.it.icon, opts: li.opts, note: x.note, qty: x.qty, total: li.total }; }).filter(Boolean),
+    total: cartTotal(), card: method === "card" ? (cards.length ? cardLabel(cards[0]) : "Tarjeta") : null };
+}
+let draftOrder = null;
+function confirmOrder(o) {
+  orders.push(o); saveOrders();
+  cart = { local: null, lines: [] }; saveCart();
+  curOrder = o.id;
+  const l = localById(o.local), n = o.lines.reduce((a, x) => a + x.qty, 0);
+  addMovement(o.lines.length === 1 ? o.lines[0].name : `Pedido · ${plural(n, "producto", "productos")}`, `${l.name} · ${l.place}`, "−" + money(o.total), "Pagado", "ok",
+    { icon: "utensils", go: "factura", goLabel: "Ver factura ›", order: o.id, date: `${o.date} · ${o.time}` });
+  go("factura");
+}
+const orderLines = o => o.lines.map(x => `<div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="${x.icon}"></i></div><div><b style="font-size:13px">${esc(x.name)}</b>${x.opts.map(t => `<p class="small">${esc(t)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}<p class="small">Cantidad ${x.qty} · ${money(x.total)}</p></div></div>`).join("");
+const orderTotals = o => `<div class="kv"><span>Subtotal</span><b>${money(o.total)}</b></div><div class="kv"><span>Cargos adicionales</span><b>$0,00</b></div><div class="kv"><span>Retiro en el local</span><b>Gratis</b></div>
+  <div class="sep"></div><div class="kv total"><span>Total</span><b>${money(o.total)}</b></div>`;
+function renderComprobante() {
+  if (!draftOrder) { if (cartLocal() && cart.lines.length) draftOrder = newOrder("transfer"); else return; }
+  const o = draftOrder, l = localById(o.local);
+  document.getElementById("cpLead").textContent = `Pedido de ${l.name} · ${o.date}`;
+  document.querySelectorAll("#comprobante [data-ord=place]").forEach(e => e.textContent = `${l.name} · ${l.place}`);
+  document.querySelectorAll("#comprobante [data-ord=total]").forEach(e => e.textContent = money(o.total));
+  document.querySelectorAll("#comprobante [data-ord=num]").forEach(e => e.textContent = o.num);
+  document.querySelectorAll("#comprobante [data-ord-val=total]").forEach(e => e.value = money(o.total));
+  document.getElementById("cpOrder").innerHTML = `<h3 class="h2">Tu pedido</h3><b style="font-size:13px">${esc(l.name)} · ${l.place}</b>${orderLines(o)}
+    <div class="sep"></div>${orderTotals(o)}<p class="tiny">Pedido ${o.num} · Desde tu carrito</p><span class="pill warn">Sin confirmar</span>`;
+  icons();
+}
+const FC_SAMPLE = ["fcLead", "fcNotice", "fcCard", "fcPickup"].map(id => [id, document.getElementById(id).innerHTML]);
+function renderFactura() {
+  const o = curOrder && orders.find(x => x.id === curOrder);
+  if (!o) { // sin pedido elegido se muestra la factura de ejemplo
+    FC_SAMPLE.forEach(([id, h]) => { document.getElementById(id).innerHTML = h; });
+    setFrame("factura", "Factura de comida", ["Actividad", "Factura"]); icons(); return;
+  }
+  const l = localById(o.local), card = o.method === "card";
+  document.getElementById("fcLead").textContent = card ? "El pago con tarjeta fue aprobado. Aquí está el detalle de tu pedido." : "La transferencia fue aprobada. Aquí está el detalle de tu pedido.";
+  document.getElementById("fcNotice").innerHTML = `<i data-lucide="shield-check"></i><div><b>Confirmado · ${o.date} · ${o.time}</b>${card ? `Pagaste el pedido ${o.num} con tu tarjeta. Ya puedes retirarlo en el local.` : `El comercio validó el comprobante del pedido ${o.num}.`}</div>`;
+  document.getElementById("fcCard").innerHTML = `<h2 class="h2">Factura de comida</h2>
+    <div class="row start"><span class="ico"><i data-lucide="store"></i></span><div><b style="font-size:17px;font-weight:600">${esc(l.name)}</b><p class="small" style="font-size:13px">${l.place} · Campus Central</p></div></div>
+    <span class="pill ok">Pagado · Confirmado</span><div class="sep"></div>
+    <b style="font-size:13px">${esc(user.full)} · ${esc(user.carnet)}</b>
+    <div class="kv"><span>Fecha de emisión</span><b>${o.date} · ${o.time}</b></div>
+    <p class="small">Factura F${o.num}</p><p class="small" style="margin-top:-10px">Pedido ${o.num}</p>
+    <div class="sep"></div>${orderLines(o)}<div class="sep"></div>${orderTotals(o)}
+    <p class="tiny">Precios finales en USD · Sin cargos extra</p><div class="sep"></div>
+    <div class="kv"><span>Método de pago</span><b>${card ? esc(o.card) : "Transferencia"}</b></div>${o.ref ? `<div class="kv"><span>Referencia</span><b>${esc(o.ref)}</b></div>` : ""}`;
+  document.getElementById("fcPickup").innerHTML = `<h3 class="h2">Retira en ${esc(l.name)}</h3><p style="font-size:13px">${l.place} · Planta baja</p>
+    <p class="small" style="font-size:13px">Preparación estimada: ${l.eta} desde la confirmación del pago.</p>
+    <p class="small">Muestra el número de pedido ${o.num} en el mostrador.</p>
+    <button class="btn ghost" type="button" data-go="actividad">Ver pedido en Actividad</button>`;
+  setFrame("factura", "Factura de comida", ["Actividad", "Factura " + o.num]);
+  icons();
+}
+
+document.getElementById("c-search").addEventListener("input", renderFoodList);
+document.addEventListener("input", e => {
+  if (e.target.id === "d-note") document.getElementById("d-note-count").textContent = `${e.target.value.length} / 120 caracteres`;
+});
+document.addEventListener("click", e => {
+  const ol = e.target.closest("[data-open-local]");
+  if (ol) { curLocal = ol.dataset.openLocal; curCat = "Todos"; saveFoodNav(); go("local"); return; }
+  const fc = e.target.closest("[data-food-cat]");
+  if (fc) { curCat = fc.dataset.foodCat; renderLocal(); return; }
+  const oi = e.target.closest("[data-open-item]");
+  if (oi) { openItem(oi.dataset.openItem); go("detalle"); return; }
+  const dopt = e.target.closest("[data-det-opt]");
+  if (dopt) { const [g, c] = dopt.dataset.detOpt.split(":").map(Number); detSel[g] = c; dopt.parentElement.querySelectorAll("[data-det-opt]").forEach(b => b.classList.toggle("on", b === dopt)); refreshDetTotal(); return; }
+  const dq = e.target.closest("[data-det-qty]");
+  if (dq) { detQty = Math.max(1, Math.min(20, detQty + +dq.dataset.detQty)); refreshDetTotal(); return; }
+  if (e.target.closest("#detAdd")) { addFromDetalle(); return; }
+  const cq = e.target.closest("[data-cart-qty]");
+  if (cq) {
+    const [i, d] = cq.dataset.cartQty.split(":").map(Number);
+    cart.lines[i].qty += d;
+    if (cart.lines[i].qty < 1) { cart.lines.splice(i, 1); toast("Quitamos el producto de tu carrito."); }
+    cart.lines[i] && (cart.lines[i].qty = Math.min(20, cart.lines[i].qty));
+    if (!cart.lines.length) cart.local = null;
+    saveCart(); renderCarrito(); return;
+  }
+  const cd = e.target.closest("[data-cart-del]");
+  if (cd) { cart.lines.splice(+cd.dataset.cartDel, 1); if (!cart.lines.length) cart.local = null; saveCart(); toast("Quitamos el producto de tu carrito."); renderCarrito(); return; }
+  const ce = e.target.closest("[data-cart-edit]");
+  if (ce) { const i = +ce.dataset.cartEdit; curLocal = cart.local; openItem(cart.lines[i].item, i); go("detalle"); return; }
+  const pm = e.target.closest("[data-pay-method]");
+  if (pm) { payMethod = pm.dataset.payMethod; renderCarrito(); return; }
+  if (e.target.closest("#cartPay")) {
+    if (payMethod === "card") confirmOrder(newOrder("card"));
+    else { draftOrder = newOrder("transfer"); go("comprobante"); }
+    return;
+  }
+  const fg = e.target.closest('[data-go="factura"]');
+  if (fg) curOrder = fg.dataset.order || null; // el data-go del mismo botón navega a la factura
+});
+document.getElementById("cpForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const f = e.target, missing = [...f.querySelectorAll("input")].find(i => !i.value.trim());
+  if (missing) { missing.focus(); toast("Completa todos los campos para continuar."); return; }
+  if (!draftOrder) { toast("Tu carrito está vacío. Elige productos antes de pagar."); go("comida"); return; }
+  const o = draftOrder; o.ref = document.getElementById("cp-r").value.trim(); draftOrder = null;
+  confirmOrder(o);
+});
+renderFoodList();
+
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();
   const carnet = f.querySelector("[data-digits]");

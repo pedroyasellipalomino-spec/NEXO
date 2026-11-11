@@ -36,7 +36,7 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - `localStorage["nexo-accounts"]`: lista de cuentas. La contraseña se guarda transformada con `passKey()`, nunca en claro.
 - Sesión en `nexo-session` (localStorage si marcó "Recordarme", si no sessionStorage).
 - `isDemo` es verdadero solo para Ana. Al arrancar se eliminan los elementos `[data-new]` (si es demo) o `[data-demo]` (si es cuenta nueva).
-- Datos por cuenta con `K("nexo-…")` = clave + `":" + correo`: nexo-pagos, nexo-cards, nexo-nread, nexo-nprefs, nexo-sim, nexo-wallet, nexo-moves, nexo-pendrec, nexo-vehicle, nexo-plan, nexo-materias. Si el usuario cambia su correo, estas claves se migran.
+- Datos por cuenta con `K("nexo-…")` = clave + `":" + correo`: nexo-pagos, nexo-cards, nexo-nread, nexo-nprefs, nexo-sim, nexo-wallet, nexo-moves, nexo-pendrec, nexo-vehicle, nexo-plan, nexo-materias, nexo-cart, nexo-orders. Si el usuario cambia su correo, estas claves se migran.
 - `saveAccount({...})` actualiza la cuenta activa (nombre, correo, carrera, cédula, teléfono, etc.).
 
 **Estado de cuenta / matrícula.**
@@ -47,6 +47,11 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - `simDate`: chips para simular fechas entre el 1 sep y el 30 nov.
 
 **Estacionamiento.** Wallet Nexo con recargas (tarjeta afiliada o Pago Móvil), registro de vehículo (marca, modelo, año, placa), planes (incluye bimestral y trimestral) pagados con saldo y verificación por código de 6 dígitos enviado al correo (simulado: 10 min de validez, reenvío a los 30 s, 3 intentos).
+
+**Comida y kioscos.** Los menús salen de `LOCALES` en `app.js` (4 locales + 3 kioscos; cada uno con categorías → productos; `foodOpt()` define grupos de opciones de "elige una" con recargo). Las pantallas `#comida`, `#local`, `#detalle`, `#carrito` se pintan con `renderFoodList/renderLocal/renderDetalle/renderCarrito` desde `show()`; el local y el producto abiertos viven en `sessionStorage["nexo-food"]`.
+- Carrito por cuenta en `nexo-cart` (`{ local, lines:[{item, sel, qty, note}] }`): un solo local por pedido; al añadir de otro local se avisa y se vacía. La cuenta demo arranca con el almuerzo del día de Pincho Pan.
+- Pago con tarjeta (simulado) → crea el pedido y va a `#factura`. Transferencia → `#comprobante` (borrador `draftOrder`) → al enviar, se confirma. Los pedidos se guardan en `nexo-orders` y se agregan a Actividad con `addMovement(..., { order })`; el botón lleva `data-order` para abrir esa factura.
+- `#factura` sin pedido elegido muestra la factura de ejemplo original (`FC_SAMPLE`).
 
 ## Convenciones
 
@@ -62,7 +67,8 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 
 - Ingeniería Mecánica no tiene materias en `CARRERAS`: su flujograma en PDF tiene el texto convertido en curvas y no se pudo extraer.
 - El código `EI27` (Contrataciones Internacionales) viene así en el flujograma; parece incompleto.
-- Menús de los demás locales de comida, validación de Pago Móvil.
+- Validación de Pago Móvil.
+- Comida: los menús y precios son de ejemplo (confirmar con cada local); falta el estado del pedido (preparando / listo para retirar) y la validación de los datos de transferencia.
 - Decidir si una cuenta nueva debe pagar las 3 facturas del trimestre (hoy septiembre y octubre salen como "No aplica").
 
 Fuente de materias: https://www.unimet.edu.ve/estudios/flujogramas-pregrado/

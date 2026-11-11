@@ -290,54 +290,14 @@
   <div class="cols">
     <div class="stack">
       <div class="stack s14" data-group="local">
-        <div class="row"><h2 class="sec" style="font-weight:600">Locales de comida</h2><span class="small">4 locales · Feria Central</span></div>
-        <div class="svc-grid">
-      <div class="card svc" data-kind="local">
-        <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="sandwich"></i></span><div><h3 class="h3">Pincho Pan</h3><p class="small">Feria Central · Retiro en 10–15 min</p></div></div><span class="pill ok">Abierto</span></div>
-        <div><b style="font-weight:600;font-size:14px">Almuerzo del día</b><p class="small" style="font-size:13px">Pollo a la plancha, arroz y ensalada. Incluye bebida natural.</p></div>
-        <div class="row"><span class="price">$8,50</span><span class="small">Hoy · 11:30–15:00</span></div>
-        <button class="btn" type="button" data-go="local"><i data-lucide="arrow-right"></i>Ver menú de Pincho Pan</button>
-      </div>
-      <div class="card svc" data-kind="local">
-        <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="coffee"></i></span><div><h3 class="h3">La Pausa</h3><p class="small">Feria Central · Retiro en 5–10 min</p></div></div><span class="pill ok">Abierto</span></div>
-        <div><b style="font-weight:600;font-size:14px">Menú próximamente</b><p class="small" style="font-size:13px">Pronto podrás ver sus productos y precios.</p></div>
-        <div class="row"><span></span><span class="small">Hoy · 7:00–16:00</span></div>
-        <button class="btn ghost" type="button" data-toast="El menú de La Pausa se agregará en el siguiente paso."><i data-lucide="arrow-right"></i>Ver menú de La Pausa</button>
-      </div>
-      <div class="card svc" data-kind="local">
-        <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="beef"></i></span><div><h3 class="h3">Mi Punto Grill</h3><p class="small">Feria Central · Retiro en 15–20 min</p></div></div><span class="pill ok">Abierto</span></div>
-        <div><b style="font-weight:600;font-size:14px">Menú próximamente</b><p class="small" style="font-size:13px">Pronto podrás ver sus productos y precios.</p></div>
-        <div class="row"><span></span><span class="small">Hoy · 11:00–16:00</span></div>
-        <button class="btn ghost" type="button" data-toast="El menú de Mi Punto Grill se agregará en el siguiente paso."><i data-lucide="arrow-right"></i>Ver menú de Mi Punto Grill</button>
-      </div>
-      <div class="card svc" data-kind="local">
-        <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="utensils"></i></span><div><h3 class="h3">TEEB</h3><p class="small">Feria Central · Retiro en 10–15 min</p></div></div><span class="pill ok">Abierto</span></div>
-        <div><b style="font-weight:600;font-size:14px">Menú próximamente</b><p class="small" style="font-size:13px">Pronto podrás ver sus productos y precios.</p></div>
-        <div class="row"><span></span><span class="small">Hoy · 10:00–16:00</span></div>
-        <button class="btn ghost" type="button" data-toast="El menú de TEEB se agregará en el siguiente paso."><i data-lucide="arrow-right"></i>Ver menú de TEEB</button>
-      </div>
-        </div>
+        <div class="row"><h2 class="sec" style="font-weight:600">Locales de comida</h2><span class="small" id="foodLocalCount">Feria Central</span></div>
+        <div class="svc-grid" id="foodLocales"></div>
       </div>
       <div class="stack s14" data-group="kiosco">
-        <div class="row"><h2 class="sec" style="font-weight:600">Kioscos</h2><span class="small">3 kioscos · Campus Central</span></div>
-        <div class="svc-grid">
-      <div class="card svc" data-kind="kiosco">
-        <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="store"></i></span><div><h3 class="h3">La Tiendita Unimetana A1</h3><p class="small">Kiosco · Café desde $1,50 · 5 min</p></div></div><span class="pill ok">Abierto</span></div>
-        <div class="row start"><span class="small">Hoy · 7:00–17:00</span></div>
-        <button class="btn ghost" type="button" data-toast="El catálogo de La Tiendita Unimetana A1 se agregará en el siguiente paso."><i data-lucide="arrow-right"></i>Ver kiosco</button>
+        <div class="row"><h2 class="sec" style="font-weight:600">Kioscos</h2><span class="small" id="foodKioscoCount">Campus Central</span></div>
+        <div class="svc-grid" id="foodKioscos"></div>
       </div>
-      <div class="card svc" data-kind="kiosco">
-        <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="store"></i></span><div><h3 class="h3">La Tiendita Unimetana A2</h3><p class="small">Kiosco · Café, bebidas y meriendas · 5 min</p></div></div><span class="pill ok">Abierto</span></div>
-        <div class="row start"><span class="small">Hoy · 7:00–17:00</span></div>
-        <button class="btn ghost" type="button" data-toast="El catálogo de La Tiendita Unimetana A2 se agregará en el siguiente paso."><i data-lucide="arrow-right"></i>Ver kiosco</button>
-      </div>
-      <div class="card svc" data-kind="kiosco">
-        <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="cup-soda"></i></span><div><h3 class="h3">Kiosco Believe</h3><p class="small">Kiosco · Bebidas y snacks · 5 min</p></div></div><span class="pill ok">Abierto</span></div>
-        <div class="row start"><span class="small">Hoy · 7:30–16:30</span></div>
-        <button class="btn ghost" type="button" data-toast="El catálogo de Kiosco Believe se agregará en el siguiente paso."><i data-lucide="arrow-right"></i>Ver kiosco</button>
-      </div>
-        </div>
-      </div>
+      <p class="nempty" id="foodEmpty" hidden>No encontramos productos ni locales con esa búsqueda.</p>
     </div>
     <div class="stack">
       <div class="card">
@@ -346,196 +306,70 @@
         <p class="small" style="font-size:13px">Campus Central · Planta baja. Selecciona un local, elige tu comida y retira directamente en su mostrador.</p>
         <p style="color:var(--brand);font-weight:600;font-size:13px">Solo retiro · Sin cargos extra</p>
       </div>
-      <div class="card" data-demo>
-        <h3 class="h3">Tu pedido en curso</h3>
-        <p class="small" style="font-size:13px">Almuerzo del día · Pincho Pan</p>
-        <button class="btn ghost" type="button" data-go="carrito"><i data-lucide="shopping-bag"></i>Ver carrito · $8,50</button>
-      </div>
+      <div class="card" id="foodCartCard" hidden></div>
       <p class="small">Los horarios y tiempos de retiro corresponden a cada local.</p>
     </div>
   </div>
 </section>
 
-<!-- 6 · Pincho Pan -->
-<section class="screen app" id="local" data-title="Pincho Pan" data-back="comida" data-tab="servicios" data-crumb="Comida y kioscos  /  Pincho Pan" hidden>
+<!-- 6 · Menú del local (se genera desde LOCALES en app.js) -->
+<section class="screen app" id="local" data-title="Menú" data-back="comida" data-tab="servicios" data-crumb="Comida y kioscos  /  Menú" hidden>
   <button class="link back" type="button" data-go="comida"><i data-lucide="arrow-left"></i>Volver a comida y kioscos</button>
-  <div><h1 class="h1">Pincho Pan</h1><p class="lead">Feria Central · Pinchos, sándwiches y almuerzos caseros.</p></div>
-  <div class="chips"><span class="pill ok">Abierto</span><span class="pill neutral">Retiro en 10–15 min</span><span class="pill neutral">11:30–15:00</span></div>
-  <div class="chips" data-chips><button class="pill ok" type="button">Todos</button><button class="pill neutral" type="button">Almuerzos</button><button class="pill neutral" type="button">Meriendas</button><button class="pill neutral" type="button">Bebidas</button></div>
+  <div id="localHead"></div>
+  <div class="chips" id="localChips"></div>
   <div class="cols">
-    <div class="stack s14">
-      <h2 class="h2">Almuerzos</h2>
-      <div class="card">
-        <div class="thumb"><i data-lucide="utensils"></i></div>
-        <div class="row"><h3 class="h2">Almuerzo del día</h3><span class="price">$8,50</span></div>
-        <p class="small" style="font-size:13px">Pollo a la plancha, arroz y ensalada. Incluye bebida natural.</p>
-        <div class="chips"><span class="pill ok">Más pedido</span><span class="pill neutral">10–15 min</span></div>
-        <button class="btn" type="button" data-go="detalle"><i data-lucide="arrow-right"></i>Elegir opciones</button>
-      </div>
-      <h2 class="h2">Meriendas</h2>
-      <button class="card row" type="button" data-go="detalle" style="text-align:left;flex-direction:row">
-        <span class="ico lg"><i data-lucide="sandwich"></i></span>
-        <div style="flex:1;min-width:0"><b class="h3">Wrap de pollo</b><p class="small">Pollo a la plancha, lechuga y tomate.</p><b style="font-size:17px;font-weight:600">$5,00</b></div>
-        <span class="ico"><i data-lucide="chevron-right"></i></span>
-      </button>
-      <h2 class="h2">Bebidas</h2>
-      <button class="card row" type="button" data-go="detalle" style="text-align:left;flex-direction:row">
-        <span class="ico lg"><i data-lucide="cup-soda"></i></span>
-        <div style="flex:1;min-width:0"><b class="h3">Limonada natural</b><p class="small">Preparada al momento · 350 ml.</p><b style="font-size:17px;font-weight:600">$2,00</b></div>
-        <span class="ico"><i data-lucide="chevron-right"></i></span>
-      </button>
-    </div>
-    <div class="stack">
-      <div class="card">
-        <i data-lucide="map-pin" style="color:var(--brand);font-size:22px"></i>
-        <h3 class="sec" style="font-weight:600">Pide y retira</h3>
-        <p class="small" style="font-size:13px">Pincho Pan · Feria Central</p>
-        <div class="sep"></div>
-        <p style="font-size:13px">Hoy · 11:30–15:00</p><p style="font-size:13px">Preparación en 10–15 min</p>
-        <p style="color:var(--brand);font-weight:600;font-size:13px">Sin cargos extra</p>
-      </div>
-      <div class="card">
-        <h3 class="h3">Tu almuerzo, a tu gusto</h3>
-        <p class="small" style="font-size:13px">Elige la bebida y las opciones del almuerzo antes de añadirlo al carrito.</p>
-        <p class="small">¿Tienes alguna alergia? Consulta con el local antes de pedir.</p>
-      </div>
-    </div>
+    <div class="stack s14" id="localMenu"></div>
+    <div class="stack" id="localSide"></div>
   </div>
 </section>
 
-<!-- 7 · Detalle del almuerzo -->
-<section class="screen app" id="detalle" data-title="Detalle del almuerzo" data-back="local" data-tab="servicios" data-crumb="Pincho Pan  /  Almuerzo del día" hidden>
-  <button class="link back" type="button" data-go="local"><i data-lucide="arrow-left"></i>Volver al menú de Pincho Pan</button>
-  <div class="cols even">
-    <div class="stack s14">
-      <div class="thumb"><i data-lucide="utensils"></i></div>
-      <div class="chips"><span class="pill ok">Disponible hoy</span><span class="pill neutral">10–15 min</span></div>
-      <div><h1 class="h1">Almuerzo del día</h1><p class="lead">Pollo a la plancha, arroz y ensalada. Incluye bebida natural.</p></div>
-      <p style="font-size:30px" class="mono">$8,50</p>
-      <p class="small" style="font-size:13px">Pincho Pan · Feria Central</p>
-      <div class="notice" style="background:var(--surface);border:1px solid var(--line);color:var(--muted)"><i data-lucide="info" style="color:var(--brand)"></i><p>Preparado al momento. Si tienes alergias o restricciones alimentarias, consulta con el local antes de comprar.</p></div>
-    </div>
-    <div class="stack s14">
-      <h2 class="h2" style="font-size:20px">Elige tus opciones</h2>
-      <div class="card" data-radio>
-        <div><b class="h3">Guarnición</b><p class="small">Elige una · Obligatorio</p></div>
-        <button class="opt on" type="button"><span class="dot"></span><span class="grow">Arroz y ensalada</span><span class="small">+$0,00</span></button>
-        <button class="opt" type="button"><span class="dot"></span><span class="grow">Solo ensalada</span><span class="small">+$0,00</span></button>
-      </div>
-      <div class="card" data-radio>
-        <div><b class="h3">Bebida natural</b><p class="small">Elige una · Incluida en tu almuerzo</p></div>
-        <button class="opt on" type="button"><span class="dot"></span><span class="grow">Limonada</span><span class="small">+$0,00</span></button>
-        <button class="opt" type="button"><span class="dot"></span><span class="grow">Jugo de papelón</span><span class="small">+$0,00</span></button>
-      </div>
-      <div class="card">
-        <label for="d-note" style="font-weight:600">Indicaciones · Opcional</label>
-        <div class="input" style="flex-direction:column;align-items:stretch;padding:12px"><textarea id="d-note" rows="2" maxlength="120" placeholder="Ej.: aderezo aparte"></textarea><span class="tiny" style="text-align:right">0 / 120 caracteres</span></div>
-      </div>
-      <div class="card">
-        <div class="row">
-          <div class="stack s14" style="gap:6px"><span class="small">Cantidad</span><span class="qty"><button type="button" aria-label="Quitar uno"><i data-lucide="minus"></i></button>1<button type="button" aria-label="Agregar uno"><i data-lucide="plus"></i></button></span></div>
-          <div style="text-align:right"><span class="small">Total del producto</span><p style="font-size:25px;font-weight:600" class="mono">$8,50</p></div>
-        </div>
-        <button class="btn" type="button" data-go="carrito"><i data-lucide="shopping-bag"></i>Añadir al carrito · $8,50</button>
-        <p class="small center">1 almuerzo · Opciones incluidas · Sin cargos extra</p>
-      </div>
-    </div>
-  </div>
+<!-- 7 · Detalle del producto -->
+<section class="screen app" id="detalle" data-title="Detalle del producto" data-back="local" data-tab="servicios" data-crumb="Comida y kioscos  /  Producto" hidden>
+  <button class="link back" type="button" data-go="local" id="detBack"><i data-lucide="arrow-left"></i>Volver al menú</button>
+  <div class="cols even" id="detBody"></div>
 </section>
 
 <!-- 8 · Carrito y pago -->
 <section class="screen app" id="carrito" data-title="Carrito y pago" data-back="local" data-tab="servicios" data-crumb="Comida y kioscos  /  Carrito y pago" hidden>
-  <button class="link back" type="button" data-go="local"><i data-lucide="arrow-left"></i>Volver al menú de Pincho Pan</button>
-  <div><h1 class="h1">Tu pedido, casi listo</h1><p class="lead">Revisa tu almuerzo, el retiro y tu método de pago.</p></div>
+  <button class="link back" type="button" data-go="local" id="cartBack"><i data-lucide="arrow-left"></i>Volver al menú</button>
+  <div><h1 class="h1">Tu pedido, casi listo</h1><p class="lead">Revisa tus productos, el retiro y tu método de pago.</p></div>
   <p class="small" style="font-weight:600"><span style="color:var(--brand)">1. Carrito y pago</span> &nbsp;›&nbsp; 2. Revisión &nbsp;›&nbsp; 3. Listo</p>
-  <div class="cols">
-    <div class="stack">
-      <div class="card">
-        <div class="row start"><i data-lucide="store" style="color:var(--brand);font-size:20px"></i><b class="h3">Pincho Pan</b></div>
-        <p class="small" style="margin-top:-8px">Feria Central · 1 producto</p>
-        <div class="sep"></div>
-        <div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="utensils"></i></div>
-          <div><b style="font-size:15px;font-weight:600">Almuerzo del día</b><p class="small">Pollo · Arroz y ensalada</p><p class="small">Bebida: limonada</p><b class="mono" style="font-weight:600">$8,50</b></div></div>
-        <div class="row"><span class="qty"><button type="button" aria-label="Quitar uno"><i data-lucide="minus"></i></button>1<button type="button" aria-label="Agregar uno"><i data-lucide="plus"></i></button></span>
-          <div class="row" style="gap:16px"><button class="link b" type="button" data-go="detalle" style="font-size:12px">Editar</button><button class="link" type="button" style="color:var(--muted);font-size:12px" data-toast="El prototipo mantiene el artículo para seguir el flujo.">Eliminar</button></div></div>
-        <button class="link" type="button" data-go="local">+ Seguir comprando en Pincho Pan</button>
-      </div>
-      <div class="card">
-        <div class="row start"><i data-lucide="map-pin" style="color:var(--brand);font-size:20px"></i><b class="h3">Retiro en el local</b></div>
-        <div><p style="font-size:13px">Pincho Pan · Feria Central</p><p class="small">Campus Central · Planta baja</p></div>
-        <div class="notice" style="color:var(--ink);font-weight:600;font-size:13px"><i data-lucide="clock" style="color:var(--brand)"></i><span style="flex:1">Lo antes posible · 10–15 min</span><i data-lucide="chevron-down" style="color:var(--brand)"></i></div>
-        <p class="small">El tiempo de preparación comienza al confirmar tu pago.</p>
-      </div>
-      <div class="card">
-        <div><h3 class="h2">¿Cómo quieres pagar?</h3><p class="small" style="font-size:13px">Elige un método para continuar.</p></div>
-        <div class="card sel" style="border-color:var(--brand)">
-          <div class="row start"><span class="opt on" style="padding:0;border:0;background:none;width:auto"><span class="dot"></span></span><i data-lucide="credit-card" style="color:var(--brand)"></i><b>Tarjeta</b></div>
-          <div><p style="font-size:13px"><span data-defcard>Visa ···· 4242</span></p><p class="small" data-demo><span data-user="full">Ana Torres</span> · Vence 08/28</p></div>
-          <button class="link b" type="button" style="font-size:12px" data-toast="Gestión de tarjetas no incluida en el prototipo.">Cambiar o añadir tarjeta</button>
-        </div>
-        <div class="card">
-          <div class="row start"><span class="opt" style="padding:0;border:0;background:none;width:auto"><span class="dot"></span></span><i data-lucide="landmark" style="color:var(--brand)"></i><b>Transferencia bancaria</b></div>
-          <p class="small">Consulta los datos bancarios y carga tu comprobante. El pedido se confirma al validar el pago.</p>
-          <button class="btn ghost" type="button" data-go="comprobante"><i data-lucide="upload"></i>Ir a carga del comprobante</button>
-          <p class="tiny">Esta opción cambia el método a transferencia.</p>
-        </div>
-      </div>
-    </div>
-    <div class="card">
-      <div><h3 class="h2">Resumen del pedido</h3><p class="small">1 almuerzo · Pincho Pan</p></div>
-      <div class="sep"></div>
-      <div class="kv"><span>Subtotal · 1 producto</span><b>$8,50</b></div>
-      <div class="kv"><span>Cargos adicionales</span><b>$0,00</b></div>
-      <div class="kv"><span>Retiro en el local</span><b class="pos">Gratis</b></div>
-      <div class="sep"></div>
-      <div class="kv total" style="font-size:18px"><span>Total a pagar</span><b style="font-size:27px">$8,50</b></div>
-      <p class="small">Precios finales · Sin cargos extra</p>
-      <button class="btn" type="button" data-go="factura"><i data-lucide="arrow-right"></i>Revisar pago · $8,50</button>
-      <p class="tiny center"><i data-lucide="lock-keyhole"></i> Aún no se realizará ningún cobro.</p>
-    </div>
-  </div>
+  <div class="cols" id="cartBody"></div>
 </section>
 
 <!-- 9 · Cargar comprobante -->
 <section class="screen app" id="comprobante" data-title="Comprobante de pago" data-back="carrito" data-tab="servicios" data-crumb="Carrito  /  Comprobante" hidden>
-  <div><h1 class="h1">Completa tu transferencia</h1><p class="lead">Pedido de Pincho Pan · 03 nov 2026</p></div>
+  <div><h1 class="h1">Completa tu transferencia</h1><p class="lead" id="cpLead">Pedido de Pincho Pan · 03 nov 2026</p></div>
   <p class="small" style="font-weight:600;color:var(--brand)">1. Carrito &nbsp;›&nbsp; 2. Comprobante &nbsp;›&nbsp; 3. Validación</p>
   <div class="cols">
     <div class="stack">
       <div class="card">
         <h2 class="h2">1. Datos para transferir</h2>
-        <b style="font-size:13px">Pincho Pan · Feria Central</b>
+        <b style="font-size:13px" data-ord="place">Pincho Pan · Feria Central</b>
         <div class="kv"><span>Banco receptor</span><b>Mercantil</b></div>
         <p class="small">Cuenta corriente · USD</p>
         <div class="copy"><span class="mono">0105 0000 00 0000000000</span><button class="link" type="button" aria-label="Copiar número de cuenta" data-copy="0105 0000 00 0000000000" data-copy-label="Número de cuenta copiado"><i data-lucide="copy"></i></button></div>
         <div class="kv"><span>RIF</span><b>J-00000000-2</b></div>
         <p class="tiny">Datos bancarios ilustrativos. Verifica la cuenta y la moneda con el comercio antes de transferir.</p>
-        <div class="kv total"><span>Importe del pedido</span><b>$8,50</b></div>
-        <p class="tiny">Incluye tu carnet y el pedido PP-261103-0186 en el concepto.</p>
+        <div class="kv total"><span>Importe del pedido</span><b data-ord="total">$8,50</b></div>
+        <p class="tiny">Incluye tu carnet y el pedido <span data-ord="num">PP-261103-0186</span> en el concepto.</p>
       </div>
-      <form class="card" data-submit="factura">
+      <form class="card" id="cpForm">
         <div><h2 class="h2">2. Datos de tu transferencia</h2><p class="small" style="font-size:13px">Completa los datos tal como aparecen en tu comprobante.</p></div>
         <div class="grid2">
           <div class="field"><label for="cp-f">Fecha de transferencia</label><div class="input"><input id="cp-f" value="03 nov 2026"></div></div>
           <div class="field"><label for="cp-b">Banco de origen</label><div class="input"><input id="cp-b" value="Banesco"></div></div>
           <div class="field"><label for="cp-r">Número de referencia</label><div class="input"><input id="cp-r" value="0031847265"></div></div>
-          <div class="field"><label for="cp-m">Monto transferido · USD</label><div class="input"><input id="cp-m" value="$8,50"></div></div>
+          <div class="field"><label for="cp-m">Monto transferido · USD</label><div class="input"><input id="cp-m" value="$8,50" data-ord-val="total"></div></div>
         </div>
         <div class="upload"><i data-lucide="upload"></i>Adjuntar comprobante<span class="tiny" style="font-weight:400">PDF, JPG o PNG · Máximo 5 MB</span></div>
         <div class="file"><i data-lucide="file-text"></i><div class="grow"><b style="font-size:13px">comprobante_0311.pdf</b><p class="tiny">248 KB · Listo para enviar</p></div><i data-lucide="x" style="color:var(--muted)"></i></div>
-        <button class="btn" type="submit"><i data-lucide="upload"></i>Enviar a revisión · $8,50</button>
+        <button class="btn" type="submit"><i data-lucide="upload"></i>Enviar a revisión · <span data-ord="total">$8,50</span></button>
         <p class="tiny">Enviar el comprobante no confirma el pago ni emite una factura.</p>
       </form>
     </div>
     <div class="stack">
-      <div class="card">
-        <h3 class="h2">Tu pedido</h3><b style="font-size:13px">Pincho Pan · Feria Central</b>
-        <div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="utensils"></i></div><div><b style="font-size:13px">Almuerzo del día</b><p class="small">Pollo · Arroz y ensalada</p><p class="small">Limonada · Cantidad 1</p></div></div>
-        <div class="sep"></div>
-        <div class="kv"><span>Subtotal</span><b>$8,50</b></div><div class="kv"><span>Cargos adicionales</span><b>$0,00</b></div><div class="kv"><span>Retiro en el local</span><b>Gratis</b></div>
-        <div class="sep"></div><div class="kv total"><span>Total</span><b>$8,50</b></div>
-        <p class="tiny">Pedido PP-261103-0186 · Desde tu carrito</p><span class="pill warn">Sin confirmar</span>
-      </div>
+      <div class="card" id="cpOrder"></div>
       <div class="card">
         <h3 class="h2">Después de enviar</h3><span class="pill warn">Pendiente de validación</span>
         <p class="small" style="font-size:13px">El comercio revisará el monto, la referencia y tu archivo. Consulta el estado en Actividad.</p>
@@ -550,10 +384,10 @@
 
 <!-- 10 · Factura confirmada -->
 <section class="screen app" id="factura" data-title="Factura de comida" data-back="actividad" data-tab="actividad" data-crumb="Actividad  /  Factura" hidden>
-  <div><h1 class="h1">Tu pago está confirmado</h1><p class="lead">La transferencia fue aprobada. Aquí está el detalle de tu pedido.</p></div>
-  <div class="notice"><i data-lucide="shield-check"></i><div><b>Confirmado · Después de la aprobación</b>El comercio validó el comprobante del pedido PP-261103-0186. Este es el estado posterior a la revisión.</div></div>
+  <div><h1 class="h1">Tu pago está confirmado</h1><p class="lead" id="fcLead">La transferencia fue aprobada. Aquí está el detalle de tu pedido.</p></div>
+  <div class="notice" id="fcNotice"><i data-lucide="shield-check"></i><div><b>Confirmado · Después de la aprobación</b>El comercio validó el comprobante del pedido PP-261103-0186. Este es el estado posterior a la revisión.</div></div>
   <div class="cols">
-    <div class="card">
+    <div class="card" id="fcCard">
       <h2 class="h2">Factura de comida</h2>
       <div class="row start"><span class="ico"><i data-lucide="store"></i></span><div><b style="font-size:17px;font-weight:600">Pincho Pan</b><p class="small" style="font-size:13px">Feria Central · Campus Central</p></div></div>
       <span class="pill ok">Pagado · Confirmado</span>
@@ -576,7 +410,7 @@
         <button class="btn" type="button" data-toast="La descarga no está disponible en el prototipo."><i data-lucide="download"></i>Descargar factura</button>
         <button class="btn ghost" type="button" data-go="local"><i data-lucide="store"></i>Volver al comercio</button>
       </div>
-      <div class="card">
+      <div class="card" id="fcPickup">
         <h3 class="h2">Retira en Pincho Pan</h3>
         <p style="font-size:13px">Feria Central · Planta baja</p>
         <p class="small" style="font-size:13px">Preparación estimada: 10–15 min desde la confirmación del pago.</p>
