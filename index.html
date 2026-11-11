@@ -87,6 +87,7 @@
         <button class="btn" type="submit"><i data-lucide="arrow-right"></i>Iniciar sesión</button>
         <p class="tiny">Cuenta de prueba: <b>ana.torres@correo.unimet.edu.ve</b> · contraseña <b style="white-space:nowrap">demo-nexo-01</b></p>
         <p class="tiny">Gestión: administradora <b>maria.vera@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-admin-01</b> — moderadora <b>lucia.rojas@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-mod-01</b></p>
+        <p class="tiny">Creador: <b>diego.mendez@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-creador-01</b></p>
       </form>
       <p class="center small">¿No tienes cuenta? <button class="link b" type="button" data-go="registro">Crear cuenta</button></p>
       <div class="secure"><i data-lucide="shield-check"></i><p>Tu información se protege con el acceso seguro de tu universidad.</p></div>
@@ -1176,6 +1177,61 @@
 <section class="screen app" id="resueltos" data-staff="mod" data-title="Resueltos" data-tab="resueltos" data-crumb="Gestión  /  Moderador  /  Resueltos" hidden>
   <div><h1 class="h1">Casos resueltos</h1><p class="lead">Lo que ya solucionaste, con las acciones que quedaron registradas.</p></div>
   <div class="card tk-table" id="rsTable"></div>
+</section>
+
+<!-- G6 · Creador · Resumen (Figma 2:25763) -->
+<section class="screen app" id="creador" data-staff="creator" data-title="Resumen" data-tab="creador" data-crumb="Gestión  /  Creador  /  Resumen" hidden>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px"><h1 class="h1">Una mirada a todo Nexo</h1><p class="lead">Rendimiento de la plataforma · Universidad Metropolitana</p></div>
+    <div class="period"><div class="input sel"><select id="crPeriod" aria-label="Período"></select><i data-lucide="chevron-down"></i></div><p class="tiny" id="crCompare"></p></div>
+  </div>
+  <div class="kpis four" id="crKpis"></div>
+  <div class="cols wide">
+    <div class="card" id="crChart"></div>
+    <div class="card" id="crMix"></div>
+  </div>
+  <div class="health" id="crHealth"></div>
+  <p class="tiny" id="crFoot"></p>
+</section>
+
+<!-- G7 · Creador · Equipo y tickets (Figma 2:25970) -->
+<section class="screen app" id="creador-equipo" data-staff="creator" data-title="Equipo y tickets" data-tab="creador-equipo" data-crumb="Gestión  /  Creador  /  Equipo y tickets" hidden>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px"><h1 class="h1">Las personas detrás de Nexo</h1><p class="lead">Acceso total para gestionar roles, responder y resolver solicitudes.</p></div>
+    <span class="pill ok">Creador · Todos los permisos</span>
+  </div>
+  <div class="cols wide">
+    <div class="card" id="ceTeam"></div>
+    <div id="ceInvite"></div>
+  </div>
+  <div class="row" style="flex-wrap:wrap"><h2 class="sec">Centro de soporte</h2><div class="chips" id="ceChips"></div></div>
+  <div class="cols wide">
+    <div class="stack s14">
+      <div class="filters">
+        <div class="input"><i data-lucide="search"></i><input id="ceSearch" type="search" placeholder="Buscar por ticket, estudiante o compra" aria-label="Buscar tickets"></div>
+        <div class="input sel"><select id="ceState" aria-label="Filtrar por estado"><option value="all">Todos los estados</option><option value="abierto">Abierto</option><option value="revision">En revisión</option><option value="espera">En espera</option><option value="resuelto">Resuelto</option></select><i data-lucide="chevron-down"></i></div>
+        <div class="input sel"><select id="ceService" aria-label="Filtrar por servicio"><option value="all">Todos los servicios</option></select><i data-lucide="chevron-down"></i></div>
+      </div>
+      <div class="card tk-table" id="ceTable"></div>
+    </div>
+    <div class="stack s14"><div class="card" id="ceTicket"></div><p class="tiny">Los cambios de roles, respuestas y soluciones quedan registrados en el historial de auditoría.</p></div>
+  </div>
+</section>
+
+<!-- G8 · Creador · Movimientos (transacciones y registro de cambios) -->
+<section class="screen app" id="movimientos" data-staff="creator" data-title="Movimientos" data-tab="movimientos" data-crumb="Gestión  /  Creador  /  Movimientos" hidden>
+  <div><h1 class="h1">Todo lo que pasa en Nexo</h1><p class="lead">Compras, reembolsos y cada cambio del equipo, en orden.</p></div>
+  <div class="chips" id="mvTabs"></div>
+  <div class="card tk-table" id="mvList"></div>
+</section>
+
+<!-- G9 · Creador · Configuración -->
+<section class="screen app" id="config" data-staff="creator" data-title="Configuración" data-tab="config" data-crumb="Gestión  /  Creador  /  Configuración" hidden>
+  <div><h1 class="h1">Configuración de la plataforma</h1><p class="lead">Ajusta las comisiones por servicio y los datos del prototipo.</p></div>
+  <div class="cols">
+    <form class="card" id="cfForm" novalidate></form>
+    <div class="stack" id="cfSide"></div>
+  </div>
 </section>
 
 <!-- 21 · Notificaciones -->

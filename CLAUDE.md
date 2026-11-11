@@ -11,7 +11,7 @@ Es un prototipo: no hay backend. Los datos viven en el navegador (localStorage/s
 - Un solo archivo para compartir: `npm run build` → `dist/nexo-prototipo.html` (CSS, JS e íconos adentro; `dist/` no se versiona)
 - Prueba de humo: `npm test` (necesita `pip install playwright` y `playwright install chromium`)
 
-Cuentas de prueba: estudiante `ana.torres@correo.unimet.edu.ve` / `demo-nexo-01` (carnet 20241010186); administradora `maria.vera@unimet.edu.ve` / `demo-admin-01`; moderadores `lucia.rojas@unimet.edu.ve` / `demo-mod-01` y `carlos.gil@unimet.edu.ve` / `demo-mod-02`. Cualquier cuenta nueva que se registre empieza desde cero.
+Cuentas de prueba: estudiante `ana.torres@correo.unimet.edu.ve` / `demo-nexo-01` (carnet 20241010186); administradora `maria.vera@unimet.edu.ve` / `demo-admin-01`; moderadores `lucia.rojas@unimet.edu.ve` / `demo-mod-01` y `carlos.gil@unimet.edu.ve` / `demo-mod-02`; creador `diego.mendez@unimet.edu.ve` / `demo-creador-01`. Cualquier cuenta nueva que se registre empieza desde cero.
 
 ## Estructura
 
@@ -54,10 +54,12 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - Pago con tarjeta (simulado) → crea el pedido y va a `#factura`. Transferencia → `#comprobante` (borrador `draftOrder`) → al enviar, se confirma. Los pedidos se guardan en `nexo-orders` y se agregan a Actividad con `addMovement(..., { order })`; el botón lleva `data-order` para abrir esa factura.
 - `#factura` sin pedido elegido muestra la factura de ejemplo original (`FC_SAMPLE`).
 
-**Roles y soporte (Figma sección `7:79457` · 08 Roles y gestión).** Las cuentas tienen `role`: estudiante (por defecto), `admin` o `mod` (`roleOf()`); `disabled` bloquea el login. Las cuentas de gestión de ejemplo están en `STAFF0`.
+**Roles y soporte (Figma sección `7:79457` · 08 Roles y gestión).** Las cuentas tienen `role`: estudiante (por defecto), `creator`, `admin` o `mod` (`roleOf()`); `disabled` bloquea el login. Las cuentas de gestión de ejemplo están en `STAFF0`.
 - Las pantallas de gestión llevan `data-staff="admin"|"mod"`: el marco usa `STAFF_NAV` (menú propio, botón Salir, sin campana). `show()` redirige según `STAFF_SCREENS`/`ROLE_HOME`: el estudiante no entra a gestión y el personal no entra a pantallas de estudiante. Al iniciar sesión cada rol cae en su inicio (`#gestion`, `#moderacion`, `#inicio`).
 - Administración: `#gestion` (indicadores, tabla filtrable, asignar moderador, exportar CSV, invitar), `#equipo` (activar/desactivar, cancelar invitaciones), `#caso` (ticket en solo lectura). Moderación: `#moderacion` (cola, conversación, responder, reembolsar/cancelar con confirmación, resolver/reabrir) y `#resueltos`.
 - Los tickets son **globales** en `localStorage["nexo-tickets"]` (no por cuenta), sembrados con `seedTickets()`. Las invitaciones en `nexo-invites`: quien se registra con un correo invitado entra como `mod`. Un reembolso agrega un movimiento a `nexo-moves:<correo del estudiante>`.
+- Creador (Figma `2:25763` y `2:25970`): `#creador` (indicadores, gráfico de ingresos por comisiones con tooltip y vista de tabla, compras por servicio; métricas de ejemplo en `PERIODS`, ingresos = volumen × comisión), `#creador-equipo` (equipo con menú ⋯ para cambiar rol/desactivar, invitar admin o moderador, centro de soporte con respuesta, reembolso, cancelación y resolver), `#movimientos` (transacciones de `nexo-orders:*` y reembolsos + registro de cambios) y `#config` (comisiones por servicio en `nexo-config`, restablecer datos de ejemplo). Movimientos y Configuración no tienen diseño en Figma.
+- Registro de auditoría global en `nexo-audit` con `logAudit(tipo, texto)`; las acciones de tickets compartidas son `ticketReply`, `ticketAction` y `ticketResolve`.
 - Estudiante: `#soporte` lista sus tickets (`renderSoporte`), crea solicitudes (`#supForm`, puede ligar un pedido de `nexo-orders`) y responde en la conversación.
 
 ## Cómo trabajar con el usuario
@@ -80,7 +82,7 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - El código `EI27` (Contrataciones Internacionales) viene así en el flujograma; parece incompleto.
 - Validación de Pago Móvil.
 - Comida: los menús y precios son de ejemplo (confirmar con cada local); falta el estado del pedido (preparando / listo para retirar) y la validación de los datos de transferencia.
-- Gestión: falta la pantalla "Creador y estadísticas" y "Creador, equipo y tickets" de Figma (rol creador); el personal invitado hoy se registra con el formulario de estudiante (pide carnet).
+- Gestión: el personal invitado hoy se registra con el formulario de estudiante (pide carnet).
 - Decidir si una cuenta nueva debe pagar las 3 facturas del trimestre (hoy septiembre y octubre salen como "No aplica").
 
 Fuente de materias: https://www.unimet.edu.ve/estudios/flujogramas-pregrado/

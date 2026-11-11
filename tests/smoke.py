@@ -143,6 +143,32 @@ async def main() -> int:
         await pg.wait_for_timeout(200)
         check("Reembolso · TK-1048" in await pg.inner_text("#actividad"), "el reembolso llega a la Actividad del estudiante")
 
+        # creador: resumen, rol, respuesta y comisiones
+        await login("diego.mendez@unimet.edu.ve", "demo-creador-01")
+        check(await pg.evaluate("location.hash") == "#creador" and "$11.456" in await pg.inner_text("#crKpis"), "el creador ve el resumen con ingresos")
+        await pg.goto(URL + "#creador-equipo")
+        await pg.wait_for_timeout(300)
+        await pg.check("#ceInvite input[value=admin]")
+        await pg.fill("#ceInvite [name=email]", "pablo.mora@unimet.edu.ve")
+        await pg.click("#ceInvite button[type=submit]")
+        await pg.wait_for_timeout(200)
+        check("Pablo Mora" in await pg.inner_text("#ceTeam"), "el creador invita a un administrador")
+        await pg.dispatch_event("[data-ce='TK-1047']", "click")  # el aviso flotante puede tapar la fila
+        await pg.fill("#ceText", "Respuesta del creador.")
+        await pg.click("#ceReply button[type=submit]")
+        await pg.wait_for_timeout(200)
+        await pg.goto(URL + "#config")
+        await pg.wait_for_timeout(200)
+        await pg.fill("#cf-Comida", "7")
+        await pg.click("#cfForm button[type=submit]")
+        await pg.wait_for_timeout(200)
+        await pg.goto(URL + "#movimientos")
+        await pg.wait_for_timeout(200)
+        await pg.click("#mvTabs [data-mv-tab='audit']")
+        await pg.wait_for_timeout(200)
+        audit = await pg.inner_text("#mvList")
+        check("Invitó a pablo.mora@unimet.edu.ve como administrador" in audit and "Respondió en TK-1047" in audit and "Cambió comisiones" in audit, "el registro de cambios guarda las acciones del creador")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 

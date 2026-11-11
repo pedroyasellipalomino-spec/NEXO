@@ -40,10 +40,11 @@ const TABS = NAV.filter(n => n[0] !== "cuenta" && n[0] !== "perfil");
 /* Espacio de gestión: cada sección con data-staff="admin" o "mod" usa su propio menú */
 const STAFF_NAV = {
   admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"]],
-  mod: [["moderacion","inbox","Mis tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]]
+  mod: [["moderacion","inbox","Mis tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]],
+  creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["config","settings","Configuración","config"]]
 };
-const ROLE_LABEL = { admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
-const ROLE_HOME = { admin: "gestion", mod: "moderacion", estudiante: "inicio" };
+const ROLE_LABEL = { creator: "Creador", admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
+const ROLE_HOME = { creator: "creador", admin: "gestion", mod: "moderacion", estudiante: "inicio" };
 
 document.querySelectorAll("[data-account]").forEach(el => el.append(document.getElementById("account-tpl").content.cloneNode(true)));
 
@@ -138,6 +139,7 @@ try { accounts = JSON.parse(localStorage.getItem("nexo-accounts") || "[]") || []
 if (!accounts.some(a => a.email === DEMO_EMAIL)) accounts.unshift({ ...DEFAULT_USER, pass: passKey("demo-nexo-01") });
 /* Cuentas de gestión de ejemplo (sin carnet): administradora y dos moderadores */
 const STAFF0 = [
+  { full: "Diego Méndez", carnet: "", email: "diego.mendez@unimet.edu.ve", role: "creator", pw: "demo-creador-01" },
   { full: "María Vera", carnet: "", email: "maria.vera@unimet.edu.ve", role: "admin", pw: "demo-admin-01" },
   { full: "Lucía Rojas", carnet: "", email: "lucia.rojas@unimet.edu.ve", role: "mod", pw: "demo-mod-01" },
   { full: "Carlos Gil", carnet: "", email: "carlos.gil@unimet.edu.ve", role: "mod", pw: "demo-mod-02" }
@@ -187,7 +189,7 @@ function enterApp(email, remember, flash) {
 const screens = [...document.querySelectorAll("section.screen")].map(s => s.id);
 let current = null, previous = "tutorial";
 const PUBLIC = ["tutorial", "login", "registro", "ayuda"];
-const STAFF_SCREENS = { gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod" };
+const STAFF_SCREENS = { gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator" };
 function show(id) {
   if (!screens.includes(id)) id = sessionEmail ? "inicio" : "tutorial";
   if (!sessionEmail && !PUBLIC.includes(id)) { id = "login"; if (location.hash !== "#login") history.replaceState(null, "", "#login"); setTimeout(() => toast("Inicia sesión para continuar."), 0); }
@@ -216,6 +218,10 @@ function show(id) {
   if (id === "moderacion" && typeof renderModeracion === "function") renderModeracion();
   if (id === "resueltos" && typeof renderResueltos === "function") renderResueltos();
   if (id === "soporte" && typeof renderSoporte === "function") renderSoporte();
+  if (id === "creador" && typeof renderCreador === "function") renderCreador();
+  if (id === "creador-equipo" && typeof renderCreadorEquipo === "function") renderCreadorEquipo();
+  if (id === "movimientos" && typeof renderMovimientos === "function") renderMovimientos();
+  if (id === "config" && typeof renderConfig === "function") renderConfig();
   if (id === "planes") { const s = document.querySelector("#planList .opt.plan.on"); if (s) try { updatePlan(s); } catch (err) {} }
 
   window.scrollTo(0, 0);
@@ -841,7 +847,7 @@ document.getElementById("registerForm").addEventListener("submit", e => {
   accounts.push({ full, carnet: carnetEl.value, email, pass: passKey(passEl.value), created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`, ...(inv ? { role: inv.role } : {}) });
   saveAccounts();
   if (inv) { invites = invites.filter(i => i !== inv); saveInvites(); }
-  enterApp(email, true, inv ? `Cuenta creada. Ya eres parte del equipo de moderación, ${full.split(" ")[0]}.` : `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
+  enterApp(email, true, inv ? `Cuenta creada. Ya eres parte del equipo de ${inv.role === "admin" ? "administración" : "moderación"}, ${full.split(" ")[0]}.` : `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
 });
 document.addEventListener("click", e => {
   if (!e.target.closest("[data-logout]")) return;
@@ -1858,6 +1864,24 @@ let tickets = null;
 try { tickets = JSON.parse(localStorage.getItem("nexo-tickets") || "null"); } catch (err) {}
 if (!Array.isArray(tickets)) { tickets = seedTickets(); try { localStorage.setItem("nexo-tickets", JSON.stringify(tickets)); } catch (err) {} }
 const saveTickets = () => { try { localStorage.setItem("nexo-tickets", JSON.stringify(tickets)); } catch (err) {} };
+/* Registro de auditoría (global): cambios de roles, asignaciones, respuestas y soluciones */
+let audit = [];
+try { audit = JSON.parse(localStorage.getItem("nexo-audit") || "[]") || []; } catch (err) {}
+if (!audit.length) {
+  const n = Date.now();
+  audit = [
+    { t: n - 9 * 24 * HOUR, who: "Diego Méndez", role: "creator", type: "rol", text: "Asignó a María Vera como administradora." },
+    { t: n - 8 * 24 * HOUR, who: "María Vera", role: "admin", type: "rol", text: "Invitó a Lucía Rojas como moderadora." },
+    { t: n - 8 * 24 * HOUR + HOUR, who: "María Vera", role: "admin", type: "rol", text: "Invitó a Carlos Gil como moderador." },
+    { t: n - 11 * 24 * HOUR, who: "Carlos Gil", role: "mod", type: "reembolso", text: "Reembolsó $12,60 en TK-1012 (Ana Torres)." },
+    { t: n - 26 * HOUR, who: "Lucía Rojas", role: "mod", type: "soporte", text: "Marcó TK-1029 como resuelto." }
+  ];
+  try { localStorage.setItem("nexo-audit", JSON.stringify(audit)); } catch (err) {}
+}
+function logAudit(type, text) {
+  audit.push({ t: Date.now(), who: user.full, role: roleOf(account), type, text });
+  try { localStorage.setItem("nexo-audit", JSON.stringify(audit)); } catch (err) {}
+}
 const tkById = id => tickets.find(t => t.id === id);
 const nextTkId = () => "TK-" + (Math.max(1000, ...tickets.map(t => +t.id.slice(3) || 0)) + 1);
 const isOpen = t => t.status !== "resuelto";
@@ -1874,7 +1898,7 @@ function pushStudentMove(email, m) {
 function convHTML(t, viewer) {
   return t.messages.map(m => {
     const mine = viewer === "student" ? m.from === "student" : m.from === "mod";
-    const who = m.from === "student" ? (viewer === "student" ? "Tú" : `${esc(m.name)} · Estudiante`) : `${esc(m.name)} · Moderación`;
+    const who = m.from === "student" ? (viewer === "student" ? "Tú" : `${esc(m.name)} · Estudiante`) : `${esc(m.name)} · ${m.role === "creator" ? "Creador" : "Moderación"}`;
     return `<div class="msg${m.from === "mod" ? " staff" : ""}${mine ? " mine" : ""}"><div class="row"><b>${who}</b><span class="tiny">${hhmm(m.t)}</span></div><p>${esc(m.text)}</p></div>`;
   }).join("") + (t.attach && viewer !== "student" ? `<div class="attach"><i data-lucide="file-text"></i><span class="grow">${esc(t.attach)}</span><button class="link" type="button" data-toast="La descarga no está disponible en el prototipo." aria-label="Descargar adjunto"><i data-lucide="download"></i></button></div>` : "");
 }
@@ -1905,7 +1929,7 @@ function inviteCard() {
   </form>`;
 }
 function teamRows() {
-  return [...mods().map(m => ({ name: m.full, email: m.email, kind: m.disabled ? "off" : "on" })), ...invites.map(i => ({ name: i.email, email: i.email, kind: "inv" }))];
+  return [...mods().map(m => ({ name: m.full, email: m.email, kind: m.disabled ? "off" : "on" })), ...invites.filter(i => i.role === "mod").map(i => ({ name: i.email, email: i.email, kind: "inv" }))];
 }
 function teamCard() {
   return `<div class="card"><h3 class="sec">Equipo de soporte</h3>${teamRows().map(r => {
@@ -1989,21 +2013,24 @@ function assignTicket(id, email) {
   t.mod = email || null;
   if (email && t.status === "abierto" && t.messages.some(m => m.from === "mod")) t.status = "revision";
   saveTickets();
+  logAudit("soporte", email ? `Asignó ${id} a ${nameOf(email)}.` : `Dejó ${id} sin asignar.`);
   toast(email ? `${id} asignado a ${nameOf(email)}.` : `${id} quedó sin asignar.`);
-  if (current === "gestion") renderGestion(); else if (current === "caso") renderCaso();
+  if (current === "gestion") renderGestion(); else if (current === "caso") renderCaso(); else if (current === "creador-equipo") renderCreadorEquipo();
 }
 function sendInvite(form) {
   const input = form.querySelector("input[name=email]"), hint = form.querySelector("[data-inv-hint]"), field = input.closest(".field");
   const email = normEmail(input.value);
+  const role = (form.querySelector("[name=role]:checked") || { value: "mod" }).value, rl = role === "admin" ? "administrador" : "moderador";
   const fail = msg => { field.classList.add("bad"); hint.hidden = false; hint.textContent = msg; input.focus(); };
   field.classList.remove("bad"); hint.hidden = true;
   if (!/^[^\s@]+@(correo\.)?unimet\.edu\.ve$/.test(email)) return fail("Usa un correo institucional, por ejemplo nombre@unimet.edu.ve.");
   const acc = accByEmail(email);
+  if (acc && acc.role === "creator") return fail("Esa persona es el creador de Nexo.");
   if (acc && (acc.role === "mod" || acc.role === "admin")) return fail(acc.disabled ? "Esa persona ya es moderadora, pero está desactivada. Reactívala desde Moderadores." : "Esa persona ya forma parte del equipo de gestión.");
   if (invites.some(i => i.email === email)) return fail("Ya enviaste una invitación a ese correo.");
-  if (acc) { acc.role = "mod"; saveAccounts(); toast(`${acc.full} ya tenía cuenta: ahora es moderador.`); }
-  else { invites.push({ email, role: "mod", by: user.email, t: Date.now() }); saveInvites(); toast(`Invitación enviada a ${email}.`); }
-  if (current === "equipo") renderEquipo(); else renderGestion();
+  if (acc) { acc.role = role; saveAccounts(); toast(`${acc.full} ya tenía cuenta: ahora es ${rl}.`); logAudit("rol", `Asignó a ${acc.full} como ${rl}.`); }
+  else { invites.push({ email, role, by: user.email, t: Date.now() }); saveInvites(); toast(`Invitación enviada a ${email}.`); logAudit("rol", `Invitó a ${email} como ${rl}.`); }
+  if (current === "equipo") renderEquipo(); else if (current === "creador-equipo") renderCreadorEquipo(); else renderGestion();
 }
 
 /* ===== Moderación ===== */
@@ -2044,18 +2071,29 @@ function renderModeracion() {
     </div>`;
   icons();
 }
-function modAction(type) {
-  const t = tkById(mdSel), p = t.purchase, now = Date.now(), me = user.full;
+function modAction(type) { ticketAction(tkById(mdSel), type); mdConfirm = null; renderModeracion(); }
+function ticketAction(t, type) {
+  const p = t.purchase, now = Date.now(), me = user.full;
   t.actions = [...(t.actions || []), { type, amount: p.amount, by: me, t: now }];
-  t.messages.push({ from: "mod", name: me, t: now, text: type === "refund"
+  t.messages.push({ from: "mod", name: me, t: now, role: roleOf(account), text: type === "refund"
     ? `Confirmamos el cargo duplicado. Reembolsamos ${money(p.amount)} a tu ${p.method}; llega en 3 a 5 días hábiles.`
     : `Cancelamos tu compra ${p.num} y devolvimos ${money(p.amount)} a tu ${p.method}.` });
   if (t.status === "abierto") t.status = "revision";
   saveTickets();
   pushStudentMove(t.student.email, { title: type === "refund" ? `Reembolso · ${t.id}` : `Compra cancelada · ${t.id}`, detail: p.place, amount: "+" + money(p.amount), pill: "Reembolsado", pillCls: "ok", date: fmtD(new Date(now)), icon: "rotate-ccw", go: "soporte", goLabel: "Ver solicitud ›" });
-  mdConfirm = null;
+  logAudit("reembolso", type === "refund" ? `Reembolsó ${money(p.amount)} en ${t.id} (${t.student.name}).` : `Canceló la compra ${p.num} en ${t.id} (${t.student.name}).`);
   toast(type === "refund" ? `Reembolso de ${money(p.amount)} registrado.` : "Compra cancelada y reembolsada.");
-  renderModeracion();
+}
+function ticketReply(t, txt) {
+  t.messages.push({ from: "mod", name: user.full, text: txt, t: Date.now(), role: roleOf(account) });
+  if (t.status === "abierto" || t.status === "espera") t.status = "revision";
+  saveTickets(); logAudit("soporte", `Respondió en ${t.id}.`);
+  toast(`Respuesta enviada a ${firstName(t.student.name)}.`);
+}
+function ticketResolve(t, done) {
+  if (done) { t.status = "resuelto"; t.resolved = Date.now(); } else { t.status = "revision"; delete t.resolved; }
+  saveTickets(); logAudit("soporte", done ? `Marcó ${t.id} como resuelto.` : `Reabrió ${t.id}.`);
+  toast(done ? `${t.id} marcado como resuelto.` : `${t.id} reabierto.`);
 }
 function renderResueltos() {
   const done = myTickets().filter(t => !isOpen(t));
@@ -2111,17 +2149,18 @@ document.addEventListener("click", e => {
   if (off) {
     const a = accByEmail(off.dataset.modOff); a.disabled = true; saveAccounts();
     const freed = tickets.filter(t => t.mod === a.email && isOpen(t)); freed.forEach(t => { t.mod = null; }); saveTickets();
-    toast(`${a.full} quedó desactivado${freed.length ? ` y ${freed.length} ${freed.length === 1 ? "ticket quedó" : "tickets quedaron"} sin asignar` : ""}.`); renderEquipo(); return;
+    logAudit("rol", `Desactivó a ${a.full}.`);
+    toast(`${a.full} quedó desactivado${freed.length ? ` y ${freed.length} ${freed.length === 1 ? "ticket quedó" : "tickets quedaron"} sin asignar` : ""}.`); current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); return;
   }
-  const on = e.target.closest("[data-mod-on]"); if (on) { const a = accByEmail(on.dataset.modOn); delete a.disabled; saveAccounts(); toast(`${a.full} está activo otra vez.`); renderEquipo(); return; }
-  const ic = e.target.closest("[data-inv-cancel]"); if (ic) { invites = invites.filter(i => i.email !== ic.dataset.invCancel); saveInvites(); toast("Invitación cancelada."); renderEquipo(); return; }
+  const on = e.target.closest("[data-mod-on]"); if (on) { const a = accByEmail(on.dataset.modOn); delete a.disabled; saveAccounts(); logAudit("rol", `Reactivó a ${a.full}.`); toast(`${a.full} está activo otra vez.`); current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); return; }
+  const ic = e.target.closest("[data-inv-cancel]"); if (ic) { invites = invites.filter(i => i.email !== ic.dataset.invCancel); saveInvites(); logAudit("rol", `Canceló la invitación de ${ic.dataset.invCancel}.`); toast("Invitación cancelada."); current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); return; }
   const md = e.target.closest("[data-md]"); if (md) { mdSel = md.dataset.md; mdConfirm = null; renderModeracion(); window.scrollTo(0, 0); return; }
   const mo = e.target.closest("[data-md-open]"); if (mo) { mdSel = mo.dataset.mdOpen; mdConfirm = null; go("moderacion"); return; }
   const ma = e.target.closest("[data-md-act]"); if (ma) { mdConfirm = ma.dataset.mdAct; renderModeracion(); return; }
   if (e.target.closest("[data-md-no]")) { mdConfirm = null; renderModeracion(); return; }
   if (e.target.closest("[data-md-yes]")) { modAction(mdConfirm); return; }
-  if (e.target.closest("[data-md-resolve]")) { const t = tkById(mdSel); t.status = "resuelto"; t.resolved = Date.now(); saveTickets(); toast(`${t.id} marcado como resuelto.`); renderModeracion(); return; }
-  if (e.target.closest("[data-md-reopen]")) { const t = tkById(mdSel); t.status = "revision"; delete t.resolved; saveTickets(); toast(`${t.id} reabierto.`); renderModeracion(); return; }
+  if (e.target.closest("[data-md-resolve]")) { ticketResolve(tkById(mdSel), true); renderModeracion(); return; }
+  if (e.target.closest("[data-md-reopen]")) { ticketResolve(tkById(mdSel), false); renderModeracion(); return; }
   const sf = e.target.closest("[data-sup-f]"); if (sf) { supFilter = sf.dataset.supF; renderSoporte(); return; }
   const so = e.target.closest("[data-sup-open]"); if (so) { supOpen = supOpen === so.dataset.supOpen ? null : so.dataset.supOpen; renderSoporte(); return; }
   if (e.target.closest("#supNew")) { openSupForm(true); return; }
@@ -2144,9 +2183,7 @@ document.addEventListener("submit", e => {
     e.preventDefault();
     const txt = document.getElementById("mdText").value.trim();
     if (!txt) { document.getElementById("mdText").focus(); toast("Escribe una respuesta antes de enviarla."); return; }
-    const t = tkById(mdSel); t.messages.push({ from: "mod", name: user.full, text: txt, t: Date.now() });
-    if (t.status === "abierto" || t.status === "espera") t.status = "revision";
-    saveTickets(); toast(`Respuesta enviada a ${firstName(t.student.name)}.`); renderModeracion(); return;
+    ticketReply(tkById(mdSel), txt); renderModeracion(); return;
   }
   if (f.matches("[data-sup-reply]")) {
     e.preventDefault();
@@ -2169,6 +2206,294 @@ document.addEventListener("submit", e => {
     f.reset(); openSupForm(false); supFilter = "all"; supOpen = t.id;
     toast(`Creamos la solicitud ${t.id}. Te responderemos en menos de 24 horas hábiles.`);
     renderSoporte();
+  }
+});
+
+/* ---------- Creador: métricas de la plataforma, equipo, soporte total, movimientos y configuración ---------- */
+const int0 = n => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+const money0 = n => (n < 0 ? "−$" : "$") + int0(Math.abs(n));
+const pctTxt = (x, d = 1) => (x * 100).toFixed(d).replace(".", ",") + " %";
+const signPct = x => (x >= 0 ? "+" : "−") + pctTxt(Math.abs(x));
+const SVC4 = ["Comida", "Estacionamiento", "Materias", "Canchas"];
+const SVC_LABEL = { Comida: "Comida y kioscos", Estacionamiento: "Estacionamiento", Materias: "Materias", Canchas: "Canchas" };
+// Datos de ejemplo por mes (volumen en USD y cantidad de compras por servicio); los ingresos salen de las comisiones de Configuración
+const PERIODS = {
+  "2026-08": { label: "01 – 31 ago 2026", name: "Agosto", mau: 6900, users: 10830, newUsers: 780, vol: { Comida: 66000, Estacionamiento: 47000, Materias: 92000, Canchas: 22000 }, buys: { Comida: 6795, Estacionamiento: 4530, Materias: 2265, Canchas: 1510 }, w: [60, 80, 75, 98, 110, 128, 140, 150], days: [1, 5, 9, 13, 17, 21, 25, 31], mon: "ago" },
+  "2026-09": { label: "01 – 30 sep 2026", name: "Septiembre", prev: "2026-08", mau: 7331, users: 11670, newUsers: 840, vol: { Comida: 70980, Estacionamiento: 50300, Materias: 98900, Canchas: 23600 }, buys: { Comida: 7590, Estacionamiento: 5060, Materias: 2530, Canchas: 1688 }, w: [70, 89, 83, 112, 128, 150, 164, 178], days: [1, 5, 9, 13, 17, 21, 25, 30], mon: "sep" },
+  "2026-10": { label: "01 – 31 oct 2026", name: "Octubre", prev: "2026-09", mau: 8240, users: 12580, newUsers: 910, vol: { Comida: 85920, Estacionamiento: 57280, Materias: 114560, Canchas: 28640 }, buys: { Comida: 8289, Estacionamiento: 5526, Materias: 2763, Canchas: 1842 }, w: [86, 108, 101, 132, 156, 179, 195, 224], days: [1, 5, 9, 13, 17, 21, 25, 31], mon: "oct" },
+  "2026-11": { label: "01 – 11 nov 2026 · parcial", name: "Noviembre", prev: "2026-10", partial: 11 / 31, mau: 7960, users: 12840, newUsers: 260, vol: { Comida: 32800, Estacionamiento: 21900, Materias: 41200, Canchas: 10300 }, buys: { Comida: 3141, Estacionamiento: 2094, Materias: 1047, Canchas: 698 }, w: [190, 205, 214], days: [1, 5, 9], mon: "nov" }
+};
+const RATES0 = { Comida: 6, Estacionamiento: 4, Materias: 2.25, Canchas: 5 };
+let rates = { ...RATES0 };
+try { const c = JSON.parse(localStorage.getItem("nexo-config") || "null"); if (c && c.rates) rates = { ...RATES0, ...c.rates }; } catch (err) {}
+const saveConfig = () => { try { localStorage.setItem("nexo-config", JSON.stringify({ rates })); } catch (err) {} };
+const sumObj = o => Object.values(o).reduce((a, b) => a + b, 0);
+const revenueOf = p => SVC4.reduce((a, s) => a + p.vol[s] * rates[s] / 100, 0);
+function periodStats(id) {
+  const p = PERIODS[id];
+  return { p, mau: p.mau, buys: sumObj(p.buys), vol: sumObj(p.vol), rev: revenueOf(p) };
+}
+function firstResponseMin() {
+  const f = tickets.map(t => { const r = t.messages.find(m => m.from === "mod"); return r ? r.t - t.created : null; }).filter(x => x !== null);
+  return f.length ? Math.round(f.reduce((a, b) => a + b, 0) / f.length / MIN) : null;
+}
+const durTxt = m => m === null ? "—" : m < 60 ? `${m} min` : `${(m / 60).toFixed(1).replace(".", ",")} h`;
+
+/* Resumen */
+let crPeriod = "2026-10", crTable = false;
+function renderCreador() {
+  const sel = document.getElementById("crPeriod");
+  if (!sel.options.length) sel.innerHTML = Object.keys(PERIODS).filter(k => PERIODS[k].prev).map(k => `<option value="${k}">${PERIODS[k].label}</option>`).join("");
+  sel.value = crPeriod;
+  const cur = periodStats(crPeriod), p = cur.p, prevS = periodStats(p.prev), k = p.partial || 1;
+  const prev = { mau: prevS.mau, buys: prevS.buys * k, vol: prevS.vol * k, rev: prevS.rev * k };
+  const vsTxt = p.partial ? `vs. mismo tramo de ${PERIODS[p.prev].mon}` : `vs. ${PERIODS[p.prev].mon}`;
+  document.getElementById("crCompare").textContent = p.partial ? `Comparado con el 1 al 11 de ${PERIODS[p.prev].mon}` : `Comparado con ${PERIODS[p.prev].name.toLowerCase()} de 2026`;
+  const kpi = (label, val, ch) => `<div class="card kpi static"><div class="row"><span class="small">${label}</span><i data-lucide="arrow-up-right"></i></div><b class="kv-big">${val}</b><div class="row start" style="gap:8px"><span class="pill ${ch >= 0 ? "ok" : "bad"}">${signPct(ch)}</span><span class="tiny">${vsTxt}</span></div></div>`;
+  document.getElementById("crKpis").innerHTML =
+    kpi("Usuarios activos mensuales", int0(cur.mau), cur.mau / prev.mau - 1) +
+    kpi("Compras completadas", int0(cur.buys), cur.buys / prev.buys - 1) +
+    kpi("Volumen de compras", money0(cur.vol), cur.vol / prev.vol - 1) +
+    kpi("Ingresos de Nexo", money0(cur.rev), cur.rev / prev.rev - 1);
+  // Gráfico: ingresos por intervalo, período actual vs. anterior
+  const n = p.w.length, sw = sumObj(p.w), pw = PERIODS[p.prev].w.slice(0, n), spw = sumObj(PERIODS[p.prev].w);
+  const curV = p.w.map(x => cur.rev * x / sw), prevV = pw.map(x => prevS.rev * x / spw);
+  const max = Math.max(...curV, ...prevV), step = max > 1500 ? 1000 : 500, top = Math.ceil(max / step) * step;
+  const lbl = i => `${String(p.days[i]).padStart(2, "0")} ${p.mon}`, plbl = i => `${String(PERIODS[p.prev].days[i]).padStart(2, "0")} ${PERIODS[p.prev].mon}`;
+  const kTxt = v => v === 0 ? "$0" : `$${String(v / 1000).replace(".", ",")} mil`;
+  document.getElementById("crChart").innerHTML = `
+    <div class="row"><h2 class="sec">Ingresos por comisiones</h2><span class="pill neutral">USD</span></div>
+    <p class="small" style="font-size:12px">Ingresos brutos de la app · Por intervalo de 4 días</p>
+    <div class="row" style="flex-wrap:wrap"><div class="chips legend"><span class="pill ok"><i class="sw cur"></i>${p.name} · ${money0(cur.rev)}</span><span class="pill neutral"><i class="sw prev"></i>${PERIODS[p.prev].name}${p.partial ? " (mismo tramo)" : ""} · ${money0(sumObj(prevV))}</span></div>
+      <button class="link b" type="button" data-cr-table>${crTable ? "Ver gráfico" : "Ver tabla"}</button></div>
+    ${crTable ? `<div class="chart-table"><div class="tk-row tk-head ct"><span>Intervalo</span><span>${p.name}</span><span>${PERIODS[p.prev].name}</span></div>${curV.map((v, i) => `<div class="tk-row ct"><span>${lbl(i)}</span><span>${money0(v)}</span><span>${money0(prevV[i])}</span></div>`).join("")}</div>`
+    : `<div class="chart" role="img" aria-label="Ingresos por intervalo de ${p.name.toLowerCase()} comparados con ${PERIODS[p.prev].name.toLowerCase()}">
+      <div class="axis"><span>${kTxt(top)}</span><span>${kTxt(top / 2)}</span><span>$0</span></div>
+      <div class="plot"><div class="grid"><i></i><i></i><i></i></div>
+        ${curV.map((v, i) => `<button class="grp" type="button" aria-label="${lbl(i)}: ${money0(v)}; ${plbl(i)}: ${money0(prevV[i])}">
+          <span class="bars"><span class="bar prev" style="height:${prevV[i] / top * 100}%"></span><span class="bar cur" style="height:${v / top * 100}%"></span></span>
+          <span class="tick">${lbl(i)}</span>
+          <span class="tip"><b>${lbl(i)}</b><span><i class="sw cur"></i>${money0(v)}</span><span><i class="sw prev"></i>${money0(prevV[i])} · ${plbl(i)}</span></span>
+        </button>`).join("")}
+      </div></div>`}
+    <div class="sep"></div>
+    <div class="row start" style="gap:30px;align-items:flex-start;flex-wrap:wrap">
+      <div><b class="big brand">${pctTxt(cur.rev / cur.vol, 2)}</b><p class="small">Comisión efectiva sobre el volumen</p></div>
+      <div><b class="big">${money0(cur.vol - cur.rev)}</b><p class="small">${Math.round((1 - cur.rev / cur.vol) * 100)} % destinado a comercios y campus</p></div>
+    </div>`;
+  const tb = cur.buys;
+  document.getElementById("crMix").innerHTML = `<h2 class="sec">Compras por servicio</h2><p class="small" style="font-size:12px">Participación del total de ${int0(tb)} compras</p>
+    ${SVC4.map(s => `<div class="mix"><div class="row"><span>${SVC_LABEL[s]}</span><b>${Math.round(p.buys[s] / tb * 100)} %</b></div><div class="track"><i style="width:${p.buys[s] / tb * 100}%"></i></div><span class="tiny">${int0(p.buys[s])} compras · comisión ${String(rates[s]).replace(".", ",")} %</span></div>`).join("")}
+    <div class="sep"></div><p class="tiny">Las comisiones varían por servicio. El ${pctTxt(cur.rev / cur.vol, 2)} es la tasa efectiva agregada, no una tarifa única. <button class="link b" type="button" data-go="config" style="font-size:11px">Ajustar comisiones</button></p>`;
+  const open = tickets.filter(isOpen), alta = open.filter(t => t.prio === "alta").length;
+  document.getElementById("crHealth").innerHTML = `
+    <div class="card hl"><i data-lucide="activity"></i><div><b>La comunidad sigue creciendo</b><p class="small">${int0(p.users)} usuarios registrados · ${pctTxt(p.mau / p.users)} activos este mes</p></div><span class="pill ok">+${int0(p.newUsers)} nuevos</span></div>
+    <button class="card hl" type="button" data-go="creador-equipo"><i data-lucide="messages-square"></i><div><b>${open.length} ${open.length === 1 ? "ticket abierto" : "tickets abiertos"} ahora</b><p class="small">${alta} de prioridad alta · ${durTxt(firstResponseMin())} de primera respuesta</p></div><span class="pill ok">Ver tickets →</span></button>`;
+  const last = p.partial ? "11 nov 2026" : `${p.days[p.days.length - 1]} ${p.mon} 2026`;
+  document.getElementById("crFoot").textContent = `Datos de ejemplo · Corte de métricas: ${last}, 23:59 VET. Usuarios activos: al menos una sesión en el período. Ingresos brutos antes de gastos e impuestos. El soporte se muestra en tiempo real.`;
+  icons();
+}
+
+/* Equipo y tickets */
+let ceTab = "open", ceSel = null, ceMenu = null, ceConfirm = null, ceFull = false, ceRole = "admin";
+const staffRows = () => [
+  ...accounts.filter(a => a.role === "admin" || a.role === "mod").map(a => ({ name: a.full, email: a.email, role: a.role, kind: a.disabled ? "off" : "on" })),
+  ...invites.map(i => ({ name: i.email, email: i.email, role: i.role, kind: "inv" }))
+];
+function creatorInvite() {
+  const admin = ceRole === "admin";
+  return `<form class="card" data-invite novalidate>
+    <h2 class="sec">Invitar al equipo</h2>
+    <p class="small" style="font-size:12px">Solo el creador puede asignar administradores y moderadores.</p>
+    <div class="field"><label>Correo institucional</label><div class="input"><input type="email" name="email" placeholder="nombre@unimet.edu.ve" autocomplete="off"></div><p class="tiny" data-inv-hint hidden></p></div>
+    <fieldset class="roles"><legend>Selecciona un rol</legend>
+      <label class="pill ${admin ? "ok" : "neutral"}"><input type="radio" name="role" value="admin"${admin ? " checked" : ""}>Administrador</label>
+      <label class="pill ${admin ? "neutral" : "ok"}"><input type="radio" name="role" value="mod"${admin ? "" : " checked"}>Moderador</label></fieldset>
+    <p class="tiny">${admin ? "Podrá asignar moderadores y consultar todos los tickets abiertos." : "Podrá responder tickets y ofrecer reembolsos o cancelaciones."}</p>
+    <button class="btn" type="submit"><i data-lucide="user-plus"></i>Asignar ${admin ? "administrador" : "moderador"}</button>
+  </form>`;
+}
+function ceFiltered() {
+  const q = normTxt(document.getElementById("ceSearch").value.trim()), st = document.getElementById("ceState").value, sv = document.getElementById("ceService").value;
+  return tickets.filter(t => (ceTab === "all" || (ceTab === "open" ? isOpen(t) : !isOpen(t))) && (st === "all" || t.status === st) && (sv === "all" || t.service === sv)
+    && (!q || normTxt([t.id, t.subject, t.student.name, t.service, t.purchase ? t.purchase.num : ""].join(" ")).includes(q)))
+    .sort((a, b) => (isOpen(b) - isOpen(a)) || (({ alta: 0, media: 1, baja: 2 })[a.prio] - ({ alta: 0, media: 1, baja: 2 })[b.prio]) || b.created - a.created);
+}
+function renderCreadorEquipo() {
+  const rows = staffRows();
+  document.getElementById("ceTeam").innerHTML = `<div class="row"><h2 class="sec">Equipo de gestión</h2><button class="link b" type="button" data-mv-tab="audit">Ver registro de cambios ↗</button></div>`
+    + (rows.map(r => {
+      const st = r.kind === "inv" ? `<span class="pill warn">Invitado</span>` : r.kind === "off" ? `<span class="pill neutral">Desactivado</span>` : `<span class="pill ok">Activo</span>`;
+      const menu = ceMenu === r.email ? `<div class="menu">${r.kind === "inv"
+        ? `<button class="link" type="button" data-inv-cancel="${r.email}">Cancelar invitación</button>`
+        : `<button class="link b" type="button" data-ce-role="${r.email}">Cambiar a ${r.role === "admin" ? "moderador" : "administrador"}</button>${r.kind === "off" ? `<button class="link b" type="button" data-mod-on="${r.email}">Reactivar</button>` : `<button class="link" type="button" style="color:var(--danger)" data-mod-off="${r.email}">Desactivar</button>`}`}</div>` : "";
+      return `<div class="member"><span class="avatar soft">${initialsOf(r.kind === "inv" ? r.email.split("@")[0].replace(/[._]/g, " ") : r.name)}</span>
+        <div class="who"><b>${esc(r.kind === "inv" ? r.email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : r.name)}</b><span class="tiny">${esc(r.email)}</span></div>
+        <span class="pill neutral">${ROLE_LABEL[r.role]}</span>${st}
+        <button class="dots" type="button" aria-label="Opciones de ${esc(r.name)}" aria-expanded="${ceMenu === r.email}" data-ce-menu="${r.email}"><i data-lucide="ellipsis"></i></button></div>${menu}`;
+    }).join("") || `<p class="small">Aún no hay equipo de gestión. Invita a la primera persona.</p>`);
+  document.getElementById("ceInvite").innerHTML = creatorInvite();
+  const all = tickets.length, nOpen = tickets.filter(isOpen).length;
+  document.getElementById("ceChips").innerHTML = [["open", `Abiertos · ${nOpen}`], ["done", `Resueltos · ${all - nOpen}`], ["all", `Todos · ${all}`]]
+    .map(([k, l]) => `<button class="pill ${k === ceTab ? "ok" : "neutral"}" type="button" data-ce-tab="${k}">${l}</button>`).join("");
+  const svc = document.getElementById("ceService");
+  if (svc.options.length === 1) svc.insertAdjacentHTML("beforeend", SERVICES.map(s => `<option>${s}</option>`).join(""));
+  const list = ceFiltered();
+  if (!ceSel || !tkById(ceSel)) ceSel = (list[0] || {}).id || null;
+  document.getElementById("ceTable").innerHTML = `<div class="tk-row tk-head ce"><span>Ticket</span><span>Estudiante / Motivo</span><span>Estado</span><span>Prioridad</span></div>`
+    + (list.map(t => `<button class="tk-row ce${t.id === ceSel ? " on" : ""}" type="button" data-ce="${t.id}">
+      <span><span class="tk-ref">${t.id}</span><span class="tiny" style="display:block">${ago(t.created)}</span></span>
+      <span class="tk-main"><b style="font-size:12px">${esc(t.subject)}</b><span class="tiny" style="display:block">${esc(t.student.name)} · ${t.service}</span></span>
+      <span>${stPill(t.status)}</span><span class="prio ${t.prio}">${TK_PRIO[t.prio]}</span></button>`).join("") || `<p class="nempty" style="padding:18px">No hay tickets con esos filtros.</p>`)
+    + `<div class="tk-foot"><span class="small">${list.length} de ${all} tickets</span></div>`;
+  renderCeTicket();
+  icons();
+}
+function renderCeTicket() {
+  const box = document.getElementById("ceTicket"), t = ceSel && tkById(ceSel);
+  if (!t) { box.innerHTML = `<p class="small">Selecciona un ticket para verlo aquí.</p>`; return; }
+  const lastS = [...t.messages].reverse().find(m => m.from === "student"), lastM = [...t.messages].reverse().find(m => m.from === "mod");
+  const open = isOpen(t), p = t.purchase, acted = (t.actions || []).length;
+  box.innerHTML = `
+    <div class="row" style="align-items:flex-start"><b style="font-size:12px">${t.id} · ${esc(t.student.name)}</b>${stPill(t.status)}</div>
+    <h3 class="h3" style="font-size:17px">${esc(t.subject)}</h3>
+    <p class="tiny">${p ? `Compra ${esc(p.num)} · ${esc(p.place)} · ${money(p.amount)}` : `${t.service} · Sin compra relacionada`}</p>
+    <div class="sep"></div>
+    ${ceFull ? convHTML(t, "admin") : `${lastS ? `<div class="msg"><div class="row"><b>${esc(firstName(lastS.name))} · ${hhmm(lastS.t)}</b></div><p>${esc(lastS.text)}</p></div>` : ""}
+    ${lastM ? `<p class="tiny">${esc(firstName(lastM.name))} · ${hhmm(lastM.t)}: ${esc(lastM.text)}</p>` : ""}`}
+    <button class="link b" type="button" data-ce-full>${ceFull ? "Ver resumen" : `Ver conversación completa (${t.messages.length})`}</button>
+    ${(t.actions || []).map(a => `<span class="pill ok">${actionLabel(a)} · ${esc(a.by)}</span>`).join("")}
+    <div class="field"><label>Responsable actual</label>${open ? assignSelect(t) : `<b style="font-size:13px">${esc(t.mod ? nameOf(t.mod) : "—")}</b>`}</div>
+    <div class="sep"></div>
+    ${open ? `<form class="stack s14" id="ceReply"><label for="ceText" style="font-weight:600;font-size:13px">Responder como creador</label>
+      <div class="input" style="padding:12px"><textarea id="ceText" rows="3" maxlength="600" placeholder="Escribe una respuesta para ${esc(firstName(t.student.name))}…"></textarea></div>
+      <button class="btn" type="submit"><i data-lucide="send"></i>Enviar respuesta</button></form>
+      ${p && !acted ? (ceConfirm ? `<div class="confirm"><p>${ceConfirm === "refund" ? `¿Reembolsar ${money(p.amount)} a ${esc(p.method)}?` : `¿Cancelar la compra ${esc(p.num)} y devolver ${money(p.amount)}?`}</p><div class="row"><button class="btn ghost" type="button" data-ce-no>Volver</button><button class="btn" type="button" data-ce-yes>Confirmar</button></div></div>`
+        : `<div class="row"><button class="btn ghost" type="button" data-ce-act="refund">Reembolsar</button><button class="btn ghost" type="button" data-ce-act="cancel">Cancelar</button></div>`) : ""}
+      <button class="btn ghost" type="button" data-ce-resolve><i data-lucide="check"></i>Marcar como resuelto</button>`
+    : `<button class="btn ghost" type="button" data-ce-reopen><i data-lucide="rotate-ccw"></i>Reabrir caso</button>`}`;
+  icons();
+}
+
+/* Movimientos: transacciones de este navegador y registro de cambios */
+let mvTab = "tx";
+const AUDIT_TYPE = { rol: ["Roles", "ok"], soporte: ["Soporte", "neutral"], reembolso: ["Reembolso", "warn"], config: ["Configuración", "neutral"] };
+function allTransactions() {
+  const out = [];
+  try {
+    Object.keys(localStorage).filter(k => k.startsWith("nexo-orders:")).forEach(k => {
+      const email = k.slice("nexo-orders:".length);
+      (JSON.parse(localStorage.getItem(k) || "[]") || []).forEach(o => {
+        const l = localById(o.local);
+        out.push({ t: +o.id.slice(1) || 0, who: nameOf(email), concept: `Pedido ${o.num} · ${l ? l.name : ""}`, method: o.card || "Transferencia", amount: o.total, fee: o.total * rates.Comida / 100 });
+      });
+    });
+  } catch (err) {}
+  tickets.forEach(t => (t.actions || []).forEach(a => out.push({ t: a.t, who: t.student.name, concept: `${actionLabel(a)} · ${t.id}`, method: t.purchase ? t.purchase.method : "", amount: -a.amount, fee: null })));
+  return out.sort((a, b) => b.t - a.t);
+}
+function renderMovimientos() {
+  document.getElementById("mvTabs").innerHTML = [["tx", "Transacciones"], ["audit", "Registro de cambios"]].map(([k, l]) => `<button class="pill ${k === mvTab ? "ok" : "neutral"}" type="button" data-mv-tab="${k}">${l}</button>`).join("");
+  const box = document.getElementById("mvList");
+  if (mvTab === "tx") {
+    const tx = allTransactions();
+    box.innerHTML = `<div class="tk-row tk-head mv"><span>Fecha</span><span>Concepto</span><span>Método</span><span>Monto</span><span>Comisión</span></div>`
+      + (tx.map(x => `<div class="tk-row mv"><span class="tiny">${x.t ? fullDate(x.t) : "—"}</span><span class="tk-main"><b style="font-size:12px">${esc(x.concept)}</b><span class="tiny" style="display:block">${esc(x.who)}</span></span><span class="small">${esc(x.method)}</span><b class="${x.amount < 0 ? "neg" : ""}" style="font-size:13px">${x.amount < 0 ? "−" + money(-x.amount) : money(x.amount)}</b><span class="small">${x.fee === null ? "—" : money(x.fee)}</span></div>`).join("")
+        || `<p class="nempty" style="padding:18px">Aún no hay compras en este navegador. Cuando un estudiante pague un pedido de comida, aparecerá aquí. Los totales del Resumen son datos de ejemplo.</p>`);
+  } else {
+    box.innerHTML = `<div class="tk-row tk-head au"><span>Cuándo</span><span>Quién</span><span>Cambio</span><span>Tipo</span></div>`
+      + (audit.slice().sort((a, b) => b.t - a.t).map(a => `<div class="tk-row au"><span class="tiny">${ago(a.t)}</span><span><b style="font-size:12px">${esc(a.who)}</b><span class="tiny" style="display:block">${ROLE_LABEL[a.role] || ""}</span></span><span style="font-size:12px">${esc(a.text)}</span><span><span class="pill ${(AUDIT_TYPE[a.type] || AUDIT_TYPE.soporte)[1]}">${(AUDIT_TYPE[a.type] || AUDIT_TYPE.soporte)[0]}</span></span></div>`).join(""));
+  }
+  icons();
+}
+
+/* Configuración */
+let cfConfirm = false;
+function renderConfig() {
+  document.getElementById("cfForm").innerHTML = `<div><h2 class="h2">Comisiones por servicio</h2><p class="small" style="font-size:13px">Porcentaje que Nexo cobra sobre cada compra. El resto va al comercio o a la universidad.</p></div>
+    ${SVC4.map(s => `<div class="field"><label for="cf-${s}">${SVC_LABEL[s]}</label><div class="input"><input id="cf-${s}" data-rate="${s}" type="number" inputmode="decimal" min="0" max="15" step="0.25" value="${rates[s]}"><span class="small">%</span></div></div>`).join("")}
+    <div class="notice" id="cfPreview"></div>
+    <div class="row"><button class="btn ghost" type="button" data-cf-default>Valores por defecto</button><button class="btn" type="submit"><i data-lucide="check"></i>Guardar cambios</button></div>`;
+  document.getElementById("cfSide").innerHTML = `<div class="card"><h2 class="h2">Datos del prototipo</h2>
+    <p class="small" style="font-size:13px">Vuelve a los tickets, invitaciones, equipo y comisiones de ejemplo. Solo afecta a este navegador; las cuentas de estudiantes y sus compras se conservan.</p>
+    ${cfConfirm ? `<div class="confirm"><p>¿Restablecer los datos de gestión? Se perderán los tickets y cambios hechos en este navegador.</p><div class="row"><button class="btn ghost" type="button" data-cf-no>Volver</button><button class="btn" type="button" data-cf-yes>Restablecer</button></div></div>`
+      : `<button class="btn ghost" type="button" data-cf-reset><i data-lucide="rotate-ccw"></i>Restablecer datos de ejemplo</button>`}</div>
+    <div class="notice"><i data-lucide="shield-check"></i><p>Los cambios de comisiones quedan en el registro de cambios.</p></div>`;
+  updateCfPreview(); icons();
+}
+function readRates() {
+  const r = {}; let bad = null;
+  document.querySelectorAll("[data-rate]").forEach(i => { const v = parseFloat(String(i.value).replace(",", ".")); i.closest(".field").classList.toggle("bad", !(v >= 0 && v <= 15)); if (!(v >= 0 && v <= 15)) bad = bad || i; r[i.dataset.rate] = v; });
+  return { r, bad };
+}
+function updateCfPreview() {
+  const { r, bad } = readRates(), p = PERIODS["2026-10"], el = document.getElementById("cfPreview");
+  if (bad) { el.className = "notice warn"; el.innerHTML = `<i data-lucide="info"></i><p>Cada comisión debe estar entre 0 % y 15 %.</p>`; icons(); return; }
+  const vol = sumObj(p.vol), rev = SVC4.reduce((a, s) => a + p.vol[s] * r[s] / 100, 0);
+  el.className = "notice"; el.innerHTML = `<i data-lucide="percent"></i><p>Con estas comisiones, octubre habría dado <b>${money0(rev)}</b> de ingresos · comisión efectiva <b>${pctTxt(rev / vol, 2)}</b>.</p>`; icons();
+}
+function resetDemoData() {
+  ["nexo-tickets", "nexo-invites", "nexo-audit", "nexo-config"].forEach(k => { try { localStorage.removeItem(k); } catch (err) {} });
+  STAFF0.forEach(s => { const a = accByEmail(s.email); if (a) { a.role = s.role; delete a.disabled; } });
+  accounts.filter(a => (a.role === "admin" || a.role === "mod") && !STAFF0.some(s => s.email === a.email)).forEach(a => { delete a.role; delete a.disabled; });
+  saveAccounts();
+  try { sessionStorage.setItem("nexo-flash", "Restablecimos los datos de ejemplo."); } catch (err) {}
+  location.reload();
+}
+
+document.addEventListener("click", e => {
+  if (e.target.closest("[data-cr-table]")) { crTable = !crTable; renderCreador(); return; }
+  const mt = e.target.closest("[data-mv-tab]"); if (mt) { mvTab = mt.dataset.mvTab; if (current === "movimientos") renderMovimientos(); else go("movimientos"); return; }
+  const cm = e.target.closest("[data-ce-menu]"); if (cm) { ceMenu = ceMenu === cm.dataset.ceMenu ? null : cm.dataset.ceMenu; renderCreadorEquipo(); return; }
+  const cr = e.target.closest("[data-ce-role]");
+  if (cr) {
+    const a = accByEmail(cr.dataset.ceRole), to = a.role === "admin" ? "mod" : "admin";
+    a.role = to; saveAccounts();
+    let freed = 0;
+    if (to === "admin") tickets.forEach(t => { if (t.mod === a.email && isOpen(t)) { t.mod = null; freed++; } });
+    saveTickets(); ceMenu = null;
+    logAudit("rol", `Cambió a ${a.full} a ${to === "admin" ? "administrador" : "moderador"}.`);
+    toast(`${a.full} ahora es ${to === "admin" ? "administrador" : "moderador"}${freed ? `; ${freed} ${freed === 1 ? "ticket quedó" : "tickets quedaron"} sin asignar` : ""}.`);
+    renderCreadorEquipo(); return;
+  }
+  const ct = e.target.closest("[data-ce-tab]"); if (ct) { ceTab = ct.dataset.ceTab; ceSel = null; renderCreadorEquipo(); return; }
+  const cs = e.target.closest("[data-ce]"); if (cs) { ceSel = cs.dataset.ce; ceConfirm = null; ceFull = false; renderCreadorEquipo(); if (innerWidth < 1100) document.getElementById("ceTicket").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  if (e.target.closest("[data-ce-full]")) { ceFull = !ceFull; renderCeTicket(); return; }
+  const ca = e.target.closest("[data-ce-act]"); if (ca) { ceConfirm = ca.dataset.ceAct; renderCeTicket(); return; }
+  if (e.target.closest("[data-ce-no]")) { ceConfirm = null; renderCeTicket(); return; }
+  if (e.target.closest("[data-ce-yes]")) { ticketAction(tkById(ceSel), ceConfirm); ceConfirm = null; renderCreadorEquipo(); return; }
+  if (e.target.closest("[data-ce-resolve]")) { ticketResolve(tkById(ceSel), true); renderCreadorEquipo(); return; }
+  if (e.target.closest("[data-ce-reopen]")) { ticketResolve(tkById(ceSel), false); renderCreadorEquipo(); return; }
+  if (e.target.closest("[data-cf-default]")) { document.querySelectorAll("[data-rate]").forEach(i => { i.value = RATES0[i.dataset.rate]; }); updateCfPreview(); return; }
+  if (e.target.closest("[data-cf-reset]")) { cfConfirm = true; renderConfig(); return; }
+  if (e.target.closest("[data-cf-no]")) { cfConfirm = false; renderConfig(); return; }
+  if (e.target.closest("[data-cf-yes]")) { resetDemoData(); return; }
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "crPeriod") { crPeriod = e.target.value; renderCreador(); return; }
+  if (e.target.id === "ceState" || e.target.id === "ceService") { ceSel = null; renderCreadorEquipo(); return; }
+  if (e.target.name === "role" && e.target.closest("#ceInvite")) { ceRole = e.target.value; const v = e.target.closest("form").querySelector("[name=email]").value; renderCreadorEquipo(); document.querySelector("#ceInvite [name=email]").value = v; }
+});
+document.addEventListener("input", e => {
+  if (e.target.id === "ceSearch") { ceSel = null; renderCreadorEquipo(); return; }
+  if (e.target.matches && e.target.matches("[data-rate]")) updateCfPreview();
+});
+document.addEventListener("submit", e => {
+  const f = e.target;
+  if (f.id === "ceReply") {
+    e.preventDefault();
+    const ta = document.getElementById("ceText"), txt = ta.value.trim();
+    if (!txt) { ta.focus(); toast("Escribe una respuesta antes de enviarla."); return; }
+    ticketReply(tkById(ceSel), txt); renderCreadorEquipo(); return;
+  }
+  if (f.id === "cfForm") {
+    e.preventDefault();
+    const { r, bad } = readRates();
+    if (bad) { bad.focus(); toast("Revisa las comisiones: deben estar entre 0 % y 15 %."); return; }
+    const changed = SVC4.filter(s => r[s] !== rates[s]);
+    if (!changed.length) { toast("No hay cambios que guardar."); return; }
+    logAudit("config", `Cambió comisiones: ${changed.map(s => `${SVC_LABEL[s]} ${String(rates[s]).replace(".", ",")} % → ${String(r[s]).replace(".", ",")} %`).join("; ")}.`);
+    rates = r; saveConfig(); toast("Guardamos las nuevas comisiones."); renderConfig();
   }
 });
 
