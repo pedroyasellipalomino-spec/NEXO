@@ -1,3 +1,32 @@
+/* ---------- Almacenamiento de respaldo ----------
+   Algunos visores (vistas previas de archivos, iframes aislados, modo privado) bloquean
+   localStorage/sessionStorage. Si no funcionan, se usa un almacén guardado en window.name,
+   que sobrevive a las recargas de la misma pestaña. Así el registro y el inicio de sesión
+   (que recargan la página) siguen funcionando. */
+(() => {
+  const works = name => { try { const st = window[name], k = "__nexo_test__"; st.setItem(k, "1"); const ok = st.getItem(k) === "1"; st.removeItem(k); return ok; } catch (err) { return false; } };
+  const needLocal = !works("localStorage"), needSession = !works("sessionStorage");
+  if (!needLocal && !needSession) return;
+  let all = {};
+  try { const w = JSON.parse(window.name || "{}"); if (w && typeof w === "object" && w.__nexo) all = w.__nexo; } catch (err) {}
+  const persist = () => { try { window.name = JSON.stringify({ __nexo: all }); } catch (err) {} };
+  const make = area => {
+    const data = all[area] || (all[area] = {});
+    const api = {
+      getItem: k => Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null,
+      setItem: (k, v) => { data[k] = String(v); persist(); },
+      removeItem: k => { delete data[k]; persist(); },
+      clear: () => { Object.keys(data).forEach(k => delete data[k]); persist(); },
+      key: i => Object.keys(data)[i] ?? null,
+      get length() { return Object.keys(data).length; }
+    };
+    // Object.keys(localStorage) se usa al migrar claves: se exponen las claves como propiedades
+    return new Proxy(api, { ownKeys: () => Object.keys(data), getOwnPropertyDescriptor: (t, k) => Object.prototype.hasOwnProperty.call(data, k) ? { value: data[k], enumerable: true, configurable: true } : undefined });
+  };
+  try { if (needLocal) Object.defineProperty(window, "localStorage", { value: make("local"), configurable: true }); } catch (err) {}
+  try { if (needSession) Object.defineProperty(window, "sessionStorage", { value: make("session"), configurable: true }); } catch (err) {}
+})();
+
 /* ---------- Marco común de las pantallas internas ---------- */
 const NAV = [
   ["inicio","house","Inicio","inicio"],

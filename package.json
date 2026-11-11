@@ -5,6 +5,7 @@
   "description": "Prototipo clicable de Nexo, app de servicios del campus de la Universidad Metropolitana",
   "scripts": {
     "dev": "npx --yes serve -l 3000 .",
-    "test": "python3 tests/smoke.py"
+    "test": "python3 tests/smoke.py",
+    "build": "python3 scripts/build_single.py"
   }
 }

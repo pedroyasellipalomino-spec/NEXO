@@ -8,6 +8,7 @@ Es un prototipo: no hay backend. Los datos viven en el navegador (localStorage/s
 
 - Abrir `index.html` directamente en el navegador, o
 - `npm run dev` → sirve la carpeta en http://localhost:3000
+- Un solo archivo para compartir: `npm run build` → `dist/nexo-prototipo.html` (CSS, JS e íconos adentro; `dist/` no se versiona)
 - Prueba de humo: `npm test` (necesita `pip install playwright` y `playwright install chromium`)
 
 Cuenta de prueba: `ana.torres@correo.unimet.edu.ve` / `demo-nexo-01` (carnet 20241010186). Cualquier cuenta nueva que se registre empieza desde cero.
@@ -58,7 +59,7 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - Textos de interfaz en español, tono cercano (tú). Montos con `money(n)` → `$1.234,56`.
 - Íconos: Lucide (`<i data-lucide="nombre">`); llamar `lucide.createIcons()` tras insertar HTML nuevo.
 - Usar `el.hidden` para mostrar/ocultar (hay `[hidden]{display:none!important}`).
-- Envolver todo acceso a localStorage en `try/catch`.
+- Envolver todo acceso a localStorage en `try/catch`. Al inicio de `app.js` hay un respaldo: si el navegador bloquea localStorage/sessionStorage (vistas previas, iframes aislados), se usa `window.name`, que sobrevive a las recargas de la pestaña. No quitarlo: el registro y el login recargan la página.
 - Código nuevo de pantallas: insertarlo en `app.js` antes del bloque `document.querySelectorAll("form[data-submit]")`.
 - Al tocar algo que se inicializa al arrancar, cuidado con el orden de `let`/`const` (ya hubo errores de TDZ con `plan` y `vehicle`).
 - No pedir ni mostrar datos reales de tarjetas; los datos de Pago Móvil de destino son ilustrativos.
