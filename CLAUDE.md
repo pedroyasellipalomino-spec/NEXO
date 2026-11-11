@@ -43,7 +43,8 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 **Estado de cuenta / matrícula.**
 - Trimestre `TRIM_ID = "2026-sep-nov"` con 3 facturas: septiembre, octubre, noviembre (`MONTHS`).
 - Precio por materia: `PRICE_REG = 160`, pronto pago `PRICE_PP = 150` (del segundo lunes del mes hasta ese viernes). Vencen el día 20.
-- Estados de factura: pagada, revision, futura, pronto, pendiente, vencida. No se permiten pagos adelantados.
+- Estados de factura: pagada, revision, externa, futura, pronto, pendiente, vencida. No se permiten pagos adelantados.
+- Las 3 facturas aplican a toda cuenta, aunque se cree a mitad del trimestre. En `#inscripcion` (`#insPaid`, `renderInsPaid`) el estudiante marca los meses ya emitidos que pagó fuera de Nexo → `pagos[id] = { estado: "externa" }` ("Pagada fuera de Nexo", no suma al total pagado en Nexo). Por defecto vienen marcados los meses anteriores a la creación de la cuenta; se puede cambiar al editar las materias.
 - Antes de ver el estado de cuenta, el estudiante registra sus materias en `#inscripcion` (carrera + cantidad + nombre o código). `findSubject(texto, carrera)` resuelve nombre o código contra `MATDB` (sin importar acentos ni mayúsculas).
 - `simDate`: chips para simular fechas entre el 1 sep y el 30 nov.
 
@@ -85,6 +86,5 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - Validación de Pago Móvil.
 - Comida: los menús y precios son de ejemplo (confirmar con cada local); falta la validación de los datos de transferencia; el comercio no puede editar precios ni productos (solo agotar y pausar).
 - Invitaciones: el envío por correo es simulado (se copia el enlace).
-- Decidir si una cuenta nueva debe pagar las 3 facturas del trimestre (hoy septiembre y octubre salen como "No aplica").
 
 Fuente de materias: https://www.unimet.edu.ve/estudios/flujogramas-pregrado/

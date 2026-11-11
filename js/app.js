@@ -400,7 +400,9 @@ function inv(mo) {
   const issue = secondMonday(2026, mo.m);
   return { ...mo, issue, ppEnd: new Date(issue.getFullYear(), issue.getMonth(), issue.getDate() + 4), due: new Date(2026, mo.m, 20) };
 }
-const INVOICES = MONTHS.filter(mo => isDemo || createdAt.getFullYear() < 2026 || (createdAt.getFullYear() === 2026 && mo.m >= createdAt.getMonth())).map(inv);
+/* Las 3 facturas aplican siempre: el estudiante está inscrito en todo el trimestre aunque cree su cuenta después.
+   Los meses que ya pagó fuera de Nexo los indica en #inscripcion (pagos[id].estado = "externa"). */
+const INVOICES = MONTHS.map(inv);
 
 const PAGOS0 = isDemo ? { sep: { estado: "pagada", monto: 450, fecha: "15 sep 2026", via: "Transferencia", pp: true }, oct: { estado: "pagada", monto: 450, fecha: "14 oct 2026", via: "Transferencia", pp: true } } : {};
 let pagos, simDate;
@@ -418,6 +420,7 @@ function statusOf(iv) {
   const p = pagos[iv.id], t = day0(simDate);
   if (p && p.estado === "pagada") return "pagada";
   if (p && p.estado === "revision") return "revision";
+  if (p && p.estado === "externa") return "externa";
   if (t < iv.issue) return "futura";
   if (t <= iv.ppEnd) return "pronto";
   if (t <= iv.due) return "pendiente";
@@ -429,11 +432,12 @@ const payableInv = () => activeInvoices().filter(iv => ["pronto", "pendiente", "
 let paySel = [];
 function defaultSel() { const p = payableInv(); paySel = p.length ? [p[0].id] : []; }
 
-const ST = { pagada: ["ok", "Pagada"], revision: ["neutral", "En revisión"], futura: ["neutral", "Aún no emitida"], pronto: ["ok", "Pronto pago"], pendiente: ["warn", "Pendiente"], vencida: ["warn", "Vencida"] };
+const ST = { externa: ["ok", "Pagada fuera de Nexo"], pagada: ["ok", "Pagada"], revision: ["neutral", "En revisión"], futura: ["neutral", "Aún no emitida"], pronto: ["ok", "Pronto pago"], pendiente: ["warn", "Pendiente"], vencida: ["warn", "Vencida"] };
 function invLine(iv) {
   const s = statusOf(iv), p = pagos[iv.id];
   if (s === "pagada") return `Pagada el ${p.fecha} · ${p.via}${p.pp ? " · con pronto pago" : ""}`;
   if (s === "revision") return `Transferencia en revisión · ${money(p.monto)}`;
+  if (s === "externa") return "Indicaste que la pagaste fuera de Nexo · Puedes cambiarlo en Mis materias";
   if (s === "futura") return `Se emite el ${fmtDW(iv.issue)} · Pronto pago hasta el ${fmtDW(iv.ppEnd)}`;
   if (s === "pronto") return `Pronto pago hasta el ${fmtDW(iv.ppEnd)} · Luego ${money(PRICE_REG * MATERIAS.length)}`;
   if (s === "pendiente") return `Vence el ${fmtDW(iv.due)}`;
@@ -478,10 +482,10 @@ function renderDebt() {
   const pc = document.getElementById("pendCard");
   if (pc) pc.querySelector("[data-pend-empty]").hidden = [...pc.querySelectorAll(".quick")].some(q => !q.hidden);
 
-  document.getElementById("cuotasList").innerHTML = MONTHS.map(inv).map((iv, i) => { if (!INVOICES.some(x => x.id === iv.id)) return `<div class="cuota"><span class="ico" style="background:var(--chip);color:var(--muted)"><i data-lucide="minus"></i></span><div class="grow"><b>Factura de ${iv.mes}</b><span class="tiny">No aplica: creaste tu cuenta después de este mes</span></div><div class="mv-actions"><span class="pill neutral">No aplica</span></div></div>`; if (!MATERIAS.length) return ""; const s = statusOf(iv);
-    return `<div class="cuota"><span class="ico"><i data-lucide="${s === "pagada" ? "circle-check" : s === "futura" ? "lock" : "file-text"}"></i></span>
+  document.getElementById("cuotasList").innerHTML = INVOICES.map((iv, i) => { if (!MATERIAS.length) return ""; const s = statusOf(iv);
+    return `<div class="cuota"><span class="ico"><i data-lucide="${s === "pagada" || s === "externa" ? "circle-check" : s === "futura" ? "lock" : "file-text"}"></i></span>
       <div class="grow"><b>Factura de ${iv.mes}</b><span class="tiny">${invLine(iv)}</span></div>
-      <div class="mv-actions"><b class="mono">${s === "futura" ? "desde " + money(PRICE_PP * MATERIAS.length) : money(amountOf(iv))}</b><span class="pill ${ST[s][0]}">${ST[s][1]}</span></div></div>`; }).join("");
+      <div class="mv-actions"><b class="mono">${s === "futura" ? "desde " + money(PRICE_PP * MATERIAS.length) : s === "externa" ? "—" : money(amountOf(iv))}</b><span class="pill ${ST[s][0]}">${ST[s][1]}</span></div></div>`; }).join("");
 
   const ci = document.getElementById("currentInvoice");
   if (next) {
@@ -1346,9 +1350,27 @@ function insRender() {
   const set = (k, v) => document.querySelectorAll(`#inscripcion [data-ins="${k}"]`).forEach(el => el.textContent = v);
   set("n", `${insN} ${insN === 1 ? "materia" : "materias"}`);
   set("month", money(insN * PRICE_REG)); set("monthpp", money(insN * PRICE_PP)); set("trim", money(insN * PRICE_REG * 3));
+  renderInsPaid();
 }
+/* Meses ya emitidos que no se pagaron por Nexo: el estudiante marca los que pagó por otra vía */
+let insPaid = null;
+const insEligible = () => INVOICES.filter(iv => day0(simDate) >= iv.issue && !(pagos[iv.id] && ["pagada", "revision"].includes(pagos[iv.id].estado)));
+function renderInsPaid() {
+  const box = document.getElementById("insPaid"), el = insEligible();
+  box.hidden = !el.length;
+  if (!el.length) return;
+  if (!insPaid) insPaid = new Set(el.filter(iv => (pagos[iv.id] && pagos[iv.id].estado === "externa") || (!MATERIAS.length && iv.m < createdAt.getMonth() && createdAt.getFullYear() === 2026)).map(iv => iv.id));
+  box.innerHTML = `<legend>¿Ya pagaste algún mes del trimestre fuera de Nexo?</legend>
+    <p class="tiny">Por ejemplo, en la caja de la universidad o por transferencia antes de usar Nexo. Lo que no marques queda por pagar.</p>
+    ${el.map(iv => `<label class="remember paidm"><input type="checkbox" data-ins-paid="${iv.id}"${insPaid.has(iv.id) ? " checked" : ""}><span class="grow">Factura de ${iv.mes}</span><span class="small">${insN ? money(insN * PRICE_REG) : ""}</span></label>`).join("")}`;
+}
+document.addEventListener("change", e => {
+  const c = e.target.closest("[data-ins-paid]"); if (!c) return;
+  if (!insPaid) insPaid = new Set();
+  c.checked ? insPaid.add(c.dataset.insPaid) : insPaid.delete(c.dataset.insPaid);
+});
 function openInscripcion() {
-  insN = MATERIAS.length; insNames = MATERIAS.map(m => m.n);
+  insN = MATERIAS.length; insNames = MATERIAS.map(m => m.n); insPaid = null;
   const car = myCareer(); careerOptions(document.getElementById("insCareer"), car); fillCatalog(car);
   const editing = MATERIAS.length > 0;
   document.querySelector('#inscripcion [data-ins="title"]').textContent = editing ? "Tus materias del trimestre" : "Antes de ver tu cuenta, cuéntanos qué inscribiste";
@@ -1378,6 +1400,8 @@ document.getElementById("insForm").addEventListener("submit", e => {
   const wasEmpty = !MATERIAS.length;
   if (career) saveAccount({ career });
   MATERIAS = found;
+  insEligible().forEach(iv => { if (insPaid && insPaid.has(iv.id)) pagos[iv.id] = { estado: "externa", via: "Fuera de Nexo" }; else if (pagos[iv.id] && pagos[iv.id].estado === "externa") delete pagos[iv.id]; });
+  savePagos();
   saveMaterias(); defaultSel(); renderDebt(); renderMatList(); if (typeof renderNotifs === "function") renderNotifs();
   toast(wasEmpty ? `Registramos tus ${MATERIAS.length} ${MATERIAS.length === 1 ? "materia" : "materias"}. Cada factura es de ${money(MATERIAS.length * PRICE_REG)}.` : "Actualizamos tus materias.");
   go(wasEmpty ? insReturn : "materias");

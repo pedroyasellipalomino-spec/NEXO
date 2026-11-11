@@ -53,6 +53,10 @@ async def main() -> int:
         await pg.wait_for_timeout(300)
         lista = await pg.inner_text("#matList")
         check("BPTEJ11" in lista and "Obligaciones" in lista, "nombre y código se resuelven contra MATDB")
+        await pg.goto(URL + "#materias")
+        await pg.wait_for_timeout(300)
+        cuotas = await pg.inner_text("#cuotasList")
+        check("No aplica" not in cuotas and cuotas.count("Factura de") == 3, "una cuenta nueva ve las 3 facturas del trimestre")
 
         # comida: menús, carrito y pedido con tarjeta (cuenta nueva, carrito vacío)
         await pg.goto(URL + "#comida")

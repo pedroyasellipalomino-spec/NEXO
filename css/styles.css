@@ -643,3 +643,7 @@ button.tk-row.on{background:var(--mint-bg)}
 @media (min-width:700px) and (max-width:1099px){.lp-board{grid-template-columns:1fr 1fr}.lp-board > :last-child{grid-column:1 / -1}}
 @media (max-width:699px){#lpPause{width:100%!important}}
 #ivBody{display:flex;flex-direction:column;gap:20px}
+.paidset{border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px;margin:0;display:flex;flex-direction:column;gap:10px}
+.paidset legend{font-size:13px;font-weight:600;padding:0 6px;margin-left:-6px}
+.paidm{display:flex;align-items:center;gap:10px;width:100%}
+.paidm .grow{flex:1}
