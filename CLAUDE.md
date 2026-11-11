@@ -51,8 +51,9 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 
 **Comida y kioscos.** Los menús salen de `LOCALES` en `app.js` (4 locales + 3 kioscos; cada uno con categorías → productos; `foodOpt()` define grupos de opciones de "elige una" con recargo). Las pantallas `#comida`, `#local`, `#detalle`, `#carrito` se pintan con `renderFoodList/renderLocal/renderDetalle/renderCarrito` desde `show()`; el local y el producto abiertos viven en `sessionStorage["nexo-food"]`.
 - Carrito por cuenta en `nexo-cart` (`{ local, lines:[{item, sel, qty, note}] }`): un solo local por pedido; al añadir de otro local se avisa y se vacía. La cuenta demo arranca con el almuerzo del día de Pincho Pan.
-- Pago con tarjeta (simulado) → crea el pedido y va a `#factura`. Transferencia → `#comprobante` (borrador `draftOrder`) → al enviar, se confirma. Los pedidos se guardan en `nexo-orders` y se agregan a Actividad con `addMovement(..., { order })`; el botón lleva `data-order` para abrir esa factura.
+- Pago con tarjeta (simulado) → crea el pedido y va a `#pedido` (seguimiento). Transferencia → `#comprobante` (borrador `draftOrder`) → al enviar, se confirma. Los pedidos se guardan en `nexo-orders` y se agregan a Actividad con `addMovement(..., { order })`; el botón lleva `data-order` para abrir esa factura.
 - `#factura` sin pedido elegido muestra la factura de ejemplo original (`FC_SAMPLE`).
+- Seguimiento (`#pedido`, `renderPedido`): al confirmar, el pedido guarda `paidAt`, `readyAt` (= pago + punto medio del `eta` del local, `prepMinutes`) y `code` (`pickupCode`, 4 dígitos). `orderStatus()`: preparando → listo (al pasar `readyAt`) → retirado (`pickedAt`, botón "Ya lo retiré"). `checkOrders()` corre cada 15 s: avisa con toast y `foodNotifs()` agrega la notificación (va a `#pedido` con `trackId`). En `#comida`, `#foodOrders` muestra los pedidos activos. Hay un enlace de prototipo para simular que ya está listo. `drawQR(canvas)` dibuja el QR ilustrativo.
 
 **Roles y soporte (Figma sección `7:79457` · 08 Roles y gestión).** Las cuentas tienen `role`: estudiante (por defecto), `creator`, `admin` o `mod` (`roleOf()`); `disabled` bloquea el login. Las cuentas de gestión de ejemplo están en `STAFF0`.
 - Las pantallas de gestión llevan `data-staff="admin"|"mod"`: el marco usa `STAFF_NAV` (menú propio, botón Salir, sin campana). `show()` redirige según `STAFF_SCREENS`/`ROLE_HOME`: el estudiante no entra a gestión y el personal no entra a pantallas de estudiante. Al iniciar sesión cada rol cae en su inicio (`#gestion`, `#moderacion`, `#inicio`).
@@ -81,7 +82,7 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - Ingeniería Mecánica no tiene materias en `CARRERAS`: su flujograma en PDF tiene el texto convertido en curvas y no se pudo extraer.
 - El código `EI27` (Contrataciones Internacionales) viene así en el flujograma; parece incompleto.
 - Validación de Pago Móvil.
-- Comida: los menús y precios son de ejemplo (confirmar con cada local); falta el estado del pedido (preparando / listo para retirar) y la validación de los datos de transferencia.
+- Comida: los menús y precios son de ejemplo (confirmar con cada local); falta la validación de los datos de transferencia y una vista para el local (marcar pedidos como listos desde el comercio).
 - Gestión: el personal invitado hoy se registra con el formulario de estudiante (pide carnet).
 - Decidir si una cuenta nueva debe pagar las 3 facturas del trimestre (hoy septiembre y octubre salen como "No aplica").
 

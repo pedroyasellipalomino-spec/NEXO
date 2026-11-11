@@ -93,7 +93,7 @@ document.querySelectorAll("section.app").forEach(sec => {
 });
 
 /* ---------- QR ilustrativo (patrón determinista, no escaneable) ---------- */
-document.querySelectorAll("canvas[data-qr]").forEach(c => {
+function drawQR(c) {
   const ctx = c.getContext("2d"), N = 29;
   let seed = [...c.dataset.qr].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
   const rnd = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296;
@@ -104,7 +104,8 @@ document.querySelectorAll("canvas[data-qr]").forEach(c => {
     if (!inF && rnd() > .52) ctx.fillRect(x, y, 1, 1);
   }
   finder(0, 0); finder(N-7, 0); finder(0, N-7);
-});
+}
+document.querySelectorAll("canvas[data-qr]").forEach(drawQR);
 
 
 const CAREER_LIST = Object.keys(CARRERAS).sort((a, b) => a.localeCompare(b, "es"));
@@ -207,11 +208,13 @@ function show(id) {
   if (["materias", "caja", "tarjeta"].includes(id)) { let none = false; try { none = !MATERIAS.length; } catch (err) {} if (none) { insReturn = id; history.replaceState(null, "", "#inscripcion"); id = "inscripcion"; current = id; screens.forEach(s => { document.getElementById(s).hidden = s !== id; }); } }
   if (id === "inscripcion" && typeof openInscripcion === "function") openInscripcion();
   if (id === "comida" && typeof renderFoodList === "function") renderFoodList();
+  if (id === "comida" && typeof renderFoodOrders === "function") try { renderFoodOrders(); } catch (err) {}
   if (id === "local" && typeof renderLocal === "function") renderLocal();
   if (id === "detalle" && typeof renderDetalle === "function") renderDetalle(document.getElementById("d-note") ? document.getElementById("d-note").value : "");
   if (id === "carrito" && typeof renderCarrito === "function") renderCarrito();
   if (id === "comprobante" && typeof renderComprobante === "function") renderComprobante();
   if (id === "factura" && typeof renderFactura === "function") renderFactura();
+  if (id === "pedido" && typeof renderPedido === "function") renderPedido();
   if (id === "gestion" && typeof renderGestion === "function") renderGestion();
   if (id === "equipo" && typeof renderEquipo === "function") renderEquipo();
   if (id === "caso" && typeof renderCaso === "function") renderCaso();
@@ -726,6 +729,7 @@ function buildNotifs() {
   // Comida: descuentos (ejemplos)
   push({ id: `food-pp-${isoD(t)}`, cat: "comida", when: t, title: "Pincho Pan · 10 % de descuento en el almuerzo del día", body: "Hoy de 11:30 a 13:00: $7,65 en lugar de $8,50. Retiro en la Feria Central.", go: "local" });
   push({ id: `food-believe-${isoD(t)}`, cat: "comida", when: addDays(t, -1), title: "Kiosco Believe · 2x1 en bebidas", body: "De 14:00 a 16:00. Válido en el kiosco.", go: "comida" });
+  try { foodNotifs(t).forEach(push); } catch (err) {} // pedidos listos (módulo de comida)
   // Soporte
   if (isDemo) push({ id: "tk-1048", cat: "soporte", when: addDays(t, -1), title: "Lucía respondió tu solicitud TK-1048", body: "Cobro duplicado de almuerzo: estamos revisando tu comprobante.", go: "soporte" });
   return list.filter(n => nPrefs[n.cat] !== false).sort((a, b) => b.when - a.when || (b.alert ? 1 : 0) - (a.alert ? 1 : 0));
@@ -768,6 +772,7 @@ document.getElementById("notificaciones").addEventListener("click", e => {
     const n = lastNotifs.find(x => x.id === it.dataset.notif); if (!n) return;
     nRead[n.id] = true; saveN();
     if (n.sport) { res.sport = n.sport; res.day = String(day0(simDate).getDate()); res.dname = DIA_CORTO[day0(simDate).getDay()][0].toUpperCase() + DIA_CORTO[day0(simDate).getDay()].slice(1); if (!document.querySelector(`#dayPicker [data-day="${res.day}"]`)) { res.day = "12"; res.dname = "Jue"; } res.slot = n.slot; renderReserva(); }
+    if (n.order) trackId = n.order;
     renderNotifs(); go(n.go);
   }
 });
@@ -1704,13 +1709,15 @@ function newOrder(method) {
 }
 let draftOrder = null;
 function confirmOrder(o) {
+  o.paidAt = Date.now(); o.readyAt = o.paidAt + prepMinutes(localById(o.local)) * MIN; o.code = pickupCode(o);
   orders.push(o); saveOrders();
   cart = { local: null, lines: [] }; saveCart();
   curOrder = o.id;
   const l = localById(o.local), n = o.lines.reduce((a, x) => a + x.qty, 0);
   addMovement(o.lines.length === 1 ? o.lines[0].name : `Pedido · ${plural(n, "producto", "productos")}`, `${l.name} · ${l.place}`, "−" + money(o.total), "Pagado", "ok",
-    { icon: "utensils", go: "factura", goLabel: "Ver factura ›", order: o.id, date: `${o.date} · ${o.time}` });
-  go("factura");
+    { icon: "utensils", go: "pedido", goLabel: "Ver pedido ›", order: o.id, date: `${o.date} · ${o.time}` });
+  trackId = o.id; toast("Pago confirmado. Ya están preparando tu pedido.");
+  go("pedido");
 }
 const orderLines = o => o.lines.map(x => `<div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="${x.icon}"></i></div><div><b style="font-size:13px">${esc(x.name)}</b>${x.opts.map(t => `<p class="small">${esc(t)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}<p class="small">Cantidad ${x.qty} · ${money(x.total)}</p></div></div>`).join("");
 const orderTotals = o => `<div class="kv"><span>Subtotal</span><b>${money(o.total)}</b></div><div class="kv"><span>Cargos adicionales</span><b>$0,00</b></div><div class="kv"><span>Retiro en el local</span><b>Gratis</b></div>
@@ -1792,6 +1799,8 @@ document.addEventListener("click", e => {
   }
   const fg = e.target.closest('[data-go="factura"]');
   if (fg) curOrder = fg.dataset.order || null; // el data-go del mismo botón navega a la factura
+  const pg = e.target.closest('[data-go="pedido"]');
+  if (pg) trackId = pg.dataset.order || null;
 });
 document.getElementById("cpForm").addEventListener("submit", e => {
   e.preventDefault();
@@ -2496,6 +2505,104 @@ document.addEventListener("submit", e => {
     rates = r; saveConfig(); toast("Guardamos las nuevas comisiones."); renderConfig();
   }
 });
+
+/* ---------- Seguimiento del pedido: en preparación → listo para retirar → retirado ----------
+   El pedido queda listo cuando pasa el tiempo de preparación del local (punto medio de su "eta").
+   Los pedidos guardados antes de esta función no tienen readyAt y se dan por retirados. */
+let trackId = null;
+function prepMinutes(l) { const n = ((l && l.eta) || "10").match(/\d+/g).map(Number); return Math.round(n.reduce((a, b) => a + b, 0) / n.length); }
+function pickupCode(o) { return String(1000 + ((+String(o.id).slice(1) || 0) * 7919) % 9000); }
+function orderStatus(o) { return !o.readyAt || o.pickedAt ? "retirado" : Date.now() >= o.readyAt ? "listo" : "preparando"; }
+const activeOrders = () => orders.filter(o => orderStatus(o) !== "retirado").sort((a, b) => b.paidAt - a.paidAt);
+const ORDER_STATE = { preparando: ["En preparación", "warn"], listo: ["Listo para retirar", "ok"], retirado: ["Retirado", "neutral"] };
+function foodNotifs(t) {
+  return orders.filter(o => orderStatus(o) === "listo").map(o => {
+    const l = localById(o.local);
+    return { id: `order-ready-${o.id}`, cat: "comida", alert: true, when: t, title: `Tu pedido de ${l.name} está listo`, body: `Muestra el código ${o.code} en el mostrador · ${l.place}.`, go: "pedido", order: o.id };
+  });
+}
+function renderPedido() {
+  const body = document.getElementById("pdBody");
+  const o = (trackId && orders.find(x => x.id === trackId)) || activeOrders()[0] || orders.slice().sort((a, b) => (b.paidAt || 0) - (a.paidAt || 0))[0];
+  if (!o) {
+    body.innerHTML = `<div class="card" style="align-items:flex-start"><span class="ico lg"><i data-lucide="shopping-bag"></i></span><h1 class="h2">Aún no tienes pedidos</h1><p class="small" style="font-size:13px">Cuando pagues un pedido de comida, aquí verás cómo va.</p><button class="btn" type="button" data-go="comida" style="max-width:320px"><i data-lucide="utensils"></i>Ver comida y kioscos</button></div>`;
+    icons(); return;
+  }
+  trackId = o.id;
+  const l = localById(o.local), st = orderStatus(o), now = Date.now();
+  body.classList.toggle("ready", st === "listo");
+  setFrame("pedido", "Tu pedido", ["Comida y kioscos", l.name, o.num]);
+  const total = (o.readyAt || now) - (o.paidAt || now), left = Math.max(0, Math.ceil(((o.readyAt || now) - now) / MIN));
+  const prog = st === "preparando" ? Math.min(96, Math.max(4, (now - o.paidAt) / total * 100)) : 100;
+  const title = st === "preparando" ? "Estamos preparando tu pedido" : st === "listo" ? "¡Tu pedido está listo!" : "Pedido retirado";
+  const lead = st === "preparando" ? `Listo aprox. a las ${hhmm(o.readyAt)} · ${left <= 1 ? "falta 1 min" : `faltan ${left} min`}`
+    : st === "listo" ? `Retíralo en el mostrador de ${l.name} · ${l.place}`
+    : o.pickedAt ? `Lo retiraste a las ${hhmm(o.pickedAt)}. ¡Buen provecho!` : "Este pedido ya fue entregado.";
+  const step = (done, on, label, time) => `<li class="${done ? "done" : ""}${on ? " on" : ""}"><span class="dot"></span><div><b>${label}</b>${time ? `<span class="tiny">${time}</span>` : ""}</div></li>`;
+  const n = o.lines.reduce((a, x) => a + x.qty, 0);
+  body.innerHTML = `
+    <div class="stack s14">
+      <div class="card">
+        <div class="row" style="align-items:flex-start"><span class="small">Pedido ${o.num} · ${esc(l.name)}</span><span class="pill ${ORDER_STATE[st][1]}">${ORDER_STATE[st][0]}</span></div>
+        <div><h1 class="h1">${title}</h1><p class="lead">${lead}</p></div>
+        ${st === "preparando" ? `<div class="track" role="progressbar" aria-label="Progreso de la preparación" aria-valuenow="${Math.round(prog)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${prog}%"></i></div>` : ""}
+        <ol class="steps-v">
+          ${o.paidAt ? step(true, false, "Pago confirmado", hhmm(o.paidAt)) : ""}
+          ${step(st !== "preparando", st === "preparando", "En preparación", o.paidAt ? `Desde las ${hhmm(o.paidAt)} · ${l.eta}` : "")}
+          ${step(st === "retirado", st === "listo", "Listo para retirar", o.readyAt ? (st === "preparando" ? `Estimado: ${hhmm(o.readyAt)}` : hhmm(o.readyAt)) : "")}
+          ${step(st === "retirado", false, "Retirado", o.pickedAt ? hhmm(o.pickedAt) : "")}
+        </ol>
+        ${st === "listo" ? `<button class="btn" type="button" data-picked="${o.id}"><i data-lucide="check"></i>Ya lo retiré</button>` : ""}
+      </div>
+      <div class="card">
+        <div class="row"><h2 class="h2">Tu pedido</h2><span class="small">${n} ${n === 1 ? "producto" : "productos"} · ${money(o.total)}</span></div>
+        ${o.lines.map(x => `<div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="${x.icon}"></i></div><div><b style="font-size:13px">${x.qty} × ${esc(x.name)}</b>${x.opts.map(t => `<p class="small">${esc(t)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}</div></div>`).join("")}
+        <button class="btn ghost" type="button" data-go="factura" data-order="${o.id}"><i data-lucide="receipt-text"></i>Ver factura</button>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card pickup${st === "listo" ? "" : " dim"}">
+        <h2 class="h2">Código de retiro</h2>
+        ${st === "listo" ? `<div class="qr"><canvas width="29" height="29" data-qr="${o.num}" role="img" aria-label="Código QR del pedido ${o.num}"></canvas></div>` : ""}
+        <b class="pcode" aria-label="Código ${o.code.split("").join(" ")}">${o.code}</b>
+        <p class="small" style="font-size:13px">${st === "listo" ? `Muéstralo en el mostrador de ${esc(l.name)}. Solo sirve para este pedido.` : st === "preparando" ? "Te avisaremos cuando esté listo. El código QR aparece en ese momento." : "Este código ya se usó."}</p>
+      </div>
+      <div class="card"><div class="row start"><i data-lucide="map-pin" style="color:var(--brand);font-size:20px"></i><b class="h3">${esc(l.name)}</b></div><p class="small" style="font-size:13px">${l.place} · Campus Central · Planta baja · Hoy ${l.hours}</p></div>
+      ${st === "preparando" ? `<div class="notice"><i data-lucide="flask-conical"></i><p>Prototipo: <button class="link b" type="button" data-sim-ready="${o.id}" style="font-size:12px">simular que el pedido ya está listo</button> para no esperar ${l.eta}.</p></div>` : ""}
+      ${orders.length > 1 ? `<button class="link b" type="button" data-go="actividad">Ver todos mis pedidos en Actividad →</button>` : ""}
+    </div>`;
+  body.querySelectorAll("canvas[data-qr]").forEach(drawQR);
+  icons();
+}
+function renderFoodOrders() {
+  const box = document.getElementById("foodOrders"), act = activeOrders();
+  box.hidden = !act.length;
+  box.innerHTML = act.map(o => {
+    const l = localById(o.local), st = orderStatus(o);
+    return `<div class="card${st === "listo" ? " sel" : ""}"><div class="row"><h3 class="h3">${st === "listo" ? "Tu pedido está listo" : "Tu pedido en curso"}</h3><span class="pill ${ORDER_STATE[st][1]}">${ORDER_STATE[st][0]}</span></div>
+      <p class="small" style="font-size:13px">${esc(l.name)} · ${st === "listo" ? `Código ${o.code}` : `Listo aprox. a las ${hhmm(o.readyAt)}`}</p>
+      <button class="btn${st === "listo" ? "" : " ghost"}" type="button" data-go="pedido" data-order="${o.id}"><i data-lucide="${st === "listo" ? "qr-code" : "clock"}"></i>${st === "listo" ? "Ver código de retiro" : "Ver pedido"}</button></div>`;
+  }).join("");
+  icons();
+}
+// Revisa cada 15 s si algún pedido ya está listo: aviso, notificación y pantallas al día
+function checkOrders() {
+  let changed = false;
+  orders.forEach(o => {
+    if (orderStatus(o) === "listo" && !o.readyNotified) { o.readyNotified = true; changed = true; toast(`Tu pedido de ${localById(o.local).name} está listo. Código ${o.code}.`); }
+  });
+  if (changed) { saveOrders(); try { renderNotifs(); } catch (err) {} }
+  if (current === "pedido") renderPedido();
+  if (current === "comida") renderFoodOrders();
+}
+document.addEventListener("click", e => {
+  const pk = e.target.closest("[data-picked]");
+  if (pk) { const o = orders.find(x => x.id === pk.dataset.picked); o.pickedAt = Date.now(); o.readyNotified = true; saveOrders(); toast("¡Buen provecho! Marcamos tu pedido como retirado."); try { renderNotifs(); } catch (err) {} renderPedido(); return; }
+  const sr = e.target.closest("[data-sim-ready]");
+  if (sr) { const o = orders.find(x => x.id === sr.dataset.simReady); o.readyAt = Date.now(); saveOrders(); checkOrders(); }
+});
+setInterval(checkOrders, 15000);
+setTimeout(checkOrders, 1200);
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();

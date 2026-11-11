@@ -308,6 +308,7 @@
         <p class="small" style="font-size:13px">Campus Central · Planta baja. Selecciona un local, elige tu comida y retira directamente en su mostrador.</p>
         <p style="color:var(--brand);font-weight:600;font-size:13px">Solo retiro · Sin cargos extra</p>
       </div>
+      <div class="stack s14" id="foodOrders" hidden></div>
       <div class="card" id="foodCartCard" hidden></div>
       <p class="small">Los horarios y tiempos de retiro corresponden a cada local.</p>
     </div>
@@ -337,6 +338,12 @@
   <div><h1 class="h1">Tu pedido, casi listo</h1><p class="lead">Revisa tus productos, el retiro y tu método de pago.</p></div>
   <p class="small" style="font-weight:600"><span style="color:var(--brand)">1. Carrito y pago</span> &nbsp;›&nbsp; 2. Revisión &nbsp;›&nbsp; 3. Listo</p>
   <div class="cols" id="cartBody"></div>
+</section>
+
+<!-- 8b · Seguimiento del pedido (preparación → listo → retirado) -->
+<section class="screen app" id="pedido" data-title="Tu pedido" data-back="comida" data-tab="servicios" data-crumb="Comida y kioscos  /  Tu pedido" hidden>
+  <button class="link back" type="button" data-go="comida"><i data-lucide="arrow-left"></i>Volver a comida y kioscos</button>
+  <div class="cols" id="pdBody"></div>
 </section>
 
 <!-- 9 · Cargar comprobante -->
