@@ -176,7 +176,7 @@ const STAFF0 = [
   { full: "Carlos Gil", carnet: "", email: "carlos.gil@unimet.edu.ve", role: "mod", pw: "demo-mod-02" }
 ];
 /* Una cuenta por comercio (correo ilustrativo, misma contraseña de prueba) */
-[["pinchopan", "Pincho Pan"], ["lapausa", "La Pausa"], ["migrill", "Mi Punto Grill"], ["teeb", "TEEB"], ["tienditaa1", "La Tiendita Unimetana A1"], ["tienditaa2", "La Tiendita Unimetana A2"], ["believe", "Kiosco Believe"]]
+[["pinchopan", "Pincho Pan"], ["lapausa", "La Pausa"], ["migrill", "Mi Punto Grill"], ["teeb", "TEEB"], ["molokai", "Molokai"], ["zanahorias", "Zanahorias"], ["granier", "Granier"], ["pepperonis", "Pepperonis"], ["juicebar", "Juice Bar"], ["deydonuts", "Dey Donuts"], ["tienditaa1", "La Tiendita Unimetana A1"], ["tienditaa2", "La Tiendita Unimetana A2"], ["believe", "Kiosco Believe"]]
   .forEach(([id, full]) => STAFF0.push({ full, carnet: "", email: `${id}@comercio.nexo`, role: "local", local: id, pw: "demo-local-01" }));
 STAFF0.forEach(({ pw, ...a }) => { if (!accounts.some(x => x.email === a.email)) accounts.push({ ...a, pass: passKey(pw) }); });
 // Una cuenta del equipo desactivada conserva su rol guardado (para reactivarla), pero entra como usuario
@@ -1756,16 +1756,6 @@ const FOOD_ART = {
     <path d="M30 52h60" stroke="#9aa1a7" stroke-width="2" stroke-dasharray="6 4"/>
     <rect x="34" y="42" width="34" height="12" rx="6" fill="#8a3b22"/><path d="M40 44l6 8M50 44l6 8M60 44l5 7" stroke="#5e2414" stroke-width="2.4" stroke-linecap="round"/>
     <circle cx="80" cy="48" r="8" fill="#c0392b"/><path d="M80 40v-6" stroke="#6b7177" stroke-width="2.5" stroke-linecap="round"/>` },
-  teeb: { bg: "#d4f0dd", svg: `
-    <ellipse cx="60" cy="98" rx="38" ry="6" fill="#000" opacity=".08"/>
-    <path d="M78 22l18 30M86 20l14 32" stroke="#c9915a" stroke-width="3.5" stroke-linecap="round"/>
-    <path d="M30 52c6-10 16-14 30-14s24 4 30 14z" fill="#7cc46a"/>
-    <circle cx="44" cy="46" r="7" fill="#5aa84a"/><circle cx="58" cy="42" r="8" fill="#8fd16f"/><circle cx="74" cy="46" r="7" fill="#5aa84a"/>
-    <path d="M60 50c0-7 6-10 12-8-1 6-6 9-12 8z" fill="#ffd35c"/><circle cx="48" cy="50" r="5" fill="#ff7a45"/><circle cx="68" cy="51" r="4" fill="#ff7a45"/>
-    <path d="M38 50h14l-2 6H40z" fill="#f2b45f"/>
-    <path d="M22 54h76c0 20-17 36-38 36S22 74 22 54z" fill="#0e8c7b"/>
-    <path d="M28 60c4 12 16 22 32 22" stroke="#4cc3ae" stroke-width="4" stroke-linecap="round" fill="none"/>
-    <rect x="22" y="52" width="76" height="6" rx="3" fill="#12a690"/>` },
   tienda: { bg: "#d6e7fb", svg: `
     <ellipse cx="60" cy="102" rx="40" ry="5" fill="#000" opacity=".08"/>
     <rect x="26" y="50" width="68" height="50" rx="4" fill="#fff"/>
@@ -1784,6 +1774,54 @@ const FOOD_ART = {
     <path d="M42 70c4 18 4 22 2 26" stroke="#ff8fb7" stroke-width="3" stroke-linecap="round" fill="none"/>
     <rect x="32" y="34" width="56" height="8" rx="4" fill="#fff"/>
     <circle cx="28" cy="58" r="3" fill="#fff" opacity=".8"/><circle cx="92" cy="48" r="4" fill="#fff" opacity=".8"/><circle cx="96" cy="66" r="2.5" fill="#fff" opacity=".8"/><circle cx="24" cy="76" r="2" fill="#fff" opacity=".8"/>` },
+  teeb: { bg: "#ffe0b8", svg: `
+    <ellipse cx="60" cy="100" rx="40" ry="5" fill="#000" opacity=".08"/>
+    <path d="M70 92h30l-4-38H74z" fill="#e2483d"/><path d="M74 54h22l-1 8H75z" fill="#fff" opacity=".9"/>
+    <path d="M78 54l-2-22M83 54l-1-26M88 54l1-24M93 54l2-20M85 54v-18" stroke="#ffc23d" stroke-width="5" stroke-linecap="round"/>
+    <path d="M12 82c0-20 14-34 30-34s30 14 30 34z" fill="#f0b257"/><path d="M12 82h60" stroke="#d48b34" stroke-width="5" stroke-linecap="round"/>
+    <path d="M18 82l3-4 3 4 3-4 3 4 3-4 3 4 3-4 3 4 3-4 3 4 3-4 3 4 3-4 3 4 3-4 3 4" stroke="#c97c2a" stroke-width="2" fill="none"/>
+    <path d="M24 64c6-7 14-10 22-8" stroke="#ffd58f" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <g transform="translate(40 66) rotate(18)"><path d="M0 26c0-14 10-24 22-24s22 10 22 24z" fill="#e9a24a"/><path d="M0 26h44" stroke="#c97c2a" stroke-width="4" stroke-linecap="round"/><path d="M4 26l2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3" stroke="#b56d22" stroke-width="1.6" fill="none"/></g>` },
+  molokai: { bg: "#cfeefb", svg: `
+    <ellipse cx="60" cy="100" rx="40" ry="5" fill="#000" opacity=".08"/>
+    <path d="M30 50c4-8 12-12 18-10 2-8 14-10 18-2 8-4 18 2 18 12z" fill="#fff"/>
+    <rect x="34" y="40" width="16" height="12" rx="3" fill="#ff8a65" transform="rotate(-10 42 46)"/><path d="M36 44l12-2M37 48l12-2" stroke="#ffc1a8" stroke-width="1.5" transform="rotate(-10 42 46)"/>
+    <rect x="52" y="38" width="15" height="12" rx="3" fill="#ff8a65" transform="rotate(8 60 44)"/>
+    <ellipse cx="74" cy="46" rx="7" ry="5" fill="#7cc46a"/><ellipse cx="74" cy="46" rx="4" ry="3" fill="#b9e08a"/>
+    <circle cx="60" cy="52" r="2" fill="#5aa84a"/><circle cx="66" cy="54" r="2" fill="#5aa84a"/><circle cx="84" cy="50" r="3" fill="#ffd35c"/>
+    <path d="M22 54h76c0 22-17 38-38 38S22 76 22 54z" fill="#1c5cab"/><path d="M28 62c4 12 16 22 32 22" stroke="#5598e7" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <rect x="22" y="52" width="76" height="6" rx="3" fill="#2a78d6"/>
+    <g transform="translate(92 26)"><circle r="5" fill="#ffd35c"/>${[0, 72, 144, 216, 288].map(a => `<ellipse rx="5" ry="9" cy="-10" fill="#e94f86" transform="rotate(${a})"/>`).join("")}<circle r="4" fill="#ffd35c"/></g>` },
+  zanahorias: { bg: "#ffe2c8", svg: `
+    <ellipse cx="60" cy="100" rx="36" ry="5" fill="#000" opacity=".08"/>
+    ${[[-18, 40, 0], [0, 60, -6], [18, 80, 4]].map(([r, x, d]) => `<g transform="rotate(${r} ${x} 70)"><path d="M${x - 9} ${42 + d}h18l-9 52z" fill="#f2792c"/><path d="M${x - 6} ${54 + d}h7M${x - 3} ${66 + d}h7M${x - 5} ${78 + d}h5" stroke="#d45d16" stroke-width="2" stroke-linecap="round"/><path d="M${x} ${42 + d}c-2-10-8-14-12-16M${x} ${42 + d}c0-10 2-16 0-22M${x} ${42 + d}c2-10 8-14 12-16" stroke="#4caf50" stroke-width="4" stroke-linecap="round" fill="none"/></g>`).join("")}` },
+  granier: { bg: "#f6dfbf", svg: `
+    <ellipse cx="60" cy="100" rx="42" ry="5" fill="#000" opacity=".08"/>
+    <path d="M14 74c0-18 18-30 40-30s40 12 40 30c0 8-6 14-14 14H28c-8 0-14-6-14-14z" fill="#c98a52"/>
+    <path d="M30 56l8 14M46 50l8 16M62 50l8 16M78 56l6 12" stroke="#a46a3f" stroke-width="4" stroke-linecap="round"/>
+    <path d="M22 66c4-10 14-16 24-17" stroke="#e3ad78" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M48 94c4-14 16-22 26-22s22 8 26 22c-6 2-10-2-12-6-3 5-8 7-14 7s-11-2-14-7c-2 4-6 8-12 6z" fill="#e9a24a"/>
+    <path d="M62 80c2 4 2 8 0 12M74 76c2 5 2 11 0 16M86 80c2 4 2 8 0 12" stroke="#c97c2a" stroke-width="2.4" stroke-linecap="round" fill="none"/>` },
+  pepperonis: { bg: "#ffd9c4", svg: `
+    <ellipse cx="60" cy="100" rx="40" ry="5" fill="#000" opacity=".08"/>
+    <circle cx="60" cy="58" r="40" fill="#e9a24a"/><circle cx="60" cy="58" r="34" fill="#e2483d"/><circle cx="60" cy="58" r="32" fill="#ffd35c"/>
+    <path d="M60 58L60 18A40 40 0 0 1 98 46z" fill="#ffd9c4"/>
+    ${[[48, 40], [40, 60], [56, 74], [74, 66], [64, 50], [80, 76], [44, 80]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5.5" fill="#c0392b"/><circle cx="${x - 1.5}" cy="${y - 1.5}" r="1.5" fill="#e2483d"/>`).join("")}
+    <path d="M70 12l30 12-24 34z" fill="#ffd35c" stroke="#e9a24a" stroke-width="4" stroke-linejoin="round" transform="translate(4 -2)"/>
+    <circle cx="84" cy="24" r="4" fill="#c0392b"/><circle cx="80" cy="36" r="3.5" fill="#c0392b"/>` },
+  juicebar: { bg: "#fff0b8", svg: `
+    <ellipse cx="56" cy="100" rx="30" ry="5" fill="#000" opacity=".08"/>
+    <path d="M62 12l-6 40" stroke="#0e8c7b" stroke-width="5" stroke-linecap="round"/>
+    <path d="M32 34h48l-6 64H38z" fill="#fff" opacity=".85"/><path d="M34 48h44l-5 48H39z" fill="#ff9a2e"/>
+    <path d="M38 52h36" stroke="#ffc07a" stroke-width="3" stroke-linecap="round"/><rect x="44" y="62" width="9" height="9" rx="2" fill="#fff" opacity=".45"/><rect x="58" y="72" width="9" height="9" rx="2" fill="#fff" opacity=".45"/>
+    <circle cx="82" cy="34" r="12" fill="#ffb02e"/><circle cx="82" cy="34" r="9" fill="#ffd27a"/><path d="M82 25v18M73 34h18M76 28l12 12M88 28L76 40" stroke="#ffb02e" stroke-width="1.4"/>
+    <path d="M18 80c0-8 6-12 12-12s10 4 10 10c0 9-9 16-11 18-2-2-11-8-11-16z" fill="#e2483d"/><path d="M28 68c0-4 3-6 6-6" stroke="#4caf50" stroke-width="3" stroke-linecap="round" fill="none"/>` },
+  deydonuts: { bg: "#fde0ec", svg: `
+    <ellipse cx="60" cy="100" rx="40" ry="5" fill="#000" opacity=".08"/>
+    <circle cx="60" cy="60" r="36" fill="#e9a24a"/>
+    <path d="M60 28c18 0 32 13 32 30 0 6-4 6-6 3s-6 2-8 6-6 2-8-1-6 2-8 4-7 0-8-3-6-3-8 0-7 0-8-4-6-2-8-5c-2-8 4-30 29-30z" fill="#f48fb1"/>
+    <circle cx="60" cy="58" r="11" fill="#fde0ec"/><circle cx="60" cy="58" r="11" fill="none" stroke="#e57fa4" stroke-width="2"/>
+    ${[[42, 42, "#ffd35c", 20], [50, 34, "#4cc3ae", -30], [70, 36, "#2a78d6", 40], [80, 48, "#fff", -10], [38, 56, "#fff", 60], [74, 62, "#ffd35c", 10], [46, 66, "#4cc3ae", -40], [66, 44, "#e94f86", 70]].map(([x, y, c, r]) => `<rect x="${x}" y="${y}" width="7" height="2.6" rx="1.3" fill="${c}" transform="rotate(${r} ${x} ${y})"/>`).join("")}` },
 };
 const FOOD_ART_FOR = { tienditaa1: ["tienda", "A1"], tienditaa2: ["tienda", "A2"] };
 function foodArt(id, cls = "") {
@@ -1837,9 +1875,46 @@ const PROD_ART = {
   chocolate: ["snack", `${paSh}<g transform="rotate(-18 32 34)"><rect x="12" y="24" width="40" height="22" rx="3" fill="#5a3420"/><path d="M22 24v22M32 24v22M42 24v22M12 35h40" stroke="#3d2414" stroke-width="1.5"/><path d="M32 22h22v26H32z" fill="#e94f86"/><path d="M36 30h14" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></g>`],
   mani: ["snack", `${paSh}<path d="M12 34h40c0 10-9 18-20 18s-20-8-20-18z" fill="#fff"/><path d="M12 34h40" stroke="#e8e2d6" stroke-width="2"/>${[[20, 30], [27, 27], [34, 29], [41, 27], [24, 33], [38, 32]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="4" ry="3" fill="#d9a25a"/><path d="M${x - 1} ${y - 1}v2" stroke="#b07a45" stroke-width="1"/>`).join("")}`],
 };
+
+/* Productos de los locales nuevos (TEEB, Molokai, Zanahorias, Granier, Pepperonis, Juice Bar, Dey Donuts) */
+const paDonut = (glaze, sprinkles) => `${paSh}<circle cx="32" cy="34" r="20" fill="#e9a24a"/><path d="M32 15c10 0 18 7 18 17 0 3-2 3-3 2s-3 1-4 3-3 1-4 0-3 1-4 2-4 0-5-2-3-2-4 0-4 0-4-2-3-1-4-3c-1-5 2-19 17-19z" fill="${glaze}"/><circle cx="32" cy="32" r="6" fill="#fde0ec"/>${sprinkles ? [[22, 24, "#ffd35c", 20], [28, 19, "#4cc3ae", -30], [38, 20, "#2a78d6", 40], [44, 28, "#fff", -10], [24, 33, "#fff", 60], [40, 36, "#ffd35c", 10]].map(([x, y, c, r]) => `<rect x="${x}" y="${y}" width="4.5" height="1.8" rx=".9" fill="${c}" transform="rotate(${r} ${x} ${y})"/>`).join("") : ""}`;
+const paSlice = (top, dots) => `${paSh}<path d="M10 16l44 8-26 30z" fill="#ffd35c" stroke="#e9a24a" stroke-width="5" stroke-linejoin="round"/>${top}${dots.map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="3.6" fill="${c}"/>`).join("")}`;
+const paTall = (liq, extra = "") => `${paSh}<path d="M20 14h24l-3 40H23z" fill="#fff" opacity=".8"/><path d="M21.2 22h21.6l-2.5 31H23.7z" fill="${liq}"/>${extra}<path d="M36 4l-4 34" stroke="#0e8c7b" stroke-width="2.5" stroke-linecap="round"/>`;
+Object.assign(PROD_ART, {
+  papas: ["comida", `${paSh}<path d="M18 54h28l-4-26H22z" fill="#e2483d"/><path d="M22 28h20l-1 5H23z" fill="#fff" opacity=".85"/><path d="M25 28l-2-16M29 28l-1-19M33 28l1-18M37 28l2-15M31 28v-13" stroke="#ffc23d" stroke-width="3.5" stroke-linecap="round"/>`],
+  tostones: ["comida", `${paSh}${[[20, 40], [36, 44], [30, 30], [44, 32]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="10" ry="8" fill="#f0c04a"/><ellipse cx="${x}" cy="${y}" rx="6" ry="4.5" fill="#f6d77a"/>`).join("")}<path d="M18 30l4 2M28 22l4 3M40 26l3 3M34 40l4 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`],
+  perro: ["comida", `${paSh}<g transform="rotate(-12 32 34)"><rect x="8" y="30" width="48" height="14" rx="7" fill="#e9a24a"/><rect x="6" y="27" width="52" height="8" rx="4" fill="#b8452a"/><path d="M10 26c4-3 6 2 10-1s6 2 10-1 6 2 10-1 6 2 10-1 5 2 6 0" stroke="#7cc46a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M12 25c5 3 9-3 14 0s9-3 14 0 9-3 14 0" stroke="#ffd35c" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="8" y="22" width="48" height="10" rx="5" fill="#f2b45f"/></g>`],
+  "poke-salmon": ["bowl", paBowl(`<path d="M14 30c2-7 8-9 12-6 3-5 10-6 13-1 5-3 11 0 11 7z" fill="#fff"/><rect x="18" y="22" width="10" height="7" rx="2" fill="#ff8a65"/><rect x="30" y="20" width="9" height="7" rx="2" fill="#ff8a65"/><ellipse cx="44" cy="25" rx="5" ry="3.5" fill="#7cc46a"/><circle cx="36" cy="29" r="1.6" fill="#5aa84a"/><circle cx="26" cy="30" r="1.6" fill="#5aa84a"/>`)],
+  "poke-atun": ["bowl", paBowl(`<path d="M14 30c2-7 8-9 12-6 3-5 10-6 13-1 5-3 11 0 11 7z" fill="#fff"/><rect x="18" y="22" width="10" height="7" rx="2" fill="#c0392b"/><rect x="30" y="20" width="9" height="7" rx="2" fill="#c0392b"/><rect x="41" y="22" width="7" height="6" rx="1.5" fill="#ffc23d"/><path d="M24 30l3-2M34 30l3-2" stroke="#5aa84a" stroke-width="2" stroke-linecap="round"/>`)],
+  "poke-tofu": ["bowl", paBowl(`<path d="M14 30c2-7 8-9 12-6 3-5 10-6 13-1 5-3 11 0 11 7z" fill="#fff"/><rect x="18" y="22" width="8" height="8" rx="1.5" fill="#f3e3b5"/><rect x="28" y="20" width="8" height="8" rx="1.5" fill="#f3e3b5"/><ellipse cx="42" cy="25" rx="5" ry="3.5" fill="#7cc46a"/><path d="M30 30h8" stroke="#ff7a45" stroke-width="2.5" stroke-linecap="round"/><circle cx="24" cy="31" r="1.6" fill="#ffd35c"/>`)],
+  edamame: ["bowl", `${paSh}<path d="M10 36h44c0 10-10 18-22 18S10 46 10 36z" fill="#fff"/><path d="M10 36h44" stroke="#e8e2d6" stroke-width="2"/>${[[18, 30, -20], [28, 26, 10], [38, 29, -5], [46, 32, 25]].map(([x, y, r]) => `<g transform="rotate(${r} ${x} ${y})"><rect x="${x - 9}" y="${y - 3.5}" width="18" height="7" rx="3.5" fill="#7cc46a"/><circle cx="${x - 4}" cy="${y}" r="2" fill="#a6dc8a"/><circle cx="${x + 2}" cy="${y}" r="2" fill="#a6dc8a"/></g>`).join("")}`],
+  coco: ["fria", `${paSh}<circle cx="30" cy="38" r="18" fill="#7a4a2a"/><ellipse cx="30" cy="26" rx="14" ry="5" fill="#fff"/><circle cx="24" cy="44" r="1.5" fill="#5a3420"/><circle cx="34" cy="48" r="1.5" fill="#5a3420"/><path d="M36 26l8-20" stroke="#e94f86" stroke-width="3" stroke-linecap="round"/><path d="M42 8l6 2" stroke="#4caf50" stroke-width="3" stroke-linecap="round"/>`],
+  griega: ["bowl", paBowl(`<path d="M14 30c2-7 9-9 13-5 4-5 11-5 14 0 4-3 9 0 9 5z" fill="#8fd16f"/><circle cx="22" cy="27" r="3" fill="#e2483d"/><circle cx="40" cy="26" r="3" fill="#e2483d"/><rect x="29" y="23" width="6" height="6" rx="1" fill="#fff"/><circle cx="34" cy="30" r="2" fill="#3a3f44"/><circle cx="26" cy="31" r="2" fill="#3a3f44"/>`)],
+  "j-zana": ["fria", paTall("#ff8a2e", `<rect x="26" y="30" width="6" height="6" rx="1.5" fill="#fff" opacity=".45"/><path d="M44 18l8 12-4 2-6-12z" fill="#f2792c"/><path d="M44 18c-2-4-1-7 2-8M44 18c1-4 4-6 7-5" stroke="#4caf50" stroke-width="2" stroke-linecap="round" fill="none"/>`)],
+  croissant: ["horno", `${paSh}<path d="M8 42c4-14 16-22 24-22s20 8 24 22c-6 2-10-2-12-6-3 5-8 7-12 7s-9-2-12-7c-2 4-6 8-12 6z" fill="#f0b257"/><path d="M20 28c2 4 2 9 0 12M32 24c2 5 2 11 0 16M44 28c2 4 2 9 0 12" stroke="#d48b34" stroke-width="2" stroke-linecap="round" fill="none"/>`],
+  "croissant-ch": ["horno", `${paSh}<path d="M8 42c4-14 16-22 24-22s20 8 24 22c-6 2-10-2-12-6-3 5-8 7-12 7s-9-2-12-7c-2 4-6 8-12 6z" fill="#e9a24a"/><path d="M12 32c6-2 8 4 14 2s8 4 14 2 8 2 12 0" stroke="#5a3420" stroke-width="3" fill="none" stroke-linecap="round"/>`],
+  napolitana: ["horno", `${paSh}<rect x="12" y="24" width="40" height="24" rx="5" fill="#f0b257"/><rect x="12" y="24" width="40" height="8" rx="4" fill="#f6c879"/><rect x="20" y="34" width="24" height="6" rx="3" fill="#5a3420"/><path d="M16 44h32" stroke="#d48b34" stroke-width="1.6" stroke-dasharray="3 3"/>`],
+  pandequeso: ["horno", `${paSh}<ellipse cx="32" cy="38" rx="20" ry="14" fill="#f2c27a"/><ellipse cx="32" cy="34" rx="16" ry="9" fill="#f6d293"/><circle cx="26" cy="32" r="2.5" fill="#fff4d8"/><circle cx="36" cy="30" r="2" fill="#fff4d8"/><circle cx="38" cy="38" r="2.5" fill="#fff4d8"/>`],
+  "pz-pepperoni": ["comida", paSlice("", [[24, 24, "#c0392b"], [36, 28, "#c0392b"], [30, 36, "#c0392b"]])],
+  "pz-margarita": ["comida", paSlice(`<circle cx="26" cy="25" r="3.5" fill="#fff"/><circle cx="36" cy="30" r="3.5" fill="#fff"/>`, [[30, 36, "#5cb85c"], [22, 22, "#e2483d"]])],
+  "pz-hawaiana": ["comida", paSlice(`<rect x="22" y="22" width="6" height="6" rx="1" fill="#ffc23d" stroke="#e9a24a"/><rect x="33" y="30" width="6" height="6" rx="1" fill="#ffc23d" stroke="#e9a24a"/>`, [[34, 24, "#f19aa8"], [27, 34, "#f19aa8"]])],
+  calzone: ["comida", `${paSh}<path d="M8 44c0-16 11-28 24-28s24 12 24 28z" fill="#e9a24a"/><path d="M8 44h48" stroke="#c97c2a" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="32" r="1.6" fill="#c97c2a"/><circle cx="34" cy="26" r="1.6" fill="#c97c2a"/><circle cx="42" cy="34" r="1.6" fill="#c97c2a"/><path d="M16 36c4-8 10-12 18-12" stroke="#ffd58f" stroke-width="2.5" stroke-linecap="round" fill="none"/>`],
+  "j-naranja": ["fria", paTall("#ffa63d", `<circle cx="46" cy="20" r="7" fill="#ffb02e"/><circle cx="46" cy="20" r="5" fill="#ffd27a"/>`)],
+  "j-fresa": ["fria", paTall("#e2486b", `<path d="M44 14c0-4 3-6 6-6s6 2 6 6c0 5-5 9-6 10-1-1-6-5-6-10z" fill="#e2483d"/><path d="M50 8c0-2 1-3 3-3" stroke="#4caf50" stroke-width="2" stroke-linecap="round"/>`)],
+  "j-mango": ["fria", paTall("#ffc23d", `<ellipse cx="47" cy="18" rx="7" ry="9" fill="#ffb02e" transform="rotate(30 47 18)"/><path d="M50 10l3-3" stroke="#4caf50" stroke-width="2" stroke-linecap="round"/>`)],
+  merengada: ["fria", paTall("#f7a6c1", `<path d="M20 18c2-6 8-8 12-6 4-4 10-2 12 4z" fill="#fff"/><circle cx="32" cy="10" r="3" fill="#e2483d"/>`)],
+  limococo: ["fria", paTall("#f3f7e8", `<circle cx="46" cy="20" r="7" fill="#7cc46a"/><circle cx="46" cy="20" r="5" fill="#c9eea6"/><rect x="26" y="30" width="6" height="6" rx="1.5" fill="#d6ecfb" opacity=".8"/>`)],
+  "dn-glaseada": ["snack", paDonut("#f6e7c8")],
+  "dn-chocolate": ["snack", paDonut("#5a3420")],
+  "dn-fresa": ["snack", paDonut("#f48fb1", true)],
+  "dn-rellena": ["snack", `${paSh}<circle cx="32" cy="36" r="19" fill="#e9a24a"/><path d="M14 36a18 18 0 0 1 36 0" fill="#f2b45f"/><ellipse cx="32" cy="36" rx="9" ry="5" fill="#fff4d0"/>${[[20, 26], [28, 22], [38, 24], [44, 30]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.2" fill="#fff"/>`).join("")}`],
+  "dn-caja": ["snack", `${paSh}<rect x="8" y="26" width="48" height="26" rx="3" fill="#fff"/><path d="M8 26l6-10h36l6 10z" fill="#f48fb1"/>${[[18, 38, "#f48fb1"], [32, 38, "#5a3420"], [46, 38, "#f6e7c8"]].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="6" fill="#e9a24a"/><path d="M${x - 6} ${y - 1}a6 6 0 0 1 12 0" fill="${c}"/><circle cx="${x}" cy="${y}" r="2" fill="#fff"/>`).join("")}`],
+});
+const PROD_ALIAS = { "emp-carne": "empanada", "emp-pollo": "empanada", "emp-queso": "empanada", "emp-domino": "empanada", tequenos6: "tequenos", hsencilla: "clasica", "wrap-int": "wrap", "wrap-veg": "wrap" };
 const PROD_BY_NAME = {};
 function prodArt(id, fallbackIcon, cls = "", name = "") {
-  const k = PROD_ART[id] ? id : PROD_BY_NAME[name];
+  const res = x => x && (PROD_ART[x] ? x : PROD_ALIAS[x]);
+  const k = res(id) || res(PROD_BY_NAME[name]);
   const a = k && PROD_ART[k];
   if (!a) return `<span class="ico ${cls === "lg" ? "lg" : ""}"><i data-lucide="${fallbackIcon || "utensils"}"></i></span>`;
   return `<span class="food-art p-art ${cls}" style="--fa:${PA_BG[a[0]]}" aria-hidden="true"><svg viewBox="0 0 64 64">${a[1]}</svg></span>`;
@@ -1892,19 +1967,106 @@ const LOCALES = [
     { name: "Bebidas", items: [
       { id: "refresco", name: "Refresco 355 ml", desc: "Lata, varios sabores.", price: 1.5, icon: "cup-soda" },
       { id: "agua", name: "Agua mineral 600 ml", desc: "Sin gas.", price: 1, icon: "glass-water" }] }] },
-  { id: "teeb", kind: "local", name: "TEEB", icon: "salad", place: "Feria Central", eta: "10–15 min", hours: "10:00–16:00",
-    tagline: "Bowls, ensaladas y opciones saludables.", pref: "TB", cats: [
-    { name: "Bowls", items: [
-      { id: "teriyaki", name: "Bowl de pollo teriyaki", desc: "Pollo, vegetales salteados y ajonjolí.", price: 8, icon: "salad", tag: "Más pedido", opts: [
-        foodOpt("Base", "Elige una · Obligatorio", ["Arroz", ["Quinoa", 1]])] },
-      { id: "veggie", name: "Bowl vegetariano", desc: "Garbanzos, aguacate, tomate y maíz.", price: 7, icon: "salad", opts: [
-        foodOpt("Base", "Elige una · Obligatorio", ["Arroz", ["Quinoa", 1]])] }] },
-    { name: "Ensaladas", items: [
-      { id: "cesar", name: "César con pollo", desc: "Lechuga romana, parmesano y crutones.", price: 6.5, icon: "salad" },
-      { id: "atun", name: "Ensalada de atún", desc: "Atún, huevo, papa y vegetales.", price: 6.5, icon: "salad" }] },
+  { id: "teeb", kind: "local", name: "TEEB", icon: "croissant", place: "Feria Central", eta: "5–10 min", hours: "8:00–16:00",
+    tagline: "Empanadas, frituras y comida rápida.", pref: "TB", cats: [
+    { name: "Empanadas", items: [
+      { id: "emp-carne", name: "Empanada de carne mechada", desc: "Masa de maíz, recién frita.", price: 1.8, icon: "croissant", tag: "Más pedido", opts: [foodOpt("Salsa", "Elige una", ["Guasacaca", "Ajo", "Rosada", "Sin salsa"])] },
+      { id: "emp-pollo", name: "Empanada de pollo", desc: "Masa de maíz, recién frita.", price: 1.8, icon: "croissant", opts: [foodOpt("Salsa", "Elige una", ["Guasacaca", "Ajo", "Rosada", "Sin salsa"])] },
+      { id: "emp-queso", name: "Empanada de queso", desc: "Queso blanco rallado.", price: 1.6, icon: "croissant", opts: [foodOpt("Salsa", "Elige una", ["Guasacaca", "Ajo", "Rosada", "Sin salsa"])] },
+      { id: "emp-domino", name: "Empanada dominó", desc: "Caraotas negras y queso.", price: 1.8, icon: "croissant", opts: [foodOpt("Salsa", "Elige una", ["Guasacaca", "Ajo", "Rosada", "Sin salsa"])] }] },
+    { name: "Frituras", items: [
+      { id: "tequenos6", name: "Tequeños (6)", desc: "Con salsa de la casa.", price: 4.5, icon: "cookie" },
+      { id: "papas", name: "Papas fritas", desc: "Porción mediana.", price: 2.5, icon: "cookie", opts: [
+        foodOpt("Tamaño", "Elige uno", ["Mediana", ["Grande", 1]])] },
+      { id: "tostones", name: "Tostones con queso", desc: "Plátano verde frito con queso rallado.", price: 3, icon: "cookie" }] },
+    { name: "Comida rápida", items: [
+      { id: "perro", name: "Perro caliente", desc: "Repollo, papitas, queso y salsas.", price: 3, icon: "sandwich", opts: [
+        foodOpt("Extra", "Opcional", ["Sin extra", ["Tocineta", 1], ["Queso extra", 0.5]])] },
+      { id: "hsencilla", name: "Hamburguesa sencilla", desc: "Carne, queso, lechuga y tomate.", price: 4.5, icon: "beef" }] },
+    { name: "Bebidas", items: [
+      { id: "refresco", name: "Refresco 355 ml", desc: "Lata, varios sabores.", price: 1.5, icon: "cup-soda" },
+      { id: "papelon", name: "Papelón con limón", desc: "Bien frío · 350 ml.", price: 2, icon: "cup-soda" }] }] },
+  { id: "molokai", kind: "local", name: "Molokai", icon: "fish", place: "Feria Central", eta: "10–15 min", hours: "11:00–16:00",
+    tagline: "Poke y bowls hawaianos.", pref: "ML", cats: [
+    { name: "Pokes", items: [
+      { id: "poke-salmon", name: "Poke de salmón", desc: "Salmón, aguacate, pepino, edamame y ajonjolí.", price: 10, icon: "fish", tag: "Más pedido", opts: [
+        foodOpt("Base", "Elige una · Obligatorio", ["Arroz de sushi", "Arroz integral", ["Quinoa", 1]]),
+        foodOpt("Salsa", "Elige una", ["Ponzu", "Spicy mayo", "Teriyaki"])] },
+      { id: "poke-atun", name: "Poke de atún", desc: "Atún, mango, cebollín y ajonjolí.", price: 9.5, icon: "fish", opts: [
+        foodOpt("Base", "Elige una · Obligatorio", ["Arroz de sushi", "Arroz integral", ["Quinoa", 1]]),
+        foodOpt("Salsa", "Elige una", ["Ponzu", "Spicy mayo", "Teriyaki"])] },
+      { id: "teriyaki", name: "Poke de pollo teriyaki", desc: "Pollo, vegetales salteados y ajonjolí.", price: 8, icon: "salad", opts: [
+        foodOpt("Base", "Elige una · Obligatorio", ["Arroz de sushi", "Arroz integral", ["Quinoa", 1]])] },
+      { id: "poke-tofu", name: "Poke de tofu", desc: "Tofu marinado, aguacate, zanahoria y maíz.", price: 7.5, icon: "salad", opts: [
+        foodOpt("Base", "Elige una · Obligatorio", ["Arroz de sushi", "Arroz integral", ["Quinoa", 1]])] }] },
+    { name: "Para acompañar", items: [
+      { id: "edamame", name: "Edamame", desc: "Con sal marina.", price: 3, icon: "salad" }] },
     { name: "Bebidas", items: [
       { id: "tefrio", name: "Té frío de durazno", desc: "Hecho en casa · 400 ml.", price: 2, icon: "cup-soda" },
-      { id: "batido", name: "Batido verde", desc: "Piña, espinaca y jengibre.", price: 3, icon: "cup-soda" }] }] },
+      { id: "coco", name: "Agua de coco", desc: "Natural · 350 ml.", price: 2.5, icon: "cup-soda" }] }] },
+  { id: "zanahorias", kind: "local", name: "Zanahorias", icon: "carrot", place: "Feria Central", eta: "10–15 min", hours: "8:00–16:00",
+    tagline: "Comida saludable: ensaladas, wraps y bowls.", pref: "ZN", cats: [
+    { name: "Ensaladas", items: [
+      { id: "cesar", name: "César con pollo", desc: "Lechuga romana, parmesano y crutones.", price: 6.5, icon: "salad", tag: "Más pedido" },
+      { id: "atun", name: "Ensalada de atún", desc: "Atún, huevo, papa y vegetales.", price: 6.5, icon: "salad" },
+      { id: "griega", name: "Ensalada griega", desc: "Tomate, pepino, aceitunas y queso feta.", price: 6, icon: "salad" }] },
+    { name: "Wraps", items: [
+      { id: "wrap-int", name: "Wrap integral de pollo", desc: "Pollo, espinaca, tomate y yogur.", price: 5.5, icon: "sandwich" },
+      { id: "wrap-veg", name: "Wrap vegetariano", desc: "Hummus, vegetales asados y lechuga.", price: 5, icon: "sandwich" }] },
+    { name: "Bowls", items: [
+      { id: "veggie", name: "Bowl vegetariano", desc: "Garbanzos, aguacate, tomate y maíz.", price: 7, icon: "salad", opts: [
+        foodOpt("Base", "Elige una · Obligatorio", ["Arroz", ["Quinoa", 1]])] }] },
+    { name: "Bebidas", items: [
+      { id: "batido", name: "Batido verde", desc: "Piña, espinaca y jengibre.", price: 3, icon: "cup-soda" },
+      { id: "j-zana", name: "Jugo de zanahoria y naranja", desc: "Natural · 350 ml.", price: 2.5, icon: "cup-soda" }] }] },
+  { id: "granier", kind: "local", name: "Granier", icon: "croissant", place: "Feria Central", eta: "5 min", hours: "7:00–17:00",
+    tagline: "Panadería: panes, hojaldres y café.", pref: "GR", cats: [
+    { name: "Hojaldres", items: [
+      { id: "croissant", name: "Croissant", desc: "De mantequilla, horneado del día.", price: 1.8, icon: "croissant", tag: "Más pedido" },
+      { id: "croissant-ch", name: "Croissant de chocolate", desc: "Relleno de chocolate.", price: 2.3, icon: "croissant" },
+      { id: "napolitana", name: "Napolitana de chocolate", desc: "Hojaldre con chocolate.", price: 2.2, icon: "croissant" }] },
+    { name: "Salados", items: [
+      { id: "cachito", name: "Cachito de jamón", desc: "Horneado en la mañana.", price: 2.2, icon: "croissant" },
+      { id: "pandequeso", name: "Pan de queso", desc: "Tibio y esponjoso.", price: 1.5, icon: "croissant" }] },
+    { name: "Café", items: [
+      { id: "conleche", name: "Café con leche", desc: "Recién hecho.", price: 1.8, icon: "coffee", opts: [TAMANO] },
+      { id: "capuchino", name: "Capuchino", desc: "Espresso, leche y espuma.", price: 2.8, icon: "coffee", opts: [TAMANO] }] }] },
+  { id: "pepperonis", kind: "local", name: "Pepperonis", icon: "pizza", place: "Feria Central", eta: "15–20 min", hours: "11:00–18:00",
+    tagline: "Pizzas por porción y enteras.", pref: "PZ", cats: [
+    { name: "Pizzas", items: [
+      { id: "pz-pepperoni", name: "Pizza de pepperoni", desc: "Salsa de tomate, mozzarella y pepperoni.", price: 3, icon: "pizza", tag: "Más pedido", opts: [
+        foodOpt("Tamaño", "Elige uno · Obligatorio", ["Porción", ["Personal", 4], ["Familiar", 11]])] },
+      { id: "pz-margarita", name: "Pizza margarita", desc: "Tomate, mozzarella y albahaca.", price: 2.5, icon: "pizza", opts: [
+        foodOpt("Tamaño", "Elige uno · Obligatorio", ["Porción", ["Personal", 3.5], ["Familiar", 9.5]])] },
+      { id: "pz-hawaiana", name: "Pizza hawaiana", desc: "Jamón y piña.", price: 3, icon: "pizza", opts: [
+        foodOpt("Tamaño", "Elige uno · Obligatorio", ["Porción", ["Personal", 4], ["Familiar", 11]])] }] },
+    { name: "Otros", items: [
+      { id: "calzone", name: "Calzone de jamón y queso", desc: "Horneado al momento.", price: 5, icon: "pizza" }] },
+    { name: "Bebidas", items: [
+      { id: "refresco", name: "Refresco 355 ml", desc: "Lata, varios sabores.", price: 1.5, icon: "cup-soda" }] }] },
+  { id: "juicebar", kind: "local", name: "Juice Bar", icon: "citrus", place: "Feria Central", eta: "5–10 min", hours: "7:30–16:30",
+    tagline: "Jugos naturales, batidos y merengadas.", pref: "JB", cats: [
+    { name: "Jugos", items: [
+      { id: "j-naranja", name: "Jugo de naranja", desc: "Recién exprimido.", price: 2.5, icon: "citrus", tag: "Más pedido", opts: [
+        foodOpt("Tamaño", "Elige uno", ["Mediano · 350 ml", ["Grande · 500 ml", 1]])] },
+      { id: "j-fresa", name: "Jugo de fresa", desc: "Con agua o con leche.", price: 2.5, icon: "cup-soda", opts: [
+        foodOpt("Preparado", "Elige uno", ["Con agua", ["Con leche", 0.5]])] },
+      { id: "j-mango", name: "Jugo de mango", desc: "Mango de temporada.", price: 2.5, icon: "cup-soda" }] },
+    { name: "Batidos y merengadas", items: [
+      { id: "batido", name: "Batido verde", desc: "Piña, espinaca y jengibre.", price: 3, icon: "cup-soda" },
+      { id: "merengada", name: "Merengada de fresa", desc: "Fresa, leche y helado.", price: 3.5, icon: "cup-soda" },
+      { id: "limococo", name: "Limonada de coco", desc: "Cremosa y bien fría.", price: 3, icon: "cup-soda" }] }] },
+  { id: "deydonuts", kind: "local", name: "Dey Donuts", icon: "donut", place: "Feria Central", eta: "5 min", hours: "7:00–15:00",
+    tagline: "Donuts recién hechas y café.", pref: "DD", cats: [
+    { name: "Donuts", items: [
+      { id: "dn-glaseada", name: "Donut glaseada", desc: "La clásica.", price: 1.5, icon: "donut", tag: "Más pedido" },
+      { id: "dn-chocolate", name: "Donut de chocolate", desc: "Cubierta de chocolate.", price: 1.8, icon: "donut" },
+      { id: "dn-fresa", name: "Donut de fresa con chispas", desc: "Glaseado rosado y chispas de colores.", price: 1.8, icon: "donut" },
+      { id: "dn-rellena", name: "Donut rellena de crema", desc: "Crema pastelera y azúcar.", price: 2.2, icon: "donut" },
+      { id: "dn-caja", name: "Caja de 6 donuts", desc: "Surtidas.", price: 9, icon: "donut" }] },
+    { name: "Café", items: [
+      { id: "negro", name: "Café negro", desc: "Recién colado.", price: 1.2, icon: "coffee" },
+      { id: "conleche", name: "Café con leche", desc: "Recién hecho.", price: 1.8, icon: "coffee", opts: [TAMANO] }] }] },
   { id: "tienditaa1", kind: "kiosco", name: "La Tiendita Unimetana A1", icon: "store", place: "Campus Central", eta: "5 min", hours: "7:00–17:00",
     tagline: "Café, bebidas y meriendas para llevar.", pref: "A1", cats: [
     { name: "Café", items: [
@@ -2001,10 +2163,11 @@ const ffActiveCount = () => (ff.open ? 1 : 0) + (ff.price ? 1 : 0) + (ff.eta ? 1
 function itemTypes(l, cat, it) {
   const c = normTxt(cat.name), t = normTxt(it.name + " " + it.desc), out = new Set();
   if (/cafe/.test(c) || it.icon === "coffee") out.add("cafe");
-  if (/almuerzo|plato|bowl|hamburguesa/.test(c)) out.add("almuerzo");
-  if (/bebida/.test(c) || ["cup-soda", "glass-water", "zap"].includes(it.icon)) out.add("bebida");
+  if (/almuerzo|plato|bowl|hamburguesa|poke|pizza|ensalada|wrap|comida rapida/.test(c)) out.add("almuerzo");
+  if (/bebida|jugo|batido|merengada/.test(c) || ["cup-soda", "glass-water", "zap", "citrus"].includes(it.icon)) out.add("bebida");
   if (/merienda|snack|dulce|desayuno/.test(c)) out.add("merienda");
-  if (l.id === "teeb" || /ensalada|bowl/.test(c) || /^(ensalada|bowl|batido)/.test(normTxt(it.name))) out.add("saludable");
+  if (["zanahorias", "molokai"].includes(l.id) || /ensalada|bowl|poke/.test(c) || /^(ensalada|bowl|batido|poke|jugo)/.test(normTxt(it.name))) out.add("saludable");
+  if (/empanada|fritura|comida rapida|pizza|donut|hojaldre|salado|otros/.test(c)) out.add("merienda");
   return out;
 }
 const etaMax = l => Math.max(...(l.eta.match(/\d+/g) || ["0"]).map(Number));
@@ -2013,7 +2176,7 @@ const toMin = hm => { const [h, m] = hm.split(":").map(Number); return h * 60 + 
    de LOCALES, sábado en la mañana solo La Pausa y los kioscos, domingo cerrado. El comercio lo cambia en Menú y horario
    (localState[id].week, global). */
 const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-const SAT_HOURS = { lapausa: ["08:00", "12:00"], tienditaa1: ["08:00", "12:00"], tienditaa2: ["08:00", "12:00"], believe: ["09:00", "13:00"] };
+const SAT_HOURS = { lapausa: ["08:00", "12:00"], granier: ["08:00", "13:00"], deydonuts: ["08:00", "12:00"], juicebar: ["08:00", "12:00"], tienditaa1: ["08:00", "12:00"], tienditaa2: ["08:00", "12:00"], believe: ["09:00", "13:00"] };
 const pad5 = hm => hm.length === 4 ? "0" + hm : hm;
 function defaultWeek(l) {
   const [a, b] = l.hours.split("–").map(pad5);
