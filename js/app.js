@@ -101,9 +101,26 @@ document.querySelectorAll("section.app").forEach(sec => {
   bar.setAttribute("aria-label", "Navegación principal");
   bar.innerHTML = (staff ? nav : TABS).map(n => `<button type="button" data-go="${n[3]}" class="${n[0]===tab?'on':''}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`).join("")
     + (staff ? `<button type="button" data-logout><i data-lucide="log-out"></i>Salir</button>` : "");
+  bar.insertAdjacentHTML("afterbegin", `<span class="tb-ind" aria-hidden="true"></span>`);
   main.append(bar);
   sec.append(side, main);
 });
+/* Barra inferior: la "gota" de vidrio se desliza desde la pestaña anterior hasta la actual */
+let tbLast = null;
+function placeTabInd() {
+  const sec = document.getElementById(current); if (!sec) return;
+  const bar = sec.querySelector(".tabbar"), ind = bar && bar.querySelector(".tb-ind"), on = bar && bar.querySelector("button.on");
+  if (!ind || !bar.offsetParent) return;
+  if (!on) { ind.style.width = "0px"; return; }
+  const to = { left: on.offsetLeft, width: on.offsetWidth };
+  if (tbLast && (tbLast.left !== to.left)) {
+    ind.classList.add("no-anim"); ind.style.left = tbLast.left + "px"; ind.style.width = tbLast.width + "px";
+    void ind.offsetWidth; ind.classList.remove("no-anim");
+  }
+  requestAnimationFrame(() => { ind.style.left = to.left + "px"; ind.style.width = to.width + "px"; });
+  tbLast = to;
+}
+window.addEventListener("resize", () => { tbLast = null; placeTabInd(); });
 
 /* ---------- QR ilustrativo (patrón determinista, no escaneable) ---------- */
 function drawQR(c) {
@@ -4012,8 +4029,54 @@ function homeItems() {
   } catch (err) {}
   return out.sort((a, b) => a.pr - b.pr);
 }
+/* Resumen de la cuenta en la cabecera de Inicio (tarjetas de vidrio sobre el degradado) */
+function renderHomeStats() {
+  const box = document.getElementById("homeStats"); if (!box) return;
+  const tiles = [];
+  try {
+    if (account && account.carnet && MATERIAS.length) {
+      const pay = payableInv(), debt = pay.reduce((a, iv) => a + amountOf(iv), 0), late = pay.some(iv => statusOf(iv) === "vencida");
+      tiles.push(`<button class="hh-tile${late ? " alert" : ""}" type="button" data-go="materias"><span class="hh-ic"><i data-lucide="graduation-cap"></i></span><span class="hh-lbl">Cuenta universitaria</span><b>${debt ? money(debt) : "Al día"}</b><span class="hh-sub">${debt ? (late ? "Tienes una factura vencida" : `Vence el ${fmtDW(pay[0].due)}`) : "No debes nada este mes"}</span></button>`);
+    }
+  } catch (err) {}
+  try { tiles.push(`<button class="hh-tile" type="button" data-go="estacionamiento"><span class="hh-ic"><i data-lucide="wallet"></i></span><span class="hh-lbl">Wallet Nexo</span><b>${money(WALLET)}</b><span class="hh-sub">Saldo para estacionamiento</span></button>`); } catch (err) {}
+  try {
+    if (planActive()) {
+      const left = Math.max(0, Math.round((dOf(plan.end) - todayNoon()) / 864e5)), pct = Math.min(100, Math.round(left / 30 * 100));
+      tiles.push(`<button class="hh-tile" type="button" data-go="acceso"><span class="hh-ring" style="--p:${pct}"><i data-lucide="car-front"></i></span><span class="hh-lbl">Plan ${esc(plan.name.toLowerCase())}</span><b>${left} ${left === 1 ? "día" : "días"}</b><span class="hh-sub">Vence el ${fmtD(dOf(plan.end))}</span></button>`);
+    } else tiles.push(`<button class="hh-tile" type="button" data-go="planes"><span class="hh-ic"><i data-lucide="car-front"></i></span><span class="hh-lbl">Estacionamiento</span><b>Sin plan</b><span class="hh-sub">Elige uno y entra sin fila</span></button>`);
+  } catch (err) {}
+  box.innerHTML = tiles.join("");
+}
+/* Gastos del mes por servicio: barra apilada + leyenda con montos (paleta validada, orden fijo) */
+const SPEND_CATS = [["comida", "Comida", "utensils"], ["estac", "Estacionamiento", "car-front"], ["uni", "Materias", "graduation-cap"], ["canchas", "Canchas", "dribbble"]];
+function spendOfMonth() {
+  const d = day0(simDate), tag = `${MES_CORTO[d.getMonth()]} ${d.getFullYear()}`, sum = { comida: 0, estac: 0, uni: 0, canchas: 0 };
+  if (isDemo && d.getMonth() === 10) { sum.estac += 28; sum.comida += 8.5; } // movimientos de ejemplo de la cuenta demo (1 y 2 de noviembre)
+  moves.forEach(m => {
+    const a = String(m.amount || ""); if (!/^[−-]/.test(a) || !String(m.date || "").includes(tag)) return;
+    const v = parseFloat(a.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
+    const c = m.icon === "utensils" ? "comida" : m.icon === "car-front" ? "estac" : m.icon === "dribbble" ? "canchas" : String(m.detail || "").startsWith("Universidad") ? "uni" : null;
+    if (c) sum[c] += v;
+  });
+  return { sum, total: Object.values(sum).reduce((a, b) => a + b, 0), month: MESES_LARGO[d.getMonth()] };
+}
+const MESES_LARGO = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+function renderSpend() {
+  const box = document.getElementById("homeSpend"); if (!box) return;
+  const { sum, total, month } = spendOfMonth();
+  if (!total) { box.innerHTML = `<h2 class="sec">Tus gastos de ${month}</h2>` + emptyState("receipt-text", "Aún no hay gastos este mes", "Cuando pagues comida, estacionamiento o tu cuota, verás aquí en qué se te va el dinero."); icons(); return; }
+  const cats = SPEND_CATS.filter(([k]) => sum[k] > 0);
+  box.innerHTML = `<div class="row" style="align-items:flex-start"><div><h2 class="sec">Tus gastos de ${month}</h2><p class="small">Pagado en Nexo este mes</p></div><button class="link b" type="button" data-go="actividad" style="font-size:12px">Detalle</button></div>
+    <div class="spend-hero"><b>${money(total)}</b><span class="bsv inline">${bsOf(total)}</span></div>
+    <div class="spend-bar" role="img" aria-label="${cats.map(([k, l]) => `${l} ${money(sum[k])}`).join(", ")}">${cats.map(([k, l]) => `<span class="sp-${k}" style="flex:${sum[k]}" data-tip="${l} · ${money(sum[k])} · ${Math.round(sum[k] / total * 100)} %"></span>`).join("")}</div>
+    <ul class="spend-legend">${cats.map(([k, l, ic]) => `<li data-sp="${k}"><span class="sp-dot sp-${k}"></span><i data-lucide="${ic}"></i><span class="grow">${l}</span><b>${money(sum[k])}</b><span class="tiny">${Math.round(sum[k] / total * 100)} %</span></li>`).join("")}</ul>`;
+  icons();
+}
 let homeAll = false;
 function renderHome() {
+  try { renderHomeStats(); } catch (err) {}
+  try { renderSpend(); } catch (err) {}
   const box = document.getElementById("homeNow"); if (!box) return;
   const items = homeItems();
   if (!items.length) { box.hidden = true; return; }
@@ -4252,7 +4315,8 @@ document.getElementById("ayudaForm").addEventListener("submit", e => {
   e.target.reset();
   toast("Ticket enviado. Te responderemos al correo que indicaste.");
 });
-window.addEventListener("hashchange", () => { show(location.hash.slice(1)); focusScreen(); });
+window.addEventListener("hashchange", () => { show(location.hash.slice(1)); focusScreen(); try { placeTabInd(); } catch (err) {} });
+setTimeout(() => { try { placeTabInd(); } catch (err) {} }, 50);
 /* Al cambiar de pantalla, el foco va a su título (lectores de pantalla y teclado) y se anuncia */
 function focusScreen() {
   const sec = document.getElementById(current); if (!sec) return;

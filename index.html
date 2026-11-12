@@ -218,23 +218,24 @@
 
 <!-- 4 · Inicio -->
 <section class="screen app" id="inicio" data-title="Inicio" data-tab="inicio" data-crumb="Inicio" hidden>
-  <div class="row inicio-head">
-    <div><h1 class="h1">Hola, <span data-user="first">Ana</span> 👋</h1><p class="lead">Todo tu campus, en un solo lugar.</p></div>
-    <div class="row" style="gap:8px;flex-wrap:wrap;justify-content:flex-end"><span class="pill ok" data-bcv-pill title="Tasa oficial del Banco Central de Venezuela">Dólar BCV · Bs. 901,62</span><span class="pill neutral only-wide" data-sim-date>Jueves, 12 nov 2026</span></div>
+  <div class="hero-home">
+    <span class="hh-orb o1" aria-hidden="true"></span><span class="hh-orb o2" aria-hidden="true"></span><span class="hh-orb o3" aria-hidden="true"></span>
+    <div class="hh-top">
+      <div><p class="hh-date" data-sim-date>Jueves, 12 nov 2026</p><h1 class="h1">Hola, <span data-user="first">Ana</span> <span class="wave" aria-hidden="true">👋</span></h1><p class="lead">Todo tu campus, en un solo lugar.</p></div>
+      <span class="pill hh-bcv" data-bcv-pill title="Tasa oficial del Banco Central de Venezuela">Dólar BCV · Bs. 901,62</span>
+    </div>
+    <div class="hh-stats" id="homeStats"></div>
   </div>
-  <div class="card homenow" id="homeNow" aria-live="polite" hidden></div>
+  <div class="homenow" id="homeNow" aria-live="polite" hidden></div>
   <div class="cols">
     <div class="stack">
-      <div class="banner only-wide"><p class="tag">TU CAMPUS, MÁS CERCA</p><h3>Menos filas. Más vida universitaria.</h3>
-        <button type="button" data-go="servicios">Explorar servicios&nbsp;&nbsp;↗</button></div>
-      <div class="card dark only-narrow" data-account></div>
       <div class="stack s14">
-        <div class="row"><h2 class="sec">¿Qué necesitas pagar?</h2><button class="link b" type="button" data-go="servicios" style="font-size:12px">Ver servicios</button></div>
-        <div class="services">
-          <button class="service" type="button" data-go="estacionamiento"><i data-lucide="car-front"></i><div><b>Estacionamiento</b><span>Planes desde $2,00</span></div></button>
-          <button class="service" type="button" data-go="materias"><i data-lucide="graduation-cap"></i><div><b>Materias</b><span>Paga tu cuota del mes</span></div></button>
-          <button class="service" type="button" data-go="comida"><i data-lucide="utensils"></i><div><b>Comida y kioscos</b><span>Pide y retira</span></div></button>
-          <button class="service" type="button" data-go="reserva"><i data-lucide="dribbble"></i><div><b>Canchas</b><span>Reserva tu turno</span></div></button>
+        <div class="row"><h2 class="sec">Servicios</h2><button class="link b" type="button" data-go="servicios" style="font-size:12px">Ver todos</button></div>
+        <div class="svc-tiles">
+          <button class="svt t-car" type="button" data-go="estacionamiento"><span class="svt-ic"><i data-lucide="car-front"></i></span><b>Estacionamiento</b><span>Planes desde $2,00</span></button>
+          <button class="svt t-uni" type="button" data-go="materias"><span class="svt-ic"><i data-lucide="graduation-cap"></i></span><b>Materias</b><span>Paga tu cuota</span></button>
+          <button class="svt t-food" type="button" data-go="comida"><span class="svt-ic"><i data-lucide="utensils"></i></span><b>Comida</b><span>Pide y retira</span></button>
+          <button class="svt t-court" type="button" data-go="reserva"><span class="svt-ic"><i data-lucide="dribbble"></i></span><b>Canchas</b><span>Reserva tu turno</span></button>
         </div>
       </div>
       <div class="card">
@@ -248,21 +249,7 @@
       </div>
     </div>
     <div class="stack">
-      <div class="card dark only-wide" data-account></div>
-      <div class="card" data-plan="off">
-        <div class="row"><span class="ico"><i data-lucide="car-front"></i></span><span class="pill neutral">Sin plan</span></div>
-        <h3 class="h2">Estacionamiento</h3>
-        <p class="small" style="font-size:13px">Aún no tienes un plan. Elige uno para entrar al campus sin hacer fila.</p>
-        <button class="btn ghost" type="button" data-go="planes">Ver planes</button>
-      </div>
-      <div class="card" data-plan="on">
-        <div class="row"><span class="ico"><i data-lucide="car-front"></i></span><span class="pill ok">Activo</span></div>
-        <h3 class="h2">Tu lugar en el campus</h3>
-        <p class="small">Estacionamiento · Plan <span data-planv="lname">mensual</span></p>
-        <div class="kv"><span>Vehículo</span><b data-veh="plate">AB123CD</b></div>
-        <div class="kv"><span>Válido hasta</span><b><span data-planv="end">01 dic 2026</span></b></div>
-        <button class="btn ghost" type="button" data-go="acceso">Ver mi plan</button>
-      </div>
+      <div class="card spend" id="homeSpend"></div>
       <div class="card">
         <h3 class="h3" style="font-size:14px">¿Necesitas una mano?</h3>
         <p class="small">Revisa tus solicitudes o contacta a soporte desde un solo lugar.</p>
