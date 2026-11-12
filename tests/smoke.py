@@ -380,6 +380,23 @@ async def main() -> int:
         pill = await pg.evaluate("[...document.querySelectorAll('#comida .card.svc')].find(c => c.textContent.includes('Pincho Pan')).querySelector('.head .pill').textContent")
         check(pill == "Abre mañana a las 11:30", "el horario semanal del comercio cambia lo que ve el estudiante")
 
+        # moderación: cualquier moderador responde un ticket sin asignar (se le asigna) y deja notas internas
+        await login("carlos.gil@unimet.edu.ve", "demo-mod-02")
+        await pg.click("[data-md-tab=unassigned]")
+        await pg.wait_for_timeout(150)
+        await pg.dispatch_event("[data-md='TK-1043']", "click")
+        await pg.wait_for_timeout(150)
+        await pg.fill("#mdText", "Hola, Diego. Ya reviso tu pedido.")
+        await pg.click("#mdReply button[type=submit]")
+        await pg.wait_for_timeout(200)
+        dueno = await pg.evaluate("JSON.parse(localStorage.getItem('nexo-tickets')).find(t => t.id === 'TK-1043').mod")
+        check(dueno == "carlos.gil@unimet.edu.ve", "responder un ticket sin asignar se lo asigna al moderador")
+        await pg.click("[data-md-mode=note]")
+        await pg.fill("#mdText", "Nota solo para el equipo.")
+        await pg.click("#mdReply button[type=submit]")
+        await pg.wait_for_timeout(200)
+        check("Nota interna" in await pg.inner_text("#mdBody") and "Nota solo para el equipo" not in await pg.evaluate("convHTML(tkById('TK-1043'), 'student')"), "las notas internas no las ve el estudiante")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 

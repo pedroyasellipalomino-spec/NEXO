@@ -40,7 +40,7 @@ const TABS = NAV.filter(n => n[0] !== "cuenta" && n[0] !== "perfil");
 /* Espacio de gestión: cada sección con data-staff="admin" o "mod" usa su propio menú */
 const STAFF_NAV = {
   admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"], ["validar","badge-check","Pagos por validar","validar"]],
-  mod: [["moderacion","inbox","Mis tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]],
+  mod: [["moderacion","inbox","Tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]],
   local: [["local-pedidos","chef-hat","Pedidos","local-pedidos"], ["local-menu","book-open","Menú y horario","local-menu"]],
   creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["validar","badge-check","Pagos por validar","validar"], ["config","settings","Configuración","config"]]
 };
@@ -2299,7 +2299,8 @@ function pushStudentMove(email, m) {
 
 /* Conversación (compartida por moderación, administración y estudiante) */
 function convHTML(t, viewer) {
-  return t.messages.map(m => {
+  return t.messages.filter(m => viewer !== "student" || m.from !== "note").map(m => {
+    if (m.from === "note") return `<div class="msg note"><div class="row"><b><i data-lucide="lock"></i> Nota interna · ${esc(m.name)}</b><span class="tiny">${hhmm(m.t)}</span></div><p>${esc(m.text)}</p></div>`;
     const mine = viewer === "student" ? m.from === "student" : m.from === "mod";
     const who = m.from === "student" ? (viewer === "student" ? "Tú" : `${esc(m.name)} · Estudiante`) : `${esc(m.name)} · ${m.role === "creator" ? "Creador" : "Moderación"}`;
     return `<div class="msg${m.from === "mod" ? " staff" : ""}${mine ? " mine" : ""}"><div class="row"><b>${who}</b><span class="tiny">${hhmm(m.t)}</span></div><p>${esc(m.text)}</p></div>`;
@@ -2437,42 +2438,88 @@ function sendInvite(form) {
 }
 
 /* ===== Moderación ===== */
-let mdSel = null, mdConfirm = null;
+/* Moderación: bandeja con Mis tickets / Sin asignar / Todos los abiertos. Cualquier moderador puede responder
+   cualquier ticket abierto; si no tiene responsable, al responder se le asigna. Notas internas solo para el equipo. */
+let mdSel = null, mdConfirm = null, mdTab = "mine", mdQuery = "", mdSvc = "all", mdMode = "reply";
 const myTickets = () => tickets.filter(t => t.mod === sessionEmail).sort((a, b) => (isOpen(b) - isOpen(a)) || b.created - a.created);
+const PRIO_ORD = { alta: 0, media: 1, baja: 2 };
+const MD_TEMPLATES = [
+  ["saludo", "Saludo y revisión", "Hola, {nombre}. Ya estoy revisando tu caso y te escribo en cuanto tenga una respuesta."],
+  ["datos", "Pedir datos", "Hola, {nombre}. Para ayudarte, ¿me confirmas el número de referencia y la fecha del pago?"],
+  ["comprobante", "Pedir comprobante", "Hola, {nombre}. ¿Puedes enviarme una captura del comprobante de tu banco? Así lo valido más rápido."],
+  ["reembolso", "Confirmar reembolso", "Listo, {nombre}: procesamos el reembolso a tu método de pago. Llega en 3 a 5 días hábiles."],
+  ["cierre", "Cierre", "¿Hay algo más en lo que te pueda ayudar, {nombre}? Si no, cerraré este ticket."]
+];
+function mdQueue() {
+  const q = normTxt(mdQuery.trim());
+  return tickets.filter(t => (mdTab === "mine" ? t.mod === sessionEmail && isOpen(t) : mdTab === "unassigned" ? !t.mod && isOpen(t) : isOpen(t))
+      && (mdSvc === "all" || t.service === mdSvc)
+      && (!q || normTxt([t.id, t.subject, t.student.name, t.service, t.purchase ? t.purchase.num : ""].join(" ")).includes(q)))
+    .sort((a, b) => PRIO_ORD[a.prio] - PRIO_ORD[b.prio] || lastActivity(b) - lastActivity(a));
+}
+const waitingReply = t => isOpen(t) && t.status !== "espera" && t.messages.length && t.messages.filter(m => m.from !== "note").slice(-1)[0].from === "student";
 function renderModeracion() {
-  const mine = myTickets(), body = document.getElementById("mdBody");
-  if (!mdSel || !mine.some(t => t.id === mdSel)) mdSel = (mine.find(isOpen) || mine[0] || {}).id || null;
+  const body = document.getElementById("mdBody"), open = tickets.filter(isOpen);
+  const counts = { mine: open.filter(t => t.mod === sessionEmail).length, unassigned: open.filter(t => !t.mod).length, all: open.length };
+  const list = mdQueue();
+  if (!mdSel || !tkById(mdSel)) mdSel = (list[0] || {}).id || null;
   const t = mdSel && tkById(mdSel), prio = document.getElementById("mdPrio");
-  document.getElementById("mdLead").textContent = t ? `Mis tickets / ${t.id} · Asignado a ti` : "Mis tickets";
+  document.getElementById("mdLead").textContent = t ? `${t.id} · ${t.mod === sessionEmail ? "Asignado a ti" : t.mod ? `Responsable: ${nameOf(t.mod)}` : "Sin asignar"}` : "Bandeja de soporte";
   prio.hidden = !t || !isOpen(t);
   if (t) { prio.className = "pill " + (t.prio === "alta" ? "bad" : t.prio === "media" ? "warn" : "neutral"); prio.textContent = "Prioridad " + TK_PRIO[t.prio].toLowerCase(); }
-  const queue = `<div class="stack s14 md-queue"><h2 class="sec">Mis tickets · ${mine.filter(isOpen).length}</h2>
-    ${mine.map(x => `<button class="card tk-card${x.id === mdSel ? " sel" : ""}" type="button" data-md="${x.id}"><div class="row"><span class="tk-ref">${x.id}</span><i data-lucide="chevron-right"></i></div><b>${esc(x.subject)}</b><span class="small">${esc(x.student.name)}</span>${stPill(x.status)}</button>`).join("") || `<p class="small">No tienes tickets asignados. Cuando la administración te asigne uno, aparecerá aquí.</p>`}
-    <div class="notice"><i data-lucide="shield-check"></i><p>Puedes responder y ofrecer reembolsos o cancelaciones. No tienes acceso a roles ni estadísticas.</p></div></div>`;
-  if (!t) { body.innerHTML = queue + `<div class="card" style="align-items:flex-start"><span class="ico lg"><i data-lucide="inbox"></i></span><h2 class="h2">Todo al día</h2><p class="small" style="font-size:13px">No hay tickets para atender.</p></div>`; icons(); return; }
-  const open = isOpen(t), p = t.purchase, acted = (t.actions || []).length;
+  const kpi = (n, l, tab) => `<button class="md-kpi${mdTab === tab ? " on" : ""}" type="button" data-md-tab="${tab}"><b>${n}</b><span>${l}</span></button>`;
+  const svcOpts = ["all", ...SERVICES].map(sv => `<option value="${sv}"${mdSvc === sv ? " selected" : ""}>${sv === "all" ? "Todos los servicios" : sv}</option>`).join("");
+  const queue = `<div class="stack s14 md-queue">
+    <div class="md-kpis" role="tablist" aria-label="Bandejas">${kpi(counts.mine, "Mis tickets", "mine")}${kpi(counts.unassigned, "Sin asignar", "unassigned")}${kpi(counts.all, "Todos abiertos", "all")}</div>
+    <div class="input"><i data-lucide="search"></i><input id="mdSearch" type="search" placeholder="Buscar ticket o estudiante" aria-label="Buscar tickets" value="${esc(mdQuery)}"></div>
+    <div class="input sel sm"><select id="mdSvc" aria-label="Filtrar por servicio">${svcOpts}</select><i data-lucide="chevron-down"></i></div>
+    ${list.map(x => `<button class="card tk-card${x.id === mdSel ? " sel" : ""}" type="button" data-md="${x.id}">
+      <div class="row"><span class="tk-ref">${x.id}</span><span class="prio ${x.prio}">${TK_PRIO[x.prio]}</span></div>
+      <b>${esc(x.subject)}</b><span class="small">${esc(x.student.name)} · ${x.service}</span>
+      <div class="row start" style="gap:6px;flex-wrap:wrap">${stPill(x.status)}${waitingReply(x) ? `<span class="pill bad">Por responder</span>` : ""}<span class="tiny">${x.mod ? (x.mod === sessionEmail ? "Tuyo" : esc(firstName(nameOf(x.mod)))) : "Sin asignar"} · ${ago(lastActivity(x)).toLowerCase()}</span></div>
+    </button>`).join("") || `<p class="small">${mdTab === "mine" ? "No tienes tickets abiertos. Mira los que están sin asignar." : "No hay tickets en esta bandeja."}</p>`}
+    <div class="notice"><i data-lucide="shield-check"></i><p>Puedes responder cualquier ticket abierto, tomar los que no tengan responsable y ofrecer reembolsos o cancelaciones.</p></div></div>`;
+  if (!t) { body.innerHTML = queue + `<div class="card" style="align-items:flex-start"><span class="ico lg"><i data-lucide="inbox"></i></span><h2 class="h2">Todo al día</h2><p class="small" style="font-size:13px">No hay tickets para atender en esta bandeja.</p></div>`; icons(); return; }
+  const isOpenT = isOpen(t), p = t.purchase, acted = (t.actions || []).length, mineT = t.mod === sessionEmail;
   const confirmBox = mdConfirm ? `<div class="confirm"><p>${mdConfirm === "refund" ? `¿Reembolsar ${money(p.amount)} a ${esc(p.method)}?` : `¿Cancelar la compra ${esc(p.num)} y devolver ${money(p.amount)}?`} Avisaremos a ${esc(firstName(t.student.name))}.</p><div class="row"><button class="btn ghost" type="button" data-md-no>Volver</button><button class="btn" type="button" data-md-yes>Confirmar</button></div></div>` : "";
+  const owner = !isOpenT ? "" : mineT ? `<div class="notice"><i data-lucide="user-check"></i><p>Este ticket es tuyo.</p></div>`
+    : t.mod ? `<div class="notice warn"><i data-lucide="users"></i><p>El responsable es <strong>${esc(nameOf(t.mod))}</strong>. Puedes responder igual; tu mensaje sale a nombre del equipo de moderación. <button class="link b" type="button" data-md-take style="font-size:12px;color:inherit;text-decoration:underline">Tomar este ticket</button></p></div>`
+    : `<div class="notice"><i data-lucide="inbox"></i><p>Este ticket no tiene responsable. Si respondes, te lo asignamos. <button class="link b" type="button" data-md-take style="font-size:12px">Tomarlo ahora</button></p></div>`;
   body.innerHTML = queue + `
     <div class="stack s14">
       <div class="card">
         <div class="row" style="align-items:flex-start"><h2 class="h2" style="font-size:19px">${esc(t.subject)}</h2>${stPill(t.status)}</div>
-        <p class="tiny">${t.id} · Creado el ${fullDate(t.created)}</p><div class="sep"></div>
+        <p class="tiny">${t.id} · ${esc(t.student.name)} · ${t.service} · Creado el ${fullDate(t.created)}</p>${owner}<div class="sep"></div>
         ${convHTML(t, "mod")}
         ${(t.actions || []).map(a => `<div class="notice"><i data-lucide="rotate-ccw"></i><p>${actionLabel(a)} · por ${esc(a.by)} · ${fullDate(a.t)}</p></div>`).join("")}
         <p class="tiny">Última actividad: ${ago(lastActivity(t)).toLowerCase()}</p>
       </div>
-      ${open ? `<form class="card" id="mdReply"><h3 class="sec">Responder a ${esc(firstName(t.student.name))}</h3>
-        <div class="input" style="padding:12px"><textarea id="mdText" rows="3" maxlength="600" placeholder="Escribe tu respuesta…" aria-label="Respuesta"></textarea></div>
-        <div class="row"><button class="btn ghost" type="button" style="width:auto;padding:0 18px" data-toast="Adjuntar archivos no está disponible en el prototipo."><i data-lucide="paperclip"></i>Adjuntar</button><button class="btn" type="submit"><i data-lucide="send"></i>Enviar respuesta</button></div></form>` : ""}
+      ${isOpenT ? `<form class="card" id="mdReply">
+        <div class="chips" role="radiogroup" aria-label="Tipo de mensaje"><button class="pill ${mdMode === "reply" ? "ok" : "neutral"}" type="button" role="radio" aria-checked="${mdMode === "reply"}" data-md-mode="reply">Responder a ${esc(firstName(t.student.name))}</button><button class="pill ${mdMode === "note" ? "warn" : "neutral"}" type="button" role="radio" aria-checked="${mdMode === "note"}" data-md-mode="note"><i data-lucide="lock"></i>&nbsp;Nota interna</button></div>
+        ${mdMode === "reply" ? `<div class="input sel sm"><select id="mdTpl" aria-label="Respuesta rápida"><option value="">Respuestas rápidas…</option>${MD_TEMPLATES.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div>` : `<p class="tiny">Las notas internas solo las ve el equipo (moderación, administración y creador). El estudiante no las recibe.</p>`}
+        <div class="input${mdMode === "note" ? " note-in" : ""}" style="padding:12px"><textarea id="mdText" rows="3" maxlength="600" placeholder="${mdMode === "reply" ? "Escribe tu respuesta…" : "Escribe una nota para el equipo…"}" aria-label="${mdMode === "reply" ? "Respuesta" : "Nota interna"}"></textarea></div>
+        <div class="row"><button class="btn ghost" type="button" style="width:auto;padding:0 18px" data-toast="Adjuntar archivos no está disponible en el prototipo."><i data-lucide="paperclip"></i>Adjuntar</button><button class="btn" type="submit"><i data-lucide="${mdMode === "reply" ? "send" : "sticky-note"}"></i>${mdMode === "reply" ? "Enviar respuesta" : "Guardar nota"}</button></div></form>` : ""}
     </div>
     <div class="stack s14">
+      <div class="card"><h3 class="sec">Detalles</h3>
+        <div class="kv"><span>Estado</span>${stPill(t.status)}</div>
+        <div class="kv"><span>Responsable</span><b>${t.mod ? esc(mineT ? "Tú" : nameOf(t.mod)) : "Sin asignar"}</b></div>
+        ${isOpenT ? `<div class="field"><label for="mdPrioSel">Prioridad</label><div class="input sel sm"><select id="mdPrioSel">${["alta", "media", "baja"].map(pr => `<option value="${pr}"${t.prio === pr ? " selected" : ""}>${TK_PRIO[pr]}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>` : `<div class="kv"><span>Prioridad</span><b>${TK_PRIO[t.prio]}</b></div>`}
+        ${isOpenT && !mineT ? `<button class="btn ghost" type="button" data-md-take><i data-lucide="user-plus"></i>Tomar este ticket</button>` : ""}
+        ${isOpenT && mineT ? `<button class="link" type="button" data-md-release style="font-size:12px">Liberar ticket (dejarlo sin asignar)</button>` : ""}
+      </div>
       ${purchaseCard(t)}
-      ${open && p && !acted ? `<div class="card"><h3 class="sec">Ofrecer una solución</h3><p class="small" style="font-size:12px">Selecciona una acción y confírmala con ${esc(firstName(t.student.name))} antes de ejecutarla.</p>
+      ${isOpenT && p && !acted ? `<div class="card"><h3 class="sec">Ofrecer una solución</h3><p class="small" style="font-size:12px">Selecciona una acción y confírmala con ${esc(firstName(t.student.name))} antes de ejecutarla.</p>
         ${confirmBox || `<button class="btn" type="button" data-md-act="refund"><i data-lucide="rotate-ccw"></i>Reembolsar ${money(p.amount)}</button><button class="btn ghost" type="button" data-md-act="cancel"><i data-lucide="circle-x"></i>Cancelar compra</button>`}
         <p class="tiny">Reembolso al medio original en 3–5 días hábiles. Toda acción queda registrada.</p></div>` : ""}
-      ${open ? `<button class="btn ghost" type="button" data-md-resolve><i data-lucide="check"></i>Marcar como resuelto</button>` : `<button class="btn ghost" type="button" data-md-reopen><i data-lucide="rotate-ccw"></i>Reabrir caso</button>`}
+      ${isOpenT ? `${t.status !== "espera" ? `<button class="btn ghost" type="button" data-md-wait><i data-lucide="hourglass"></i>Esperar respuesta del estudiante</button>` : ""}<button class="btn ghost" type="button" data-md-resolve><i data-lucide="check"></i>Marcar como resuelto</button>` : `<button class="btn ghost" type="button" data-md-reopen><i data-lucide="rotate-ccw"></i>Reabrir caso</button>`}
     </div>`;
   icons();
+}
+function mdTake(t, silent) {
+  const prev = t.mod; t.mod = sessionEmail; if (t.status === "abierto" && t.messages.some(m => m.from === "mod")) t.status = "revision";
+  saveTickets(); logAudit("soporte", prev ? `Tomó ${t.id} (antes: ${nameOf(prev)}).` : `Tomó ${t.id}.`);
+  if (!silent) toast(`${t.id} ahora es tuyo.`);
 }
 function modAction(type) { ticketAction(tkById(mdSel), type); mdConfirm = null; renderModeracion(); }
 function ticketAction(t, type) {
@@ -2557,7 +2604,12 @@ document.addEventListener("click", e => {
   }
   const on = e.target.closest("[data-mod-on]"); if (on) { const a = accByEmail(on.dataset.modOn); delete a.disabled; saveAccounts(); logAudit("rol", `Reactivó a ${a.full}.`); toast(`${a.full} está activo otra vez.`); current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); return; }
   const ic = e.target.closest("[data-inv-cancel]"); if (ic) { invites = invites.filter(i => i.email !== ic.dataset.invCancel); saveInvites(); logAudit("rol", `Canceló la invitación de ${ic.dataset.invCancel}.`); toast("Invitación cancelada."); current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); return; }
-  const md = e.target.closest("[data-md]"); if (md) { mdSel = md.dataset.md; mdConfirm = null; renderModeracion(); window.scrollTo(0, 0); return; }
+  const md = e.target.closest("[data-md]"); if (md) { mdSel = md.dataset.md; mdConfirm = null; mdMode = "reply"; renderModeracion(); if (innerWidth < 1100) document.querySelector("#mdBody > .stack:nth-child(2)")?.scrollIntoView({ block: "start" }); else window.scrollTo(0, 0); return; }
+  const mt = e.target.closest("[data-md-tab]"); if (mt) { mdTab = mt.dataset.mdTab; mdSel = null; renderModeracion(); return; }
+  const mm = e.target.closest("[data-md-mode]"); if (mm) { const txt = document.getElementById("mdText")?.value || ""; mdMode = mm.dataset.mdMode; renderModeracion(); const ta = document.getElementById("mdText"); ta.value = txt; ta.focus(); return; }
+  if (e.target.closest("[data-md-take]")) { mdTake(tkById(mdSel)); renderModeracion(); return; }
+  if (e.target.closest("[data-md-release]")) { const t = tkById(mdSel); t.mod = null; saveTickets(); logAudit("soporte", `Liberó ${t.id}.`); toast(`${t.id} quedó sin asignar.`); renderModeracion(); return; }
+  if (e.target.closest("[data-md-wait]")) { const t = tkById(mdSel); t.status = "espera"; saveTickets(); logAudit("soporte", `Puso ${t.id} en espera de respuesta del estudiante.`); toast(`${t.id} queda en espera hasta que ${firstName(t.student.name)} responda.`); renderModeracion(); return; }
   const mo = e.target.closest("[data-md-open]"); if (mo) { mdSel = mo.dataset.mdOpen; mdConfirm = null; go("moderacion"); return; }
   const ma = e.target.closest("[data-md-act]"); if (ma) { mdConfirm = ma.dataset.mdAct; renderModeracion(); return; }
   if (e.target.closest("[data-md-no]")) { mdConfirm = null; renderModeracion(); return; }
@@ -2579,6 +2631,12 @@ document.addEventListener("change", e => {
   if (e.target.id === "gsState" || e.target.id === "gsService") renderGestion();
 });
 document.getElementById("gsSearch").addEventListener("input", renderGestion);
+document.addEventListener("input", e => { if (e.target.id === "mdSearch") { mdQuery = e.target.value; mdSel = null; renderModeracion(); const s = document.getElementById("mdSearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); } });
+document.addEventListener("change", e => {
+  if (e.target.id === "mdSvc") { mdSvc = e.target.value; mdSel = null; renderModeracion(); return; }
+  if (e.target.id === "mdTpl" && e.target.value) { const t = tkById(mdSel), tpl = MD_TEMPLATES.find(x => x[0] === e.target.value); const ta = document.getElementById("mdText"); ta.value = tpl[2].replace("{nombre}", firstName(t.student.name)); ta.focus(); e.target.value = ""; return; }
+  if (e.target.id === "mdPrioSel") { const t = tkById(mdSel); t.prio = e.target.value; saveTickets(); logAudit("soporte", `Cambió la prioridad de ${t.id} a ${TK_PRIO[t.prio].toLowerCase()}.`); toast(`Prioridad de ${t.id}: ${TK_PRIO[t.prio].toLowerCase()}.`); renderModeracion(); }
+});
 document.addEventListener("submit", e => {
   const f = e.target;
   if (f.matches("[data-invite]")) { e.preventDefault(); sendInvite(f); return; }
@@ -2586,13 +2644,18 @@ document.addEventListener("submit", e => {
     e.preventDefault();
     const txt = document.getElementById("mdText").value.trim();
     if (!txt) { document.getElementById("mdText").focus(); toast("Escribe una respuesta antes de enviarla."); return; }
-    ticketReply(tkById(mdSel), txt); renderModeracion(); return;
+    const t = tkById(mdSel);
+    if (mdMode === "note") { t.messages.push({ from: "note", name: user.full, text: txt, t: Date.now(), role: roleOf(account) }); saveTickets(); logAudit("soporte", `Agregó una nota interna en ${t.id}.`); toast("Guardamos la nota interna."); renderModeracion(); return; }
+    const auto = !t.mod; if (auto) mdTake(t, true);
+    ticketReply(t, txt); if (auto) toast(`Respuesta enviada a ${firstName(t.student.name)}. Te asignamos ${t.id}.`);
+    renderModeracion(); return;
   }
   if (f.matches("[data-sup-reply]")) {
     e.preventDefault();
     const ta = f.querySelector("textarea"), txt = ta.value.trim();
     if (!txt) { ta.focus(); return; }
     const t = tkById(f.dataset.supReply); t.messages.push({ from: "student", name: user.full, text: txt, t: Date.now() });
+    if (t.status === "espera") t.status = "revision";
     saveTickets(); toast("Enviamos tu mensaje."); renderSoporte(); return;
   }
   if (f.id === "supForm") {
@@ -3322,7 +3385,7 @@ document.addEventListener("click", e => {
    pueden pasar de su espacio de gestión a usar Nexo como cualquier usuario (pedir comida, estacionamiento, canchas). */
 const DUAL = ["creator", "admin", "mod"].includes(roleOf(account));
 const inStaffScreen = () => !!STAFF_SCREENS[current];
-const HOME_LABEL = { creator: "Resumen de Nexo", admin: "Tickets abiertos", mod: "Mis tickets", local: "Pedidos del local" };
+const HOME_LABEL = { creator: "Resumen de Nexo", admin: "Tickets abiertos", mod: "Bandeja de tickets", local: "Pedidos del local" };
 function userMenuHTML() {
   const role = roleOf(account), staffNow = inStaffScreen();
   const item = (attrs, icon, label, sub = "") => `<button class="um-item" type="button" role="menuitem" ${attrs}><i data-lucide="${icon}"></i><span class="grow">${label}${sub ? `<span class="tiny">${sub}</span>` : ""}</span></button>`;

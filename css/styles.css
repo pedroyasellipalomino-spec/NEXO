@@ -724,3 +724,18 @@ button.tk-row.on{background:var(--mint-bg)}
 .lh-times{display:flex;align-items:center;gap:8px;min-width:0}
 .lh-times .input{flex:1;min-width:0}
 .lh-times input{font-size:13px}
+
+/* ---------- Bandeja de moderación ---------- */
+.md-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.md-kpi{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);font:inherit;color:inherit;cursor:pointer;text-align:left;min-width:0}
+.md-kpi b{font-size:20px;font-weight:600;line-height:1}
+.md-kpi span{font-size:11px;color:var(--muted);line-height:1.2}
+.md-kpi.on{border-color:var(--brand);background:var(--mint-bg)}
+.md-kpi.on span{color:var(--brand);font-weight:600}
+.md-queue .tk-card .tiny{color:var(--muted)}
+.msg.note{background:var(--warn-bg);border:1px dashed var(--warn-fg)}
+.msg.note b{color:var(--warn-fg)}
+.msg.note b svg{font-size:12px;vertical-align:-1px}
+.note-in{background:var(--warn-bg);border-color:var(--warn-fg)}
+@media (min-width:700px){.mod-grid{grid-template-columns:280px minmax(0,1fr)}}
+@media (min-width:1100px){.mod-grid{grid-template-columns:280px minmax(0,1fr) 284px}}
