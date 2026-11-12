@@ -815,7 +815,12 @@ function renderNotifs() {
 document.getElementById("notificaciones").addEventListener("click", e => {
   const f = e.target.closest("[data-nf]"); if (f) { nFilter = f.dataset.nf; renderNotifs(); return; }
   const sw = e.target.closest("[data-npref]"); if (sw) { const k = sw.dataset.npref; nPrefs[k] = nPrefs[k] === false; if (nPrefs[k] === false && nFilter === k) nFilter = "all"; saveN(); renderNotifs(); toast(nPrefs[k] === false ? `Ya no verás avisos de ${NCATS[k].label.toLowerCase()}.` : `Volverás a ver avisos de ${NCATS[k].label.toLowerCase()}.`); return; }
-  if (e.target.closest("#notifReadAll")) { lastNotifs.forEach(n => nRead[n.id] = true); saveN(); renderNotifs(); toast("Todas las notificaciones están leídas."); return; }
+  if (e.target.closest("#notifReadAll")) {
+    const prev = { ...nRead };
+    lastNotifs.forEach(n => nRead[n.id] = true); saveN(); renderNotifs();
+    toast("Todas las notificaciones están leídas.", { action: "Deshacer", onAction: () => { nRead = prev; saveN(); renderNotifs(); toast("Las dejamos como estaban."); } });
+    return;
+  }
   const it = e.target.closest("[data-notif]");
   if (it) {
     const n = lastNotifs.find(x => x.id === it.dataset.notif); if (!n) return;
@@ -903,11 +908,47 @@ document.getElementById("registerForm").addEventListener("submit", e => {
 });
 document.addEventListener("click", e => {
   if (!e.target.closest("[data-logout]")) return;
+  {
+    let act = []; try { act = activeOrders(); } catch (err) {}
+    if (act.length) {
+      try { closeUserMenu(); } catch (err) {}
+      const o = act[0], n = act.length;
+      askConfirm({
+        icon: "shopping-bag", title: "¿Cerrar sesión?",
+        text: `${n === 1 ? "Tienes un pedido en curso" : `Tienes ${n} pedidos en curso`}${o.code ? ` (código de retiro ${o.code})` : ""}. Si cierras sesión, no te avisaremos cuando esté listo hasta que vuelvas a entrar.`,
+        ok: "Cerrar sesión", cancel: "Seguir aquí", danger: true,
+        onOk: doLogout
+      });
+      return;
+    }
+  }
+  doLogout();
+});
+function doLogout() {
   clearSession();
   try { sessionStorage.setItem("nexo-flash", "Cerraste sesión."); } catch (err) {}
   history.replaceState(null, "", "#login");
   location.reload();
-});
+}
+/* Diálogo de confirmación genérico: askConfirm({ icon, title, text, ok, cancel, danger, onOk }) */
+function askConfirm(o) {
+  document.querySelectorAll(".cdlg-wrap").forEach(x => x.remove());
+  const w = document.createElement("div"); w.className = "cdlg-wrap";
+  w.innerHTML = `<div class="cdlg" role="alertdialog" aria-modal="true" aria-labelledby="cdlgT" aria-describedby="cdlgP">
+    ${o.icon ? `<span class="cdlg-ic"><i data-lucide="${o.icon}"></i></span>` : ""}<h2 id="cdlgT">${o.title}</h2><p id="cdlgP">${o.text}</p>
+    <div class="cdlg-acts"><button class="btn ghost" type="button" data-cdlg-no>${o.cancel || "Cancelar"}</button><button class="btn${o.danger ? " danger" : ""}" type="button" data-cdlg-ok>${o.ok || "Confirmar"}</button></div></div>`;
+  document.body.append(w);
+  const prevFocus = document.activeElement;
+  const close = () => { w.remove(); document.removeEventListener("keydown", key); if (prevFocus && document.body.contains(prevFocus)) prevFocus.focus({ preventScroll: true }); };
+  const key = e => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", key);
+  w.addEventListener("click", e => {
+    if (e.target === w || e.target.closest("[data-cdlg-no]")) { close(); return; }
+    if (e.target.closest("[data-cdlg-ok]")) { close(); o.onOk && o.onOk(); }
+  });
+  try { lucide.createIcons(); } catch (err) {}
+  w.querySelector("[data-cdlg-no]").focus();
+}
 
 /* ---------- Recarga de wallet ---------- */
 const RC_MIN = 5, RC_MAX = 100;
@@ -1909,15 +1950,24 @@ function addFromDetalle() {
     cart.lines[editLine] = line;
     toast("Actualizamos tu carrito.");
   } else {
-    if (cart.local !== curLocal) cart = { local: curLocal, lines: [] };
+    let prevCart = null;
+    if (cart.local !== curLocal) { if (cart.lines.length) prevCart = JSON.parse(JSON.stringify(cart)); cart = { local: curLocal, lines: [] }; }
     const same = cart.lines.find(x => x.item === line.item && x.note === line.note && x.sel.join() === line.sel.join());
     if (same) same.qty = Math.min(20, same.qty + line.qty); else cart.lines.push(line);
-    toast(`Añadimos ${name} a tu carrito.`);
+    if (prevCart) {
+      const pl = localById(prevCart.local);
+      toast(`Añadimos ${name}. Vaciamos el carrito de ${pl ? pl.name : "el otro local"}: cada pedido es de un solo local.`, { action: "Deshacer", onAction: () => { cart = prevCart; saveCart(); toast("Recuperamos tu carrito anterior."); if (current === "carrito") renderCarrito(); else go("carrito"); } });
+    } else toast(`Añadimos ${name} a tu carrito.`);
   }
   editLine = null; saveFoodNav(); saveCart(); go("carrito");
 }
 
 /* Carrito y pago */
+function undoCartToast(snap) {
+  const ln = snap.lines.find((x, k) => !cart.lines[k] || JSON.stringify(cart.lines[k]) !== JSON.stringify(x));
+  const it = ln && itemById(localById(snap.local), ln.item);
+  toast(`Quitamos ${it ? it.name : "el producto"} de tu carrito.`, { action: "Deshacer", onAction: () => { cart = snap; saveCart(); if (current === "carrito") renderCarrito(); toast("Lo devolvimos a tu carrito."); } });
+}
 let payMethod = "card";
 function renderCarrito() {
   const l = cartLocal(), body = document.getElementById("cartBody");
@@ -2091,14 +2141,15 @@ document.addEventListener("click", e => {
   const cq = e.target.closest("[data-cart-qty]");
   if (cq) {
     const [i, d] = cq.dataset.cartQty.split(":").map(Number);
+    const snap = JSON.parse(JSON.stringify(cart));
     cart.lines[i].qty += d;
-    if (cart.lines[i].qty < 1) { cart.lines.splice(i, 1); toast("Quitamos el producto de tu carrito."); }
+    if (cart.lines[i].qty < 1) { cart.lines.splice(i, 1); undoCartToast(snap); }
     cart.lines[i] && (cart.lines[i].qty = Math.min(20, cart.lines[i].qty));
     if (!cart.lines.length) cart.local = null;
     saveCart(); renderCarrito(); return;
   }
   const cd = e.target.closest("[data-cart-del]");
-  if (cd) { cart.lines.splice(+cd.dataset.cartDel, 1); if (!cart.lines.length) cart.local = null; saveCart(); toast("Quitamos el producto de tu carrito."); renderCarrito(); return; }
+  if (cd) { const snap = JSON.parse(JSON.stringify(cart)); cart.lines.splice(+cd.dataset.cartDel, 1); if (!cart.lines.length) cart.local = null; saveCart(); undoCartToast(snap); renderCarrito(); return; }
   const ce = e.target.closest("[data-cart-edit]");
   if (ce) { const i = +ce.dataset.cartEdit; curLocal = cart.local; openItem(cart.lines[i].item, i); go("detalle"); return; }
   const pm = e.target.closest("[data-pay-method]");
