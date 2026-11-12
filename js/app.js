@@ -176,7 +176,7 @@ const STAFF0 = [
   { full: "Carlos Gil", carnet: "", email: "carlos.gil@unimet.edu.ve", role: "mod", pw: "demo-mod-02" }
 ];
 /* Una cuenta por comercio (correo ilustrativo, misma contraseña de prueba) */
-[["pinchopan", "Pincho Pan"], ["lapausa", "La Pausa"], ["migrill", "Mi Punto Grill"], ["teeb", "TEEB"], ["molokai", "Molokai"], ["zanahorias", "Zanahorias"], ["granier", "Granier"], ["pepperonis", "Pepperonis"], ["juicebar", "Juice Bar"], ["deydonuts", "Dey Donuts"], ["tienditaa1", "La Tiendita Unimetana A1"], ["tienditaa2", "La Tiendita Unimetana A2"], ["believe", "Kiosco Believe"]]
+[["pinchopan", "Pincho Pan"], ["lapausa", "La Pausa"], ["migrill", "Mi Punto Grill"], ["teeb", "TEEB"], ["molokai", "Molokai"], ["sanahoria", "Sanahoria"], ["granier", "Granier"], ["pepperonis", "Pepperonis"], ["juicebar", "Juice Bar"], ["deydonuts", "Dey Donuts"], ["tienditaa1", "La Tiendita Unimetana A1"], ["tienditaa2", "La Tiendita Unimetana A2"], ["believe", "Kiosco Believe"]]
   .forEach(([id, full]) => STAFF0.push({ full, carnet: "", email: `${id}@comercio.nexo`, role: "local", local: id, pw: "demo-local-01" }));
 STAFF0.forEach(({ pw, ...a }) => { if (!accounts.some(x => x.email === a.email)) accounts.push({ ...a, pass: passKey(pw) }); });
 // Una cuenta del equipo desactivada conserva su rol guardado (para reactivarla), pero entra como usuario
@@ -1792,7 +1792,7 @@ const FOOD_ART = {
     <path d="M22 54h76c0 22-17 38-38 38S22 76 22 54z" fill="#1c5cab"/><path d="M28 62c4 12 16 22 32 22" stroke="#5598e7" stroke-width="4" stroke-linecap="round" fill="none"/>
     <rect x="22" y="52" width="76" height="6" rx="3" fill="#2a78d6"/>
     <g transform="translate(92 26)"><circle r="5" fill="#ffd35c"/>${[0, 72, 144, 216, 288].map(a => `<ellipse rx="5" ry="9" cy="-10" fill="#e94f86" transform="rotate(${a})"/>`).join("")}<circle r="4" fill="#ffd35c"/></g>` },
-  zanahorias: { bg: "#ffe2c8", svg: `
+  sanahoria: { bg: "#ffe2c8", svg: `
     <ellipse cx="60" cy="100" rx="36" ry="5" fill="#000" opacity=".08"/>
     ${[[-18, 40, 0], [0, 60, -6], [18, 80, 4]].map(([r, x, d]) => `<g transform="rotate(${r} ${x} 70)"><path d="M${x - 9} ${42 + d}h18l-9 52z" fill="#f2792c"/><path d="M${x - 6} ${54 + d}h7M${x - 3} ${66 + d}h7M${x - 5} ${78 + d}h5" stroke="#d45d16" stroke-width="2" stroke-linecap="round"/><path d="M${x} ${42 + d}c-2-10-8-14-12-16M${x} ${42 + d}c0-10 2-16 0-22M${x} ${42 + d}c2-10 8-14 12-16" stroke="#4caf50" stroke-width="4" stroke-linecap="round" fill="none"/></g>`).join("")}` },
   granier: { bg: "#f6dfbf", svg: `
@@ -1876,7 +1876,7 @@ const PROD_ART = {
   mani: ["snack", `${paSh}<path d="M12 34h40c0 10-9 18-20 18s-20-8-20-18z" fill="#fff"/><path d="M12 34h40" stroke="#e8e2d6" stroke-width="2"/>${[[20, 30], [27, 27], [34, 29], [41, 27], [24, 33], [38, 32]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="4" ry="3" fill="#d9a25a"/><path d="M${x - 1} ${y - 1}v2" stroke="#b07a45" stroke-width="1"/>`).join("")}`],
 };
 
-/* Productos de los locales nuevos (TEEB, Molokai, Zanahorias, Granier, Pepperonis, Juice Bar, Dey Donuts) */
+/* Productos de los locales nuevos (TEEB, Molokai, Sanahoria, Granier, Pepperonis, Juice Bar, Dey Donuts) */
 const paDonut = (glaze, sprinkles) => `${paSh}<circle cx="32" cy="34" r="20" fill="#e9a24a"/><path d="M32 15c10 0 18 7 18 17 0 3-2 3-3 2s-3 1-4 3-3 1-4 0-3 1-4 2-4 0-5-2-3-2-4 0-4 0-4-2-3-1-4-3c-1-5 2-19 17-19z" fill="${glaze}"/><circle cx="32" cy="32" r="6" fill="#fde0ec"/>${sprinkles ? [[22, 24, "#ffd35c", 20], [28, 19, "#4cc3ae", -30], [38, 20, "#2a78d6", 40], [44, 28, "#fff", -10], [24, 33, "#fff", 60], [40, 36, "#ffd35c", 10]].map(([x, y, c, r]) => `<rect x="${x}" y="${y}" width="4.5" height="1.8" rx=".9" fill="${c}" transform="rotate(${r} ${x} ${y})"/>`).join("") : ""}`;
 const paSlice = (top, dots) => `${paSh}<path d="M10 16l44 8-26 30z" fill="#ffd35c" stroke="#e9a24a" stroke-width="5" stroke-linejoin="round"/>${top}${dots.map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="3.6" fill="${c}"/>`).join("")}`;
 const paTall = (liq, extra = "") => `${paSh}<path d="M20 14h24l-3 40H23z" fill="#fff" opacity=".8"/><path d="M21.2 22h21.6l-2.5 31H23.7z" fill="${liq}"/>${extra}<path d="M36 4l-4 34" stroke="#0e8c7b" stroke-width="2.5" stroke-linecap="round"/>`;
@@ -2004,8 +2004,8 @@ const LOCALES = [
     { name: "Bebidas", items: [
       { id: "tefrio", name: "Té frío de durazno", desc: "Hecho en casa · 400 ml.", price: 2, icon: "cup-soda" },
       { id: "coco", name: "Agua de coco", desc: "Natural · 350 ml.", price: 2.5, icon: "cup-soda" }] }] },
-  { id: "zanahorias", kind: "local", name: "Zanahorias", icon: "carrot", place: "Feria Central", eta: "10–15 min", hours: "8:00–16:00",
-    tagline: "Comida saludable: ensaladas, wraps y bowls.", pref: "ZN", cats: [
+  { id: "sanahoria", kind: "local", name: "Sanahoria", icon: "carrot", place: "Feria Central", eta: "10–15 min", hours: "8:00–16:00",
+    tagline: "Comida saludable: ensaladas, wraps y bowls.", pref: "SH", cats: [
     { name: "Ensaladas", items: [
       { id: "cesar", name: "César con pollo", desc: "Lechuga romana, parmesano y crutones.", price: 6.5, icon: "salad", tag: "Más pedido" },
       { id: "atun", name: "Ensalada de atún", desc: "Atún, huevo, papa y vegetales.", price: 6.5, icon: "salad" },
@@ -2166,7 +2166,7 @@ function itemTypes(l, cat, it) {
   if (/almuerzo|plato|bowl|hamburguesa|poke|pizza|ensalada|wrap|comida rapida/.test(c)) out.add("almuerzo");
   if (/bebida|jugo|batido|merengada/.test(c) || ["cup-soda", "glass-water", "zap", "citrus"].includes(it.icon)) out.add("bebida");
   if (/merienda|snack|dulce|desayuno/.test(c)) out.add("merienda");
-  if (["zanahorias", "molokai"].includes(l.id) || /ensalada|bowl|poke/.test(c) || /^(ensalada|bowl|batido|poke|jugo)/.test(normTxt(it.name))) out.add("saludable");
+  if (["sanahoria", "molokai"].includes(l.id) || /ensalada|bowl|poke/.test(c) || /^(ensalada|bowl|batido|poke|jugo)/.test(normTxt(it.name))) out.add("saludable");
   if (/empanada|fritura|comida rapida|pizza|donut|hojaldre|salado|otros/.test(c)) out.add("merienda");
   return out;
 }
