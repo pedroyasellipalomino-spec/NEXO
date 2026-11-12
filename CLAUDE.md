@@ -126,5 +126,6 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - El código `EI27` (Contrataciones Internacionales) viene así en el flujograma; parece incompleto.
 - Comida: los menús y precios son de ejemplo (confirmar con cada local); el comercio no puede editar precios ni productos (solo agotar y pausar).
 - Invitaciones: el envío por correo es simulado (se copia el enlace).
+- Seguridad pendiente (el usuario decidió dejarlo para el servidor completo): las huellas de usuarios del contador son SHA-256 sin llave (seudónimas; pasar a HMAC con una llave secreta guardada solo en Netlify) y `passKey()` de las cuentas locales es una huella rápida no criptográfica (FNV + djb2, sin sal; pasar a PBKDF2 o, mejor, a la autenticación del servidor).
 
 Fuente de materias: https://www.unimet.edu.ve/estudios/flujogramas-pregrado/
