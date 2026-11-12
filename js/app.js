@@ -2154,7 +2154,7 @@ let cart = null, orders = [];
 try { cart = JSON.parse(localStorage.getItem(K("nexo-cart")) || "null"); orders = JSON.parse(localStorage.getItem(K("nexo-orders")) || "[]") || []; } catch (err) {}
 if (!cart || !Array.isArray(cart.lines)) cart = JSON.parse(JSON.stringify(CART0));
 const saveCart = () => { try { localStorage.setItem(K("nexo-cart"), JSON.stringify(cart)); } catch (err) {} };
-const saveOrders = () => { try { localStorage.setItem(K("nexo-orders"), JSON.stringify(orders)); } catch (err) {} };
+const saveOrders = () => { try { localStorage.setItem(K("nexo-orders"), JSON.stringify(orders)); } catch (err) {} try { sbSyncOrders(); } catch (err) {} };
 
 // Precio y descripción de una línea del carrito
 function lineInfo(l, line) {
@@ -2536,7 +2536,7 @@ function newOrder(method) {
 let draftOrder = null;
 function confirmOrder(o) {
   const lo = localById(o.local), pk = cart.pickup && cart.local === o.local ? cartPickup(lo) : { mode: "asap" };
-  o.paidAt = Date.now(); o.code = pickupCode(o);
+  o.paidAt = Date.now(); o.code = pickupCode(o); o.studentName = user.full;
   if (pk.mode === "sched") { o.scheduledFor = slotTime(pk.day, pk.time); o.readyAt = o.scheduledFor; o.prepStart = o.scheduledFor - etaMax(lo) * MIN; }
   else o.readyAt = o.paidAt + prepMinutes(lo) * MIN;
   orders.push(o); saveOrders();
@@ -2808,7 +2808,8 @@ function seedTickets() {
 let tickets = null;
 try { tickets = JSON.parse(localStorage.getItem("nexo-tickets") || "null"); } catch (err) {}
 if (!Array.isArray(tickets)) { tickets = seedTickets(); try { localStorage.setItem("nexo-tickets", JSON.stringify(tickets)); } catch (err) {} }
-const saveTickets = () => { try { localStorage.setItem("nexo-tickets", JSON.stringify(tickets)); } catch (err) {} };
+if (sbShared()) tickets = []; // cuenta real: los tickets llegan de Supabase (sbSharedInit)
+const saveTickets = () => { if (sbShared()) return sbSyncTickets(); try { localStorage.setItem("nexo-tickets", JSON.stringify(tickets)); } catch (err) {} };
 /* Registro de auditoría (global): cambios de roles, asignaciones, respuestas y soluciones */
 let audit = [];
 try { audit = JSON.parse(localStorage.getItem("nexo-audit") || "[]") || []; } catch (err) {}
@@ -2828,13 +2829,14 @@ function logAudit(type, text) {
   try { localStorage.setItem("nexo-audit", JSON.stringify(audit)); } catch (err) {}
 }
 const tkById = id => tickets.find(t => t.id === id);
-const nextTkId = () => "TK-" + (Math.max(1000, ...tickets.map(t => +t.id.slice(3) || 0)) + 1);
+const nextTkId = () => sbShared() ? "TK-" + (Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 4)).toUpperCase() : "TK-" + (Math.max(1000, ...tickets.map(t => +t.id.slice(3) || 0)) + 1);
 const isOpen = t => t.status !== "resuelto";
 const mods = () => accounts.filter(a => a.role === "mod");
 const lastActivity = t => Math.max(t.created, ...t.messages.map(m => m.t), ...(t.actions || []).map(a => a.t));
 
 /* Movimiento en la Actividad del estudiante (sus datos se guardan por cuenta) */
 function pushStudentMove(email, m) {
+  if (/^[0-9a-f-]{36}$/.test(email)) return; // estudiante con cuenta real: lo verá en su pedido (etapa 3: movimientos en Supabase)
   const key = "nexo-moves:" + email;
   try { const list = JSON.parse(localStorage.getItem(key) || "[]") || []; list.push({ id: "m" + Date.now(), ...m }); localStorage.setItem(key, JSON.stringify(list)); } catch (err) {}
 }
@@ -3664,6 +3666,7 @@ setTimeout(checkOrders, 1200);
    Si el local no hace nada, el pedido igual pasa a "listo" por tiempo (para que la vista del estudiante funcione sola). */
 const myLocal = () => account && account.local ? localById(account.local) : null;
 function allOrders() {
+  if (sbMerchant()) return sbLocalOrders.map(r => ({ o: r.data, email: r.user_id }));
   const out = [];
   try {
     Object.keys(localStorage).filter(k => k.startsWith("nexo-orders:")).forEach(k => {
@@ -3674,6 +3677,11 @@ function allOrders() {
   return out;
 }
 function updateOrder(email, id, fn) {
+  if (sbMerchant()) {
+    const r = sbLocalOrders.find(x => x.data.id === id); if (!r) return null;
+    fn(r.data); sbPush("o" + id, () => sb.from("orders").update({ data: (sbLocalOrders.find(x => x.data.id === id) || r).data }).eq("id", id), () => toast("No pudimos guardar el cambio del pedido. Revisa tu conexión."));
+    return r.data;
+  }
   const key = "nexo-orders:" + email;
   try {
     const list = JSON.parse(localStorage.getItem(key) || "[]") || [], o = list.find(x => x.id === id);
@@ -3685,6 +3693,7 @@ function updateOrder(email, id, fn) {
 }
 // Pedidos de ejemplo para que el tablero del local no arranque vacío (una sola vez por local)
 function seedLocalOrders(l) {
+  if (sbMerchant()) return; // un comercio real no ve pedidos de ejemplo
   const flag = "nexo-localseed:" + l.id;
   try { if (localStorage.getItem(flag)) return; localStorage.setItem(flag, "1"); } catch (err) { return; }
   const n = Date.now(), items = itemsOf(l), d = day0(simDate);
@@ -4964,6 +4973,96 @@ function sbSaveProfile(changes) {
   Object.entries(changes).forEach(([k, v]) => { if (map[k]) row[map[k]] = v === "" ? null : v; });
   if (Object.keys(row).length) sb.from("profiles").update(row).eq("id", account.sb).then(({ error }) => { if (error) toast("No pudimos guardar el cambio en tu cuenta. Inténtalo de nuevo."); });
 }
+/* Etapa 2 · pedidos y tickets compartidos en vivo (Supabase: tablas orders y tickets, Realtime).
+   Estudiante con cuenta real: sus pedidos se suben al guardarlos (`sbSyncOrders`) y los cambios del comercio llegan en vivo.
+   Comercio con cuenta real (rol local + local_id): `allOrders`/`updateOrder` usan `sbLocalOrders` (pedidos de su local).
+   Tickets: con cuenta real `tickets` viene de Supabase (el estudiante ve los suyos; moderación, admin, creador y dueño, todos)
+   y `saveTickets` sube los que cambiaron. Las cuentas de prueba siguen con sus datos locales de ejemplo. */
+function sbShared() { return !!(sb && account && account.sb); }
+function sbMerchant() { return sbShared() && roleOf(account) === "local" && !!account.local; }
+let sbLocalOrders = [], sbSynced = { o: {}, t: {} }, sbLastWrite = 0;
+// lo que cambia esta misma pestaña no se anuncia como "nuevo" (Realtime también avisa los cambios propios)
+const sbLive = () => { try { if (Date.now() - sbLastWrite < 4000) liveSeen = liveKeys(); else liveCheck(); } catch (err) {} };
+// Cola por registro: los cambios de un mismo pedido o ticket se envían de uno en uno y siempre con la versión más
+// reciente (si no, dos cambios seguidos pueden llegar en desorden y el viejo pisa al nuevo).
+const sbQ = {};
+function sbPush(key, send, onError) {
+  const q = sbQ[key] || (sbQ[key] = { busy: false, again: false });
+  if (q.busy) { q.again = true; return; }
+  q.busy = true; sbLastWrite = Date.now();
+  send().then(({ error }) => { if (error) onError(error); }, onError).finally(() => { q.busy = false; sbLastWrite = Date.now(); if (q.again) { q.again = false; sbPush(key, send, onError); } });
+}
+const sbPending = key => !!(sbQ[key] && sbQ[key].busy);
+function sbSyncOrders() {
+  if (!sbShared() || sbMerchant()) return;
+  orders.forEach(o => {
+    const js = JSON.stringify(o); if (sbSynced.o[o.id] === js) return; sbSynced.o[o.id] = js;
+    sbPush("o" + o.id, () => sb.from("orders").upsert({ id: o.id, local_id: o.local, data: orders.find(x => x.id === o.id) || o }), err => { delete sbSynced.o[o.id]; console.warn("Nexo: pedido sin subir", err && err.message); });
+  });
+}
+function sbSyncTickets() {
+  if (!sbShared()) return;
+  tickets.forEach(t => {
+    const js = JSON.stringify(t); if (sbSynced.t[t.id] === js) return; sbSynced.t[t.id] = js;
+    const id = t.id, cur = () => tickets.find(x => x.id === id) || t, mine = t.student && t.student.email === sessionEmail;
+    sbPush("t" + id, () => (sbSynced.t["_" + id] || !mine ? sb.from("tickets").update({ data: cur() }).eq("id", id) : sb.from("tickets").upsert({ id, data: cur() })).then(r => { if (!r.error) sbSynced.t["_" + id] = 1; return r; }),
+      () => { delete sbSynced.t[id]; toast("No pudimos guardar el ticket. Revisa tu conexión."); });
+  });
+}
+function sbRefreshScreens() {
+  const r = { inicio: renderHome, comida: () => { renderFoodList(); renderFoodOrders(); renderFoodAgain(); }, pedido: renderPedido, soporte: renderSoporte, "local-pedidos": renderLocalPedidos, gestion: renderGestion, moderacion: renderModeracion, "creador-equipo": renderCreadorEquipo, caso: renderCaso }[current];
+  if (r) try { r(); } catch (err) {}
+  try { checkOrders(); } catch (err) {}
+}
+async function sbLoadShared() {
+  if (sbMerchant()) {
+    const { data } = await sb.from("orders").select("id,user_id,data").eq("local_id", account.local).order("created_at", { ascending: false }).limit(300);
+    sbLocalOrders = data || [];
+  } else {
+    const { data } = await sb.from("orders").select("id,data").eq("user_id", account.sb);
+    if (data) {
+      const server = new Map(data.map(r => [r.id, r.data]));
+      orders.forEach(o => { if (!server.has(o.id)) server.set(o.id, o); }); // pedidos hechos antes en este navegador: se suben
+      orders = [...server.values()].sort((a, b) => (a.paidAt || 0) - (b.paidAt || 0));
+      data.forEach(r => { sbSynced.o[r.id] = JSON.stringify(r.data); });
+      try { localStorage.setItem(K("nexo-orders"), JSON.stringify(orders)); } catch (err) {}
+      sbSyncOrders();
+    }
+  }
+  const { data: tk } = await sb.from("tickets").select("id,data").order("created_at", { ascending: true });
+  if (tk) { tickets = tk.map(r => r.data); tk.forEach(r => { sbSynced.t[r.id] = JSON.stringify(r.data); sbSynced.t["_" + r.id] = 1; }); }
+}
+async function sbSharedInit() {
+  if (!sbShared()) return;
+  try { await sbLoadShared(); } catch (err) { console.warn("Nexo: no se cargaron los datos compartidos", err); }
+  try { liveSeen = liveKeys(); } catch (err) {}
+  sbRefreshScreens();
+  sb.channel("nexo-vivo")
+    .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, ({ new: row }) => {
+      if (!row || !row.data || sbPending("o" + row.id)) return;
+      if (sbMerchant()) {
+        const i = sbLocalOrders.findIndex(x => x.id === row.id);
+        if (i >= 0) sbLocalOrders[i] = row; else sbLocalOrders.unshift(row);
+        sbLive();
+      } else if (row.user_id === account.sb) {
+        sbSynced.o[row.id] = JSON.stringify(row.data);
+        const i = orders.findIndex(o => o.id === row.id);
+        if (i >= 0) orders[i] = row.data; else orders.push(row.data);
+        try { localStorage.setItem(K("nexo-orders"), JSON.stringify(orders)); } catch (err) {}
+      }
+      sbRefreshScreens();
+    })
+    .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, ({ new: row }) => {
+      if (!row || !row.data || sbPending("t" + row.id)) return;
+      sbSynced.t[row.id] = JSON.stringify(row.data); sbSynced.t["_" + row.id] = 1;
+      const i = tickets.findIndex(t => t.id === row.id);
+      if (i >= 0) tickets[i] = row.data; else tickets.push(row.data);
+      sbLive();
+      sbRefreshScreens();
+    })
+    .subscribe();
+}
+sbSharedInit();
 // Pantalla "Datos reales" del dueño
 const SV_LBL = { comida: ["Comida", "utensils"], estacionamiento: ["Estacionamiento", "car-front"], materias: ["Materias", "graduation-cap"], canchas: ["Canchas", "dribbble"], recarga: ["Recargas de wallet", "wallet"] };
 const MT_LBL = { tarjeta: "Tarjeta", transferencia: "Transferencia", "pago-movil": "Pago Móvil", wallet: "Wallet Nexo", otro: "Otro" };
@@ -4989,7 +5088,7 @@ async function renderDueno() {
   const recent = d.recent.length ? d.recent.map(e => `<div class="tk-row dn-row"><span class="tiny">${fullDT(e.t)}<br>${esc(e.who || "")}</span><span class="row start" style="gap:8px"><i data-lucide="${SV_LBL[e.service][1]}" style="color:var(--brand);width:16px"></i>${SV_LBL[e.service][0]} · ${MT_LBL[e.method] || "Otro"}</span><span class="row start" style="gap:8px;justify-content:space-between"><span class="pill ${e.status === "En revisión" ? "warn" : "ok"}">${e.status}</span><b>${money(+e.amount)}</b></span></div>`).join("")
     : emptyState("receipt-text", "Aún no hay pagos reales", "Cuando alguien pague en nexouni.netlify.app con su cuenta, aparecerá aquí al instante.");
   const conf = d.users.confirmed;
-  body.innerHTML = `<div class="kpis dn-kpis">${k("Usuarios registrados", d.users.total, `${conf} con correo confirmado · ${d.users.today} hoy · ${d.users.last7} en 7 días`, "users")}${k("Pagos confirmados", d.payments.count, `${money(+d.payments.usd)} en total · ${d.payments.payers} ${d.payments.payers === 1 ? "persona pagó" : "personas pagaron"}`, "badge-check")}${k("Pagos en revisión", d.payments.review, d.payments.review ? `${money(+d.payments.reviewUsd)} esperando validación` : "Nada pendiente", "hourglass")}</div>
+  body.innerHTML = `<div class="kpis dn-kpis">${k("Usuarios registrados", d.users.total, `${conf} con correo confirmado · ${d.users.today} hoy · ${d.users.last7} en 7 días`, "users")}${k("Pagos confirmados", d.payments.count, `${money(+d.payments.usd)} en total · ${d.payments.payers} ${d.payments.payers === 1 ? "persona pagó" : "personas pagaron"}`, "badge-check")}${k("Pagos en revisión", d.payments.review, d.payments.review ? `${money(+d.payments.reviewUsd)} esperando validación` : "Nada pendiente", "hourglass")}${d.orders ? k("Pedidos de comida", d.orders.total, `${d.orders.active} en curso · ${d.orders.delivered} entregados${d.orders.cancelled ? ` · ${d.orders.cancelled} cancelados` : ""}`, "utensils") : ""}${d.tickets ? k("Tickets de soporte", d.tickets.open, `abiertos · ${d.tickets.unassigned} sin asignar · ${d.tickets.resolved} resueltos`, "message-circle") : ""}</div>
     <div class="card" style="padding:0;gap:0"><div class="tk-row tk-head dn-row"><span>Servicio</span><span>Confirmados</span><span>En revisión</span></div>${svRows}</div>
     <div class="card" style="padding:0;gap:0"><div class="row" style="padding:16px 18px 8px"><h2 class="sec">Últimos pagos reales</h2><span class="tiny">Actualizado ${fullDT(d.now)}</span></div><div class="tk-row tk-head dn-row"><span>Fecha y persona</span><span>Servicio y método</span><span>Estado y monto</span></div>${recent}</div>
     <div class="card" style="gap:12px"><div class="row" style="flex-wrap:wrap;gap:10px"><div><h2 class="sec">Usuarios</h2><p class="small">Cambia el rol de cada cuenta o desactívala. Los cambios se aplican la próxima vez que esa persona abra la app.</p></div>
