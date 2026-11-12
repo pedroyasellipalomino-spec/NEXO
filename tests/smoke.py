@@ -518,6 +518,11 @@ async def main() -> int:
         await pg.select_option("#pf-bd-y", "2005")
         check(await pg.input_value("#pf-birth") == "2005-02-28" and await pg.locator("#pf-bd-d option").count() == 29, "la fecha de nacimiento se elige por día, mes y año y ajusta los días del mes")
 
+        # cada local y kiosco tiene su ilustración
+        await pg.goto(URL + "#comida")
+        await pg.wait_for_timeout(300)
+        check(await pg.locator("#comida .food-art svg").count() >= 7, "cada local y kiosco muestra su ilustración en Comida")
+
         # sin campos de fecha/hora nativos: los pagos eligen entre los últimos 7 días
         check(await pg.locator('input[type="date"], input[type="time"]').count() == 0 and await pg.locator("#pm-date option").count() == 7 and (await pg.locator("#pm-date option").first.inner_text()).startswith("Hoy"), "las fechas de pago se eligen entre los últimos 7 días, sin el campo nativo")
 
