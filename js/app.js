@@ -198,7 +198,7 @@ function enterApp(email, remember, flash) {
 /* ---------- Navegación ---------- */
 const screens = [...document.querySelectorAll("section.screen")].map(s => s.id);
 let current = null, previous = "tutorial";
-const PUBLIC = ["tutorial", "login", "registro", "ayuda", "invitacion"];
+const PUBLIC = ["tutorial", "login", "registro", "ayuda", "invitacion", "recuperar"];
 const STAFF_SCREENS = { gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator"] };
 function show(id) {
   if (/^invitacion-[A-Z0-9]+$/.test(id)) { ivToken = id.slice(11); id = "invitacion"; }
@@ -225,6 +225,7 @@ function show(id) {
   if (["materias", "caja", "tarjeta"].includes(id)) { let none = false; try { none = !MATERIAS.length; } catch (err) {} if (none) { insReturn = id; history.replaceState(null, "", "#inscripcion"); id = "inscripcion"; current = id; screens.forEach(s => { document.getElementById(s).hidden = s !== id; }); } }
   if (id === "inscripcion" && typeof openInscripcion === "function") openInscripcion();
   if (id === "invitacion" && typeof renderInvitacion === "function") renderInvitacion();
+  if (id === "recuperar" && typeof renderRecuperar === "function") renderRecuperar();
   if (id === "comida" && typeof renderFoodList === "function") renderFoodList();
   if (id === "comida" && typeof renderFoodOrders === "function") try { renderFoodOrders(); } catch (err) {}
   if (id === "local" && typeof renderLocal === "function") renderLocal();
@@ -254,11 +255,24 @@ function show(id) {
 function go(id) { if (location.hash === "#" + id) show(id); else location.hash = id; }
 
 let toastTimer;
-function toast(msg) {
-  let t = document.querySelector(".toast");
-  if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role","status"); document.body.append(t); }
-  t.textContent = msg; t.hidden = false;
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+/* Avisos: toast(msg) sale y se va solo; con { action, onAction } muestra un botón (p. ej. "Deshacer", 6 s);
+   con { persist: true } se queda hasta que la persona lo cierra (para lo importante: pedido listo, pago rechazado…).
+   Los persistentes se apilan; los pasajeros reemplazan al pasajero anterior. */
+function toast(msg, opts = {}) {
+  let box = document.querySelector(".toasts");
+  if (!box) { box = document.createElement("div"); box.className = "toasts"; box.setAttribute("aria-live", "polite"); document.body.append(box); }
+  if (!opts.persist) { box.querySelectorAll(".toast:not(.persist)").forEach(x => x.remove()); clearTimeout(toastTimer); }
+  else { const same = [...box.querySelectorAll(".toast.persist")].find(x => x.dataset.msg === msg); if (same) return; }
+  const t = document.createElement("div");
+  t.className = "toast" + (opts.persist ? " persist" : "") + (opts.action ? " has-act" : "");
+  t.setAttribute("role", opts.persist ? "alert" : "status"); t.dataset.msg = msg;
+  const span = document.createElement("span"); span.className = "toast-msg"; span.textContent = msg; t.append(span);
+  const close = () => { t.remove(); };
+  if (opts.action) { const b = document.createElement("button"); b.type = "button"; b.className = "toast-act"; b.textContent = opts.action; b.addEventListener("click", () => { close(); opts.onAction && opts.onAction(); }); t.append(b); }
+  if (opts.persist || opts.action) { const x = document.createElement("button"); x.type = "button"; x.className = "toast-x"; x.setAttribute("aria-label", "Cerrar aviso"); x.textContent = "×"; x.addEventListener("click", close); t.append(x); }
+  box.append(t);
+  const persisted = box.querySelectorAll(".toast.persist"); if (persisted.length > 3) persisted[0].remove();
+  if (!opts.persist) toastTimer = setTimeout(close, opts.action ? 6000 : 2600);
 }
 
 document.addEventListener("click", e => {
@@ -839,7 +853,7 @@ document.getElementById("loginForm").addEventListener("submit", e => {
   }
   if (acc.pass !== passKey(pass)) {
     passEl.closest(".field").classList.add("bad");
-    loginError("La contraseña no es correcta.", "Revísala e inténtalo de nuevo, o usa \"¿Olvidaste tu contraseña?\".", false);
+    loginError("La contraseña no es correcta.", "Revísala e inténtalo de nuevo, o usa \"¿Olvidaste tu contraseña?\" para crear una nueva.", false);
     passEl.select(); return;
   }
   enterApp(acc.email, document.getElementById("l-rem").checked, acc.disabled
@@ -3072,9 +3086,10 @@ function renderFoodOrders() {
 function checkOrders() {
   let changed = false;
   orders.forEach(o => {
-    if (o.prepStart && orderStatus(o) === "preparando" && !o.prepNotified) { o.prepNotified = true; changed = true; toast(`${localById(o.local).name} empezó a preparar tu pedido programado.`); }
-    if (orderStatus(o) === "listo" && !o.readyNotified) { o.readyNotified = true; changed = true; toast(`Tu pedido de ${localById(o.local).name} está listo. Código ${o.code}.`); }
-    if (o.cancelledAt && !o.cancelNotified) { o.cancelNotified = true; changed = true; toast(`${localById(o.local).name} canceló tu pedido. Te devolvimos ${money(o.total)}.`); }
+    const open = () => { trackId = o.id; go("pedido"); };
+    if (o.prepStart && orderStatus(o) === "preparando" && !o.prepNotified) { o.prepNotified = true; changed = true; toast(`${localById(o.local).name} empezó a preparar tu pedido programado.`, { action: "Ver pedido", onAction: open }); }
+    if (orderStatus(o) === "listo" && !o.readyNotified) { o.readyNotified = true; changed = true; toast(`Tu pedido de ${localById(o.local).name} está listo. Código ${o.code}.`, { persist: true, action: "Ver código", onAction: open }); }
+    if (o.cancelledAt && !o.cancelNotified) { o.cancelNotified = true; changed = true; toast(`${localById(o.local).name} canceló tu pedido. Te devolvimos ${money(o.total)}.`, { persist: true, action: "Ver detalle", onAction: open }); }
   });
   if (changed) { saveOrders(); try { renderNotifs(); } catch (err) {} }
   if (current === "pedido") renderPedido();
@@ -3722,6 +3737,72 @@ document.addEventListener("submit", e => {
   if (!lhDraft.some(w => w.open)) { err.hidden = false; err.className = "tiny pm-err"; err.textContent = "Abre al menos un día de la semana."; return; }
   const l = myLocal(); lstate(l.id).week = lhDraft.map(x => ({ open: x.open, from: pad5(x.from), to: pad5(x.to) })); saveLocalState();
   toast(`Guardamos el horario. Hoy: ${todayHours(l)}.`); lhDraft = null; renderLocalMenu();
+});
+/* ---------- Recuperar contraseña: correo o carnet → código de 6 dígitos (simulado) → contraseña nueva ----------
+   El código vence a los 10 min, se puede reenviar a los 30 s y admite 3 intentos. Estado en memoria (rp). */
+let rp = { step: 1, email: null, code: null, exp: 0, sent: 0, tries: 3, err: "", ident: "" }, rpTimer = null;
+const maskMail = e => { const [u, d] = e.split("@"); return `${u.slice(0, 2)}${"•".repeat(Math.max(1, u.length - 2))}@${d}`; };
+function rpSend() { rp.code = String(Math.floor(100000 + Math.random() * 900000)); rp.exp = Date.now() + 10 * MIN; rp.sent = Date.now(); rp.tries = 3; }
+function renderRecuperar() {
+  const box = document.getElementById("rpBody"), err = rp.err ? `<div class="notice warn" role="alert"><i data-lucide="circle-alert"></i><p>${esc(rp.err)}</p></div>` : "";
+  clearInterval(rpTimer);
+  const steps = `<p class="small" style="font-weight:600"><span${rp.step === 1 ? ' style="color:var(--brand)"' : ""}>1. Tu cuenta</span> &nbsp;›&nbsp; <span${rp.step === 2 ? ' style="color:var(--brand)"' : ""}>2. Código</span> &nbsp;›&nbsp; <span${rp.step === 3 ? ' style="color:var(--brand)"' : ""}>3. Contraseña nueva</span></p>`;
+  if (rp.step === 1) {
+    if (!rp.ident) { const li = document.getElementById("l-mail"); if (li && li.value.trim()) rp.ident = li.value.trim(); }
+    box.innerHTML = `<div><h1 class="h1">¿Olvidaste tu contraseña?</h1><p class="lead">Escribe tu correo institucional o tu carnet y te enviamos un código.</p></div>${steps}
+      <form class="card" id="rpForm1" novalidate><div class="field"><label for="rp-id">Correo institucional o carnet</label><div class="input"><input id="rp-id" autocomplete="username" placeholder="nombre@correo.unimet.edu.ve" value="${esc(rp.ident)}"><i data-lucide="mail"></i></div></div>
+      ${err}<button class="btn" type="submit"><i data-lucide="send"></i>Enviarme el código</button></form>`;
+  } else if (rp.step === 2) {
+    const left = () => Math.max(0, 30 - Math.floor((Date.now() - rp.sent) / 1000));
+    box.innerHTML = `<div><h1 class="h1">Revisa tu correo</h1><p class="lead">Te enviamos un código de 6 dígitos a <b>${esc(maskMail(rp.email))}</b>. Vence en 10 minutos.</p></div>${steps}
+      <div class="notice"><i data-lucide="flask-conical"></i><p>Prototipo: no se envían correos reales. Tu código es <strong class="mono">${rp.code}</strong>.</p></div>
+      <form class="card" id="rpForm2" novalidate><div class="field"><label for="rp-code">Código de verificación</label><div class="input"><input id="rp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="letter-spacing:6px;font-size:18px"></div><p class="tiny">${rp.tries} ${rp.tries === 1 ? "intento" : "intentos"} disponibles.</p></div>
+      ${err}<button class="btn" type="submit"><i data-lucide="check"></i>Verificar código</button>
+      <div class="row"><button class="link b" type="button" data-rp-resend id="rpResend"></button><button class="link" type="button" data-rp-back>Usar otra cuenta</button></div></form>`;
+    const tick = () => { const b = document.getElementById("rpResend"); if (!b) return clearInterval(rpTimer); const l = left(); b.disabled = l > 0; b.textContent = l > 0 ? `Reenviar código en ${l} s` : "Reenviar código"; };
+    tick(); rpTimer = setInterval(tick, 1000);
+  } else {
+    box.innerHTML = `<div><h1 class="h1">Crea tu contraseña nueva</h1><p class="lead">Para ${esc(maskMail(rp.email))}.</p></div>${steps}
+      <form class="card" id="rpForm3" novalidate>
+        <div class="field"><label for="rp-p1">Contraseña nueva</label><div class="input"><input id="rp-p1" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres y un número"><button class="eye" type="button" data-eye="rp-p1" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div></div>
+        <div class="field"><label for="rp-p2">Repítela</label><div class="input"><input id="rp-p2" type="password" autocomplete="new-password"></div></div>
+        ${err}<button class="btn" type="submit"><i data-lucide="check"></i>Guardar contraseña</button></form>`;
+  }
+  icons();
+  const f = box.querySelector("input"); if (f) f.focus();
+}
+document.addEventListener("submit", e => {
+  const f = e.target; if (!/^rpForm[123]$/.test(f.id)) return;
+  e.preventDefault(); rp.err = "";
+  if (f.id === "rpForm1") {
+    const ident = document.getElementById("rp-id").value.trim(); rp.ident = ident;
+    const byDigits = /^\d+$/.test(ident), acc = accounts.find(a => byDigits ? a.carnet === ident : a.email === normEmail(ident));
+    if (!ident) rp.err = "Escribe tu correo institucional o tu carnet.";
+    else if (!acc) rp.err = byDigits ? `No hay ninguna cuenta con el carnet ${ident}.` : `No hay ninguna cuenta con el correo ${normEmail(ident)}. ¿Quieres crear una?`;
+    else { rp.email = acc.email; rpSend(); rp.step = 2; }
+  } else if (f.id === "rpForm2") {
+    const c = document.getElementById("rp-code").value.replace(/\D/g, "");
+    if (Date.now() > rp.exp) rp.err = "El código venció. Pide uno nuevo.";
+    else if (c !== rp.code) { rp.tries--; rp.err = rp.tries > 0 ? `El código no es correcto. Te ${rp.tries === 1 ? "queda 1 intento" : `quedan ${rp.tries} intentos`}.` : "Agotaste los intentos. Pide un código nuevo."; if (rp.tries <= 0) { rp.step = 1; rp.code = null; } }
+    else rp.step = 3;
+  } else {
+    const p1 = document.getElementById("rp-p1").value, p2 = document.getElementById("rp-p2").value, acc = accounts.find(a => a.email === rp.email);
+    if (p1.length < 8 || !/\d/.test(p1)) rp.err = "Usa al menos 8 caracteres y un número.";
+    else if (p1 !== p2) rp.err = "Las contraseñas no coinciden.";
+    else if (acc && acc.pass === passKey(p1)) rp.err = "Esa es tu contraseña actual. Elige una distinta.";
+    else {
+      acc.pass = passKey(p1); saveAccounts();
+      const email = rp.email; rp = { step: 1, email: null, code: null, exp: 0, sent: 0, tries: 3, err: "", ident: "" };
+      go("login"); setTimeout(() => { const li = document.getElementById("l-mail"); li.value = email; document.getElementById("l-pass").value = ""; document.getElementById("l-pass").focus(); toast("Listo: cambiamos tu contraseña. Inicia sesión con la nueva."); }, 50);
+      return;
+    }
+  }
+  renderRecuperar();
+});
+document.addEventListener("click", e => {
+  if (e.target.closest("[data-rp-resend]")) { rpSend(); rp.err = ""; toast(`Te enviamos un código nuevo a ${maskMail(rp.email)}.`); renderRecuperar(); return; }
+  if (e.target.closest("[data-rp-back]")) { rp = { step: 1, email: null, code: null, exp: 0, sent: 0, tries: 3, err: "", ident: "" }; renderRecuperar(); return; }
+  if (e.target.closest('[data-go="recuperar"]')) { rp.err = ""; if (rp.step !== 1 && !rp.email) rp.step = 1; }
 });
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();

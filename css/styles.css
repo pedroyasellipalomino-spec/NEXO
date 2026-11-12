@@ -441,7 +441,16 @@ svg.lucide{width:1em;height:1em;flex-shrink:0;stroke-width:1.75}
 .mrow{display:flex;align-items:center;gap:10px}
 .mrow .num{flex-shrink:0}
 .mrow .input{flex:1;min-width:0}
-.toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:100px;font-size:13px;z-index:50;max-width:calc(100% - 32px);text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.toasts{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:50;display:flex;flex-direction:column;align-items:center;gap:8px;width:max-content;max-width:calc(100% - 32px);pointer-events:none}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:100px;font-size:13px;text-align:left;box-shadow:0 6px 20px rgba(0,0,0,.18);animation:in .18s ease}
+.toast.has-act,.toast.persist{padding-right:8px}
+.toast.persist{border-radius:14px;background:var(--deep);color:#fff;border:1px solid var(--brand)}
+.toast-msg{flex:1;min-width:0}
+.toast-act{background:none;border:0;color:var(--mint);font:inherit;font-weight:700;padding:4px 6px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.toast-act:hover{background:rgba(255,255,255,.1)}
+.toast-x{background:none;border:0;color:inherit;opacity:.7;font-size:20px;line-height:1;padding:2px 6px;border-radius:6px;cursor:pointer}
+.toast-x:hover{opacity:1;background:rgba(255,255,255,.1)}
+@media (min-width:700px){.toasts{bottom:28px}}
 .q-empty{display:none!important}
 
 /* ---------- Espacio de gestión (administración y moderación) ---------- */

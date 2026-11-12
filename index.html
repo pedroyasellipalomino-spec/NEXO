@@ -83,7 +83,7 @@
         <div class="field"><label for="l-pass">Contraseña</label><div class="input"><input id="l-pass" type="password" placeholder="Tu contraseña" autocomplete="current-password"><button class="eye" type="button" data-eye="l-pass" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div></div>
         <div class="notice warn" id="loginError" role="alert" hidden><i data-lucide="circle-alert"></i><div><b data-le="title"></b><span data-le="text"></span> <button class="link b" type="button" id="loginToSignup" hidden style="font-size:12px;color:inherit;text-decoration:underline">Crear una cuenta con este correo</button></div></div>
         <label class="remember" for="l-rem"><input id="l-rem" type="checkbox" checked>Recordar en este dispositivo</label>
-        <button class="link b" type="button" data-toast="Te enviaríamos un enlace a tu correo institucional.">¿Olvidaste tu contraseña?</button>
+        <button class="link b" type="button" data-go="recuperar">¿Olvidaste tu contraseña?</button>
         <button class="btn" type="submit"><i data-lucide="arrow-right"></i>Iniciar sesión</button>
         <p class="tiny">Cuenta de prueba: <b>ana.torres@correo.unimet.edu.ve</b> · contraseña <b style="white-space:nowrap">demo-nexo-01</b></p>
         <p class="tiny">Gestión: administradora <b>maria.vera@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-admin-01</b> — moderadora <b>lucia.rojas@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-mod-01</b></p>
@@ -145,6 +145,23 @@
   </main>
 </section>
 
+<!-- 3c · Recuperar contraseña (código simulado por correo) -->
+<section class="screen" id="recuperar" hidden>
+  <header class="topbar gutter">
+    <div class="brand"><span class="emblem"><i data-lucide="layers"></i></span>nexo</div>
+    <button class="link" type="button" data-go="ayuda">Soporte</button>
+  </header>
+  <main class="auth-wrap gutter">
+    <aside class="campus"><p class="tag">RECUPERA TU ACCESO</p><h2>Vuelve a tu campus en un minuto.</h2>
+      <p>Te enviamos un código a tu correo institucional para confirmar que eres tú y creas una contraseña nueva.</p><p class="place">U. Metropolitana · Campus Central · Caracas</p></aside>
+    <div class="form-col">
+      <button class="link back" type="button" data-go="login"><i data-lucide="arrow-left"></i>Volver a iniciar sesión</button>
+      <div id="rpBody"></div>
+      <div class="secure"><i data-lucide="shield-check"></i><p>Nunca te pediremos tu contraseña por correo ni por teléfono.</p></div>
+    </div>
+  </main>
+</section>
+
 <!-- 3b · Ayuda sin iniciar sesión -->
 <section class="screen" id="ayuda" hidden>
   <header class="topbar gutter">
@@ -160,7 +177,7 @@
         <div class="card faq">
           <h2 class="h2">Preguntas frecuentes</h2>
           <details><summary>No puedo iniciar sesión<i data-lucide="chevron-down"></i></summary><p>Revisa que uses tu correo institucional y que ya hayas creado tu cuenta en Nexo.</p></details>
-          <details><summary>Olvidé mi contraseña<i data-lucide="chevron-down"></i></summary><p>Usa "¿Olvidaste tu contraseña?" en la pantalla de inicio de sesión. Te enviaremos un enlace a tu correo institucional.</p></details>
+          <details><summary>Olvidé mi contraseña<i data-lucide="chevron-down"></i></summary><p>Usa "¿Olvidaste tu contraseña?" en la pantalla de inicio de sesión: te enviamos un código de 6 dígitos a tu correo institucional y creas una contraseña nueva.</p></details>
           <details><summary>Mi carnet no es aceptado<i data-lucide="chevron-down"></i></summary><p>El carnet debe tener 11 dígitos seguidos, sin guiones ni espacios.</p></details>
         </div>
 
