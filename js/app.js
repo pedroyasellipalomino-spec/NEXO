@@ -1661,29 +1661,59 @@ function itemTypes(l, cat, it) {
 }
 const etaMax = l => Math.max(...(l.eta.match(/\d+/g) || ["0"]).map(Number));
 const toMin = hm => { const [h, m] = hm.split(":").map(Number); return h * 60 + (m || 0); };
+/* Horario semanal de cada local (índice = getDay(): 0 domingo … 6 sábado). Por defecto: lunes a viernes el horario
+   de LOCALES, sábado en la mañana solo La Pausa y los kioscos, domingo cerrado. El comercio lo cambia en Menú y horario
+   (localState[id].week, global). */
+const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const SAT_HOURS = { lapausa: ["08:00", "12:00"], tienditaa1: ["08:00", "12:00"], tienditaa2: ["08:00", "12:00"], believe: ["09:00", "13:00"] };
+const pad5 = hm => hm.length === 4 ? "0" + hm : hm;
+function defaultWeek(l) {
+  const [a, b] = l.hours.split("–").map(pad5);
+  return DIAS.map((_, d) => d === 0 ? { open: false, from: a, to: b } : d === 6 ? (SAT_HOURS[l.id] ? { open: true, from: SAT_HOURS[l.id][0], to: SAT_HOURS[l.id][1] } : { open: false, from: a, to: b }) : { open: true, from: a, to: b });
+}
+function weekOf(l) { const w = localState[l.id] && localState[l.id].week; return Array.isArray(w) && w.length === 7 ? w : defaultWeek(l); }
+const hoursOn = (l, date) => { const w = weekOf(l)[date.getDay()]; return w && w.open ? w : null; };
+const shortHM = hm => hm.replace(/^0(\d)/, "$1");
+const hoursTxt = h => h ? `${shortHM(h.from)}–${shortHM(h.to)}` : "Cerrado";
+const todayHours = l => hoursTxt(hoursOn(l, new Date()));
+function nextOpen(l, from) {
+  for (let k = 0; k < 8; k++) {
+    const d = new Date(from); d.setDate(d.getDate() + k); const h = hoursOn(l, d); if (!h) continue;
+    const [hh, mm] = h.from.split(":").map(Number); d.setHours(hh, mm, 0, 0); if (d > from) return d;
+  }
+  return null;
+}
+function dayWord(d) { const t = day0(new Date()).getTime(), x = day0(d).getTime(); return x === t ? "hoy" : x - t === 864e5 ? "mañana" : `el ${DIAS[d.getDay()].toLowerCase()}`; }
 function openState(l) {
   if (isPaused(l.id)) return { open: false, label: "Pausado", cls: "warn" };
-  const [a, b] = l.hours.split("–"), now = new Date(), m = now.getHours() * 60 + now.getMinutes();
-  if (m >= toMin(a) && m < toMin(b)) return { open: true, label: "Abierto", cls: "ok" };
-  return { open: false, label: m < toMin(a) ? `Abre a las ${a}` : "Cerrado por hoy", cls: "neutral" };
+  const now = new Date(), m = now.getHours() * 60 + now.getMinutes(), h = hoursOn(l, now);
+  if (h && m >= toMin(h.from) && m < toMin(h.to)) return { open: true, label: "Abierto", cls: "ok" };
+  const nx = nextOpen(l, now);
+  const hm = nx ? `${nx.getHours()}:${String(nx.getMinutes()).padStart(2, "0")}` : ""; // no usar hhmm(): se define más abajo y esto corre al arrancar
+  return { open: false, label: !nx ? "Cerrado" : dayWord(nx) === "hoy" ? `Abre a las ${hm}` : `Abre ${dayWord(nx)} a las ${hm}`, cls: "neutral" };
 }
-/* Retiro programado: franjas de 15 min dentro del horario del local, hoy (desde ahora + preparación) o mañana */
-const DAY_TXT = ["Hoy", "Mañana"];
+function weekTable(l) {
+  const today = new Date().getDay(), order = [1, 2, 3, 4, 5, 6, 0];
+  return `<div class="weektable">${order.map(d => `<div class="row${d === today ? " today" : ""}"><span>${DIAS[d]}${d === today ? " · hoy" : ""}</span><b>${hoursTxt(weekOf(l)[d].open ? weekOf(l)[d] : null)}</b></div>`).join("")}</div>`;
+}
+/* Retiro programado: franjas de 15 min dentro del horario del local, en los próximos días en que abre */
+const dayLabel = day => { if (day === 0) return "Hoy"; if (day === 1) return "Mañana"; const d = new Date(); d.setDate(d.getDate() + day); return `${DIAS[d.getDay()]} ${d.getDate()}`; };
 function pickupSlots(l, day) {
-  const [a, b] = l.hours.split("–"), prep = etaMax(l), now = new Date(), nowM = now.getHours() * 60 + now.getMinutes();
+  const date = new Date(); date.setDate(date.getDate() + day); const h = hoursOn(l, date); if (!h) return [];
+  const a = h.from, b = h.to, prep = etaMax(l), now = new Date(), nowM = now.getHours() * 60 + now.getMinutes();
   let start = toMin(a) + prep; if (day === 0) start = Math.max(start, nowM + prep);
   start = Math.ceil(start / 15) * 15;
   const out = []; for (let m = start; m <= toMin(b); m += 15) out.push(`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`);
   return out;
 }
 function slotTime(day, hm) { const d = new Date(); d.setDate(d.getDate() + day); const [h, m] = hm.split(":").map(Number); d.setHours(h, m, 0, 0); return d.getTime(); }
-const whenTxt = t => { const d = new Date(t), today = day0(new Date()).getTime(), dd = day0(d).getTime(); return `${dd === today ? "hoy" : dd - today === 864e5 ? "mañana" : fmtD(d)} a las ${hhmm(t)}`; };
+const whenTxt = t => { const d = new Date(t); return `${dayWord(d)}${dayWord(d).startsWith("el ") ? " " + d.getDate() : ""} a las ${hhmm(t)}`; };
 function cartPickup(l) {
   // devuelve el retiro elegido y corrige lo que ya no sea válido (local cerrado, franja pasada)
   const open = openState(l).open, p = cart.pickup || { mode: open ? "asap" : "sched" };
   if (!open) p.mode = "sched";
   if (p.mode === "sched") {
-    let day = p.day ?? 0; if (!pickupSlots(l, day).length) day = 1;
+    let day = p.day ?? 0; if (!pickupSlots(l, day).length) day = [0, 1, 2, 3, 4, 5, 6].find(d => pickupSlots(l, d).length) ?? 0;
     const slots = pickupSlots(l, day); if (!slots.includes(p.time)) p.time = slots[0];
     p.day = day;
   }
@@ -1730,7 +1760,7 @@ function renderFoodList() {
     return `<div class="card svc" data-kind="${l.kind}">
       <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="${l.icon}"></i></span><div><h3 class="h3">${esc(l.name)}</h3><p class="small">${l.place} · Retiro en ${l.eta}</p></div></div><span class="pill ${st.cls}">${st.label}</span></div>
       <div><b style="font-weight:600;font-size:14px">${hit ? "Coincide: " : filtering && items.length > 1 ? `${items.length} opciones · ` : ""}${esc(star.name)}</b><p class="small" style="font-size:13px">${esc(l.tagline)}</p></div>
-      <div class="row"><span class="price">${filtering && !hit && items.length > 1 ? "Desde " : ""}${money(star.price)}</span><span class="small">Hoy · ${l.hours}</span></div>
+      <div class="row"><span class="price">${filtering && !hit && items.length > 1 ? "Desde " : ""}${money(star.price)}</span><span class="small">Hoy · ${todayHours(l)}</span></div>
       <button class="btn${l.kind === "local" ? "" : " ghost"}" type="button" data-open-local="${l.id}"><i data-lucide="arrow-right"></i>${l.kind === "local" ? "Ver menú de " + esc(l.name) : "Ver kiosco"}</button>
     </div>`;
   };
@@ -1778,8 +1808,8 @@ function renderLocal() {
   const l = localById(curLocal);
   setFrame("local", l.name, ["Comida y kioscos", l.name]);
   document.getElementById("localHead").innerHTML = `<h1 class="h1">${esc(l.name)}</h1><p class="lead">${l.place} · ${esc(l.tagline)}</p>
-    <div class="chips" style="margin-top:12px">${isPaused(l.id) ? `<span class="pill warn">Pedidos en pausa</span>` : `<span class="pill ${openState(l).cls}">${openState(l).label}</span>`}<span class="pill neutral">Retiro en ${l.eta}</span><span class="pill neutral">${l.hours}</span></div>
-    ${isPaused(l.id) ? `<div class="notice warn" style="margin-top:12px"><i data-lucide="circle-pause"></i><p>${esc(l.name)} no está recibiendo pedidos en este momento. Puedes ver el menú y volver más tarde.</p></div>` : !openState(l).open ? `<div class="notice" style="margin-top:12px"><i data-lucide="clock"></i><p>${esc(l.name)} atiende de ${l.hours}. Puedes armar tu pedido y programar el retiro para cuando abra.</p></div>` : ""}`;
+    <div class="chips" style="margin-top:12px">${isPaused(l.id) ? `<span class="pill warn">Pedidos en pausa</span>` : `<span class="pill ${openState(l).cls}">${openState(l).label}</span>`}<span class="pill neutral">Retiro en ${l.eta}</span><span class="pill neutral">Hoy ${todayHours(l)}</span></div>
+    ${isPaused(l.id) ? `<div class="notice warn" style="margin-top:12px"><i data-lucide="circle-pause"></i><p>${esc(l.name)} no está recibiendo pedidos en este momento. Puedes ver el menú y volver más tarde.</p></div>` : !openState(l).open ? `<div class="notice" style="margin-top:12px"><i data-lucide="clock"></i><p>${esc(l.name)} ${hoursOn(l, new Date()) ? `atiende hoy de ${todayHours(l)}` : "no abre hoy"} (${openState(l).label.toLowerCase()}). Puedes armar tu pedido y programar el retiro para cuando abra.</p></div>` : ""}`;
   const cats = ["Todos", ...l.cats.map(c => c.name)];
   if (!cats.includes(curCat)) curCat = "Todos";
   document.getElementById("localChips").innerHTML = cats.map(c => `<button class="pill ${c === curCat ? "ok" : "neutral"}" type="button" data-food-cat="${esc(c)}">${esc(c)}</button>`).join("");
@@ -1793,7 +1823,8 @@ function renderLocal() {
   document.getElementById("localSide").innerHTML = `
     <div class="card"><i data-lucide="map-pin" style="color:var(--brand);font-size:22px"></i><h3 class="sec" style="font-weight:600">Pide y retira</h3>
       <p class="small" style="font-size:13px">${esc(l.name)} · ${l.place}</p><div class="sep"></div>
-      <p style="font-size:13px">Hoy · ${l.hours}</p><p style="font-size:13px">Preparación en ${l.eta}</p>
+      <p style="font-size:13px">Hoy · ${todayHours(l)}</p><p style="font-size:13px">Preparación en ${l.eta}</p>
+      <details class="weekdet"><summary class="link b">Horario de la semana</summary>${weekTable(l)}</details>
       <p style="color:var(--brand);font-weight:600;font-size:13px">Sin cargos extra</p></div>
     ${mine ? `<div class="card"><h3 class="h3">Tu carrito</h3><p class="small" style="font-size:13px">${plural(cartCount(), "producto", "productos")} · ${money(cartTotal())}</p>
       <button class="btn" type="button" data-go="carrito"><i data-lucide="shopping-bag"></i>Ir al carrito · ${money(cartTotal())}</button></div>`
@@ -1915,7 +1946,7 @@ function renderCarrito() {
           <button class="opt${pk.mode === "sched" ? " on" : ""}" type="button" role="radio" aria-checked="${pk.mode === "sched"}" data-pk-mode="sched"><span class="dot"></span><span class="grow">Programar el retiro<br><span class="small" style="font-weight:400">Elige el día y la hora; lo tendrán listo para entonces.</span></span></button>
         </div>
         ${pk.mode === "sched" ? `<div class="grid2">
-          <div class="field"><label for="pk-day">Día</label><div class="input sel"><select id="pk-day">${[0, 1].filter(d => pickupSlots(l, d).length).map(d => `<option value="${d}"${pk.day === d ? " selected" : ""}>${DAY_TXT[d]}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
+          <div class="field"><label for="pk-day">Día</label><div class="input sel"><select id="pk-day">${[0, 1, 2, 3, 4, 5, 6].filter(d => pickupSlots(l, d).length).map(d => `<option value="${d}"${pk.day === d ? " selected" : ""}>${dayLabel(d)}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
           <div class="field"><label for="pk-time">Hora de retiro</label><div class="input sel"><select id="pk-time">${pickupSlots(l, pk.day).map(t => `<option${pk.time === t ? " selected" : ""}>${t}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
         </div>
         <p class="small">Lo retiras ${whenTxt(slotTime(pk.day, pk.time))}. Empezarán a prepararlo ${etaMax(l)} min antes; te avisamos cuando esté listo.</p>` : ""}
@@ -2957,7 +2988,7 @@ function renderPedido() {
         <b class="pcode" aria-label="Código ${o.code.split("").join(" ")}">${o.code}</b>
         <p class="small" style="font-size:13px">${st === "listo" ? `Muéstralo en el mostrador de ${esc(l.name)}. Solo sirve para este pedido.` : ["programado", "preparando"].includes(st) ? "Te avisaremos cuando esté listo. El código QR aparece en ese momento." : "Este código ya se usó."}</p>
       </div>
-      <div class="card"><div class="row start"><i data-lucide="map-pin" style="color:var(--brand);font-size:20px"></i><b class="h3">${esc(l.name)}</b></div><p class="small" style="font-size:13px">${l.place} · Campus Central · Planta baja · Hoy ${l.hours}</p></div>
+      <div class="card"><div class="row start"><i data-lucide="map-pin" style="color:var(--brand);font-size:20px"></i><b class="h3">${esc(l.name)}</b></div><p class="small" style="font-size:13px">${l.place} · Campus Central · Planta baja · Hoy ${todayHours(l)}</p></div>
       ${st === "cancelado" ? `<div class="notice warn"><i data-lucide="ban"></i><p>Si tienes dudas sobre la cancelación, escríbenos desde <button class="link b" type="button" data-go="soporte" style="font-size:12px">Soporte</button>.</p></div>` : ""}
       ${["programado", "preparando"].includes(st) ? `<div class="notice"><i data-lucide="flask-conical"></i><p>Prototipo: <button class="link b" type="button" data-sim-ready="${o.id}" style="font-size:12px">simular que el pedido ya está listo</button> para no esperar ${l.eta}.</p></div>` : ""}
       ${orders.length > 1 ? `<button class="link b" type="button" data-go="actividad">Ver todos mis pedidos en Actividad →</button>` : ""}
@@ -3051,7 +3082,7 @@ function renderLocalPedidos() {
   const done = mine.filter(x => ["retirado", "cancelado"].includes(orderStatus(x.o)) && (x.o.pickedAt || x.o.cancelledAt || 0) >= today).sort((a, b) => (b.o.pickedAt || b.o.cancelledAt) - (a.o.pickedAt || a.o.cancelledAt));
   const sales = mine.filter(x => x.o.paidAt >= today && !x.o.cancelledAt).reduce((a, x) => a + x.o.total, 0);
   document.getElementById("lpTitle").textContent = isPaused(l.id) ? "Pedidos en pausa" : "Pedidos de hoy";
-  document.getElementById("lpLead").textContent = `${l.name} · ${l.place} · Hoy ${l.hours}`;
+  document.getElementById("lpLead").textContent = `${l.name} · ${l.place} · Hoy ${todayHours(l)}`;
   document.getElementById("lpPause").innerHTML = isPaused(l.id)
     ? `<button class="btn" type="button" data-lp-pause="0"><i data-lucide="circle-play"></i>Reanudar pedidos</button>`
     : `<button class="btn ghost" type="button" data-lp-pause="1"><i data-lucide="circle-pause"></i>Pausar pedidos</button>`;
@@ -3085,8 +3116,10 @@ function renderLocalPedidos() {
     + `<div class="stack s14"><div class="row"><h2 class="sec"><i data-lucide="check" style="color:var(--brand)"></i> Entregados hoy</h2><span class="pill neutral">${done.length}</span></div><div class="card" style="gap:0">${done.map(x => card(x, "done")).join("") || `<p class="small">Todavía no entregas pedidos hoy.</p>`}</div></div>`;
   icons();
 }
+let lhDraft = null;
 function renderLocalMenu() {
   const l = myLocal(); if (!l) return;
+  if (!lhDraft) lhDraft = weekOf(l).map(x => ({ ...x }));
   const st = lstate(l.id), n = st.soldout.length;
   document.getElementById("lmLead").textContent = `${l.name} · ${l.tagline}`;
   document.getElementById("lmBody").innerHTML = `
@@ -3100,10 +3133,21 @@ function renderLocalMenu() {
     </div>
     <div class="stack">
       <div class="card"><h2 class="h2">Recepción de pedidos</h2>
-        <p class="small" style="font-size:13px">${isPaused(l.id) ? "Los pedidos están en pausa: los estudiantes ven tu menú, pero no pueden pagar." : `Estás recibiendo pedidos. Horario de hoy: ${l.hours}.`}</p>
-        <span class="pill ${isPaused(l.id) ? "warn" : "ok"}">${isPaused(l.id) ? "En pausa" : "Abierto"}</span>
+        <p class="small" style="font-size:13px">${isPaused(l.id) ? "Los pedidos están en pausa: los estudiantes ven tu menú, pero no pueden pagar." : `Estás recibiendo pedidos. Horario de hoy: ${todayHours(l)}${hoursOn(l, new Date()) ? "" : " (hoy no abres)"}.`}</p>
+        <span class="pill ${openState(l).cls}">${isPaused(l.id) ? "En pausa" : openState(l).label}</span>
         ${isPaused(l.id) ? `<button class="btn" type="button" data-lp-pause="0"><i data-lucide="circle-play"></i>Reanudar pedidos</button>` : `<button class="btn ghost" type="button" data-lp-pause="1"><i data-lucide="circle-pause"></i>Pausar pedidos</button>`}
         <p class="tiny">Úsalo si se acumulan pedidos o cierras antes de tiempo. Los pedidos ya pagados siguen en tu tablero.</p></div>
+      <form class="card" id="lhForm" novalidate>
+        <div class="row"><h2 class="h2">Horario de la semana</h2><button class="link b" type="button" data-lh-default>Restablecer</button></div>
+        <p class="small" style="font-size:13px">Los estudiantes ven si estás abierto y solo pueden programar retiros dentro de este horario.</p>
+        ${[1, 2, 3, 4, 5, 6, 0].map(d => { const w = lhDraft[d]; return `<div class="lh-row${w.open ? "" : " off"}">
+          <button class="switch" type="button" role="switch" aria-checked="${w.open}" aria-label="Abrir el ${DIAS[d].toLowerCase()}" data-lh-day="${d}"></button>
+          <b>${DIAS[d]}</b>
+          ${w.open ? `<div class="lh-times"><div class="input sm"><input type="time" step="900" value="${w.from}" data-lh-from="${d}" aria-label="${DIAS[d]}: abre a las"></div><span class="tiny">a</span><div class="input sm"><input type="time" step="900" value="${w.to}" data-lh-to="${d}" aria-label="${DIAS[d]}: cierra a las"></div></div>` : `<span class="small">Cerrado</span>`}
+        </div>`; }).join("")}
+        <p class="tiny" id="lhErr" hidden></p>
+        <button class="btn" type="submit"><i data-lucide="check"></i>Guardar horario</button>
+      </form>
       <div class="notice"><i data-lucide="info"></i><p>Tiempo de preparación que ven los estudiantes: ${l.eta}. Los precios y el menú los ajusta la administración de Nexo.</p></div>
     </div>`;
   icons();
@@ -3599,6 +3643,25 @@ document.addEventListener("submit", e => {
   vlDecide(f.dataset.vlRejectForm, false, sel === "otro" ? otro : sel);
 });
 try { renderNotifs(); } catch (err) {} // ya con todos los datos cargados (recargas, pedidos, pagos)
+/* Editor del horario semanal (comercio) */
+document.addEventListener("click", e => {
+  const d = e.target.closest("[data-lh-day]");
+  if (d) { const i = +d.dataset.lhDay; lhDraft[i].open = !lhDraft[i].open; renderLocalMenu(); document.querySelector(`[data-lh-day="${i}"]`)?.focus(); return; }
+  if (e.target.closest("[data-lh-default]")) { lhDraft = defaultWeek(myLocal()).map(x => ({ ...x })); renderLocalMenu(); toast("Volviste al horario por defecto. Guarda para aplicarlo."); }
+});
+document.addEventListener("input", e => {
+  const f = e.target.closest("[data-lh-from], [data-lh-to]"); if (!f) return;
+  const i = +(f.dataset.lhFrom ?? f.dataset.lhTo); lhDraft[i][f.dataset.lhFrom !== undefined ? "from" : "to"] = f.value;
+});
+document.addEventListener("submit", e => {
+  if (e.target.id !== "lhForm") return;
+  e.preventDefault();
+  const err = document.getElementById("lhErr"), bad = lhDraft.findIndex(w => w.open && (!w.from || !w.to || toMin(w.from) + 30 > toMin(w.to)));
+  if (bad >= 0) { err.hidden = false; err.className = "tiny pm-err"; err.textContent = `Revisa el ${DIAS[bad].toLowerCase()}: la hora de cierre debe ser al menos 30 minutos después de la de apertura.`; document.querySelector(`[data-lh-to="${bad}"]`)?.focus(); return; }
+  if (!lhDraft.some(w => w.open)) { err.hidden = false; err.className = "tiny pm-err"; err.textContent = "Abre al menos un día de la semana."; return; }
+  const l = myLocal(); lstate(l.id).week = lhDraft.map(x => ({ open: x.open, from: pad5(x.from), to: pad5(x.to) })); saveLocalState();
+  toast(`Guardamos el horario. Hoy: ${todayHours(l)}.`); lhDraft = null; renderLocalMenu();
+});
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();
   const carnet = f.querySelector("[data-digits]");

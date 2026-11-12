@@ -24,8 +24,8 @@ async def main() -> int:
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=__import__("os").environ.get("CHROME_PATH") or None)
         pg = await b.new_page(viewport={"width": 1280, "height": 900})
-        # Hora fija dentro del horario de los locales (12:30) para que la prueba no dependa de la hora real
-        await pg.add_init_script("""(() => { const R = Date, base = new R(); base.setHours(12, 30, 0, 0); const off = base - R.now();
+        # Fecha y hora fijas (miércoles 11 nov 2026, 12:30): dentro del horario de los locales y del pronto pago de noviembre
+        await pg.add_init_script("""(() => { const R = Date, base = new R("2026-11-11T12:30:00"); const off = base - R.now();
           globalThis.Date = class extends R { constructor(...a) { if (a.length) super(...a); else super(R.now() + off); } static now() { return R.now() + off; } }; })()""")
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -366,6 +366,19 @@ async def main() -> int:
         await pg.goto(URL + "#materias")
         await pg.wait_for_timeout(300)
         check("Pagada el" in (await pg.inner_text("#cuotasList")).split("Factura de noviembre")[1], "al aprobarla, la factura de Ana queda pagada")
+
+        # horario semanal: el comercio cierra los miércoles y el estudiante lo ve
+        await login("pinchopan@comercio.nexo", "demo-local-01")
+        await pg.goto(URL + "#local-menu")
+        await pg.wait_for_timeout(300)
+        await pg.click("[data-lh-day='3']")
+        await pg.click("#lhForm button[type=submit]")
+        await pg.wait_for_timeout(200)
+        await login("ana.torres@correo.unimet.edu.ve", "demo-nexo-01")
+        await pg.goto(URL + "#comida")
+        await pg.wait_for_timeout(300)
+        pill = await pg.evaluate("[...document.querySelectorAll('#comida .card.svc')].find(c => c.textContent.includes('Pincho Pan')).querySelector('.head .pill').textContent")
+        check(pill == "Abre mañana a las 11:30", "el horario semanal del comercio cambia lo que ve el estudiante")
 
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
