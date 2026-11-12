@@ -70,7 +70,7 @@ document.querySelectorAll("section.app").forEach(sec => {
   const main = document.createElement("div");
   main.className = "main";
   const left = back
-    ? `<button class="title" type="button" data-go="${back}"><i data-lucide="arrow-left"></i>${title}</button>`
+    ? `<button class="title" type="button" data-go="${back}" data-back-btn><i data-lucide="arrow-left"></i>${title}</button>`
     : `<button class="brand" type="button" data-go="${home}"><span class="emblem"><i data-lucide="layers"></i></span>nexo</button>`;
   const macts = staff
     ? `<span class="pill ok">${ROLE_LABEL[staff]}</span><button class="avatarbtn" type="button" aria-label="Menú de usuario" aria-haspopup="menu" data-usermenu><span data-user="initials">AT</span></button>`
@@ -81,7 +81,7 @@ document.querySelectorAll("section.app").forEach(sec => {
   const crumbBase = staff ? "" : "Mi campus&nbsp;&nbsp;/&nbsp;&nbsp;";
   main.innerHTML = `
     <header class="mbar gutter">${left}<div class="mbar-acts">${macts}</div></header>
-    <header class="deskbar"><div class="crumbs">${back ? `<button class="deskback" type="button" data-go="${back}" aria-label="Volver"><i data-lucide="arrow-left"></i>Volver</button>` : ""}<span>${crumbBase}${sec.dataset.crumb.replace(/  \/  /g,"&nbsp;&nbsp;/&nbsp;&nbsp;")}</span></div>
+    <header class="deskbar"><div class="crumbs">${back ? `<button class="deskback" type="button" data-go="${back}" data-back-btn aria-label="Volver"><i data-lucide="arrow-left"></i>Volver</button>` : ""}<span>${crumbBase}${sec.dataset.crumb.replace(/  \/  /g,"&nbsp;&nbsp;/&nbsp;&nbsp;")}</span></div>
       <div class="acts">${dacts}</div></header>`;
   main.append(body);
   const bar = document.createElement("nav");
@@ -198,6 +198,39 @@ function enterApp(email, remember, flash) {
 /* ---------- Navegación ---------- */
 const screens = [...document.querySelectorAll("section.screen")].map(s => s.id);
 let current = null, previous = "tutorial";
+/* Recorrido real para el botón "atrás": se guarda en la pestaña; si no hay a dónde volver, se usa data-back */
+let navTrail = [];
+try { navTrail = JSON.parse(sessionStorage.getItem("nexo-trail") || "[]"); if (!Array.isArray(navTrail)) navTrail = []; } catch (err) { navTrail = []; }
+const NO_BACK = ["comprobante", "tarjeta", "pagoplan", "revision", "login", "registro", "recuperar", "tutorial", "ayuda", "invitacion"];
+let goingBack = false;
+function trailPush(id) {
+  if (["login", "registro", "tutorial", "recuperar", "invitacion"].includes(id)) navTrail = []; // sesión nueva: recorrido nuevo
+  if (goingBack && navTrail[navTrail.length - 2] === id) navTrail.pop(); // volvió atrás con el botón
+  else if (navTrail[navTrail.length - 1] !== id) navTrail.push(id);
+  goingBack = false;
+  if (navTrail.length > 30) navTrail = navTrail.slice(-30);
+  try { sessionStorage.setItem("nexo-trail", JSON.stringify(navTrail)); } catch (err) {}
+}
+function backTarget(fallback) {
+  const staffNow = !!STAFF_SCREENS[current];
+  for (let i = navTrail.length - 2; i >= 0; i--) {
+    const p = navTrail[i];
+    if (p === current) continue;
+    let cartEmpty = false; try { cartEmpty = p === "carrito" && !cart.lines.length; } catch (err) {}
+    if (NO_BACK.includes(p) || cartEmpty || !!STAFF_SCREENS[p] !== staffNow) continue;
+    navTrail = navTrail.slice(0, i + 1).concat(current); // el show() siguiente detecta la vuelta y saca la pantalla actual
+    return p;
+  }
+  return fallback;
+}
+window.addEventListener("click", e => {
+  const b = e.target.closest("[data-back-btn]"); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  navTrail[navTrail.length - 1] !== current && navTrail.push(current);
+  const to = backTarget(b.dataset.go);
+  goingBack = navTrail[navTrail.length - 2] === to;
+  go(to);
+}, true);
 const PUBLIC = ["tutorial", "login", "registro", "ayuda", "invitacion", "recuperar"];
 const STAFF_SCREENS = { gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator"] };
 function show(id) {
@@ -216,7 +249,7 @@ function show(id) {
     if (dual) { try { localStorage.setItem(K("nexo-mode"), need ? "gestion" : "usuario"); } catch (err) {} }
   }
   if (current && current !== id) previous = current;
-  current = id;
+  current = id; trailPush(id);
   screens.forEach(s => { document.getElementById(s).hidden = s !== id; });
   if (id === "recarga" && typeof renderRecarga === "function") renderRecarga();
   if (id === "afiliar" && typeof renderAf === "function") renderAf();
@@ -260,6 +293,10 @@ let toastTimer;
 /* Avisos: toast(msg) sale y se va solo; con { action, onAction } muestra un botón (p. ej. "Deshacer", 6 s);
    con { persist: true } se queda hasta que la persona lo cierra (para lo importante: pedido listo, pago rechazado…).
    Los persistentes se apilan; los pasajeros reemplazan al pasajero anterior. */
+/* Estado vacío uniforme: ícono, título, explicación y (opcional) una acción */
+function emptyState(icon, title, text = "", act = "") {
+  return `<div class="empty"><span class="ico lg"><i data-lucide="${icon}"></i></span><b>${title}</b>${text ? `<p>${text}</p>` : ""}${act}</div>`;
+}
 function toast(msg, opts = {}) {
   let box = document.querySelector(".toasts");
   if (!box) { box = document.createElement("div"); box.className = "toasts"; box.setAttribute("aria-live", "polite"); document.body.append(box); }
@@ -586,7 +623,7 @@ function drawMovement(m) {
   const el = document.createElement("div");
   el.className = "move"; if (m.id) el.dataset.mv = m.id;
   el.innerHTML = `<span class="ico"><i data-lucide="${m.icon || "graduation-cap"}"></i></span><div class="info"><b>${m.title}</b><span>${m.detail}</span><br><span>${m.date}</span></div>
-    <div class="mv-actions"><span class="amt${m.amount.startsWith("+") ? " pos" : ""}">${m.amount}</span><span class="pill ${m.pillCls}">${m.pill}</span><button class="link b" type="button" data-go="${m.go || "materias"}"${m.order ? ` data-order="${m.order}"` : ""} style="font-size:12px">${m.goLabel || "Ver estado de cuenta ›"}</button></div>`;
+    <div class="mv-actions"><span class="amt${m.amount.startsWith("+") ? " pos" : ""}">${m.amount}</span><span class="pill ${m.pillCls}">${m.pill}</span><button class="link b" type="button" data-go="${m.go || "materias"}"${m.order ? ` data-order="${m.order}"` : ""} style="font-size:12px">${(m.goLabel || "Ver estado de cuenta →").replace("›", "→")}</button></div>`;
   card.querySelector("h2").after(el);
 }
 function addMovement(title, detail, amount, pill, pillCls, extra = {}) {
@@ -808,7 +845,7 @@ function renderNotifs() {
   const box = document.getElementById("notifList");
   box.innerHTML = shown.length
     ? (today.length ? `<p class="ngroup">HOY</p>` + today.map(item).join("") : "") + (older.length ? `<p class="ngroup">ANTERIORES</p>` + older.map(item).join("") : "")
-    : `<p class="nempty">No hay avisos en este tema.</p>`;
+    : emptyState("bell-off", "No hay avisos en este tema", "Cuando haya novedades aquí, te las mostraremos.", nFilter !== "all" ? `<button class="btn ghost sm" type="button" data-nf="all">Ver todos los avisos</button>` : "");
   document.getElementById("notifPrefs").innerHTML = Object.entries(NCATS).map(([k, c]) => `
     <div class="npref"><span class="ico"><i data-lucide="${c.icon}"></i></span><div class="grow"><b>${c.label}</b><span class="tiny">${c.desc}</span></div>
       <button class="switch" type="button" role="switch" aria-checked="${nPrefs[k] !== false}" aria-label="Recibir avisos de ${c.label}" data-npref="${k}"></button></div>`).join("");
@@ -986,11 +1023,11 @@ function renderRecarga() {
       + `<button class="link b" type="button" data-afiliar style="font-size:13px">+ Afiliar otra tarjeta</button>`;
   }
   const card = cards.find(c => c.id === rcCardId);
-  rc("method").forEach(el => el.textContent = rcMethod === "pm" ? "Pago móvil" : card ? `${cardLabel(card)} · ${card.type}` : "Sin tarjeta afiliada");
+  rc("method").forEach(el => el.textContent = rcMethod === "pm" ? "Pago Móvil" : card ? `${cardLabel(card)} · ${card.type}` : "Sin tarjeta afiliada");
   rc("afterlabel").forEach(el => el.textContent = rcMethod === "pm" ? "Saldo cuando se valide" : "Saldo tras la recarga");
   rc("after").forEach(el => el.textContent = money(WALLET + (ok ? rcAmount : 0)));
   const go = document.getElementById("rcGo");
-  const cta = rcMethod === "pm" ? `Continuar a Pago móvil` : card ? `Recargar ${money(rcAmount)}` : "Afiliar una tarjeta";
+  const cta = rcMethod === "pm" ? `Continuar a Pago Móvil` : card ? `Recargar ${money(rcAmount)}` : "Afiliar una tarjeta";
   rc("cta").forEach(el => el.textContent = ok ? cta : "Elige un monto válido");
   go.disabled = !ok; go.style.opacity = ok ? "" : ".5";
   rc("foot").forEach(el => el.textContent = rcMethod === "pm" ? "Verás los datos de Pago Móvil de Nexo y registrarás tu pago." : "Prototipo: no se realiza ningún cobro real.");
@@ -1019,7 +1056,7 @@ document.getElementById("recarga").addEventListener("click", e => {
     const card = cards.find(x => x.id === rcCardId);
     if (!card) { afReturn = "recarga"; go("afiliar"); return; }
     WALLET = Math.round((WALLET + rcAmount) * 100) / 100; saveWallet(); renderWallet();
-    addMovement("Recarga de wallet", `Estacionamiento · ${cardLabel(card)}`, "+" + money(rcAmount), "Pagado", "ok", { icon: "wallet", go: "estacionamiento", goLabel: "Ver wallet ›" });
+    addMovement("Recarga de wallet", `Estacionamiento · ${cardLabel(card)}`, "+" + money(rcAmount), "Pagado", "ok", { icon: "wallet", go: "estacionamiento", goLabel: "Ver wallet →" });
     toast(`Recargaste ${money(rcAmount)} con ${cardLabel(card)}. Tu saldo ahora es ${money(WALLET)}.`);
     renderRecarga(); go("estacionamiento");
   }
@@ -1071,7 +1108,7 @@ document.getElementById("afForm").addEventListener("submit", e => {
   go(afReturn);
 });
 
-/* ---------- Pago móvil ---------- */
+/* ---------- Pago Móvil ---------- */
 function openPagoMovil() {
   const amt = money(rcAmount);
   document.querySelector('[data-pm="lead"]').textContent = `Recarga de ${amt} a tu wallet Nexo`;
@@ -1176,7 +1213,7 @@ document.getElementById("pmForm").addEventListener("submit", e => {
   const v = id => document.getElementById(id).value.trim();
   const ref = v("pm-ref");
   pendRec.push({ id: "r" + Date.now(), amount: rcAmount, ref, bank: v("pm-bank"), date: v("pm-date"), bs: parseAmt(v("pm-bs")), estado: "revision", sentAt: Date.now() }); savePend();
-  addMovement("Recarga de wallet", `Pago móvil · Ref. ${ref.slice(-6)}`, "+" + money(rcAmount), "En revisión", "neutral", { icon: "smartphone", go: "recarga", goLabel: "Ver estado ›" });
+  addMovement("Recarga de wallet", `Pago Móvil · Ref. ${ref.slice(-6)}`, "+" + money(rcAmount), "En revisión", "neutral", { icon: "smartphone", go: "recarga", goLabel: "Ver estado →" });
   e.target.reset(); PM_FIELDS.forEach(id => pmShow(id, ""));
   toast(`Registramos tu Pago Móvil de ${money(rcAmount)}. Lo validaremos en un máximo de 24 horas hábiles.`);
   renderRecarga(); go("recarga");
@@ -1363,7 +1400,7 @@ document.getElementById("ppCodeForm").addEventListener("submit", e => {
   plan = { key: p.key, name: p.name, price: p.price, days: p.days, start: prev ? prev.start : p.start, end: p.end, paidOn: isoOf(todayNoon()) };
   savePlan();
   const ref = "EST-" + p.start.replace(/-/g, "").slice(2) + "-" + String(Math.floor(Math.random() * 9000) + 1000);
-  addMovement(`Plan ${p.name.toLowerCase()}`, `Estacionamiento · Wallet Nexo · ${ref}`, "−" + money(p.price), "Pagado", "ok", { icon: "car-front", go: "acceso", goLabel: "Ver credencial ›" });
+  addMovement(`Plan ${p.name.toLowerCase()}`, `Estacionamiento · Wallet Nexo · ${ref}`, "−" + money(p.price), "Pagado", "ok", { icon: "car-front", go: "acceso", goLabel: "Ver credencial →" });
   document.querySelector('#pagoplan [data-pp="ref"]').textContent = ref;
   document.querySelector('#pagoplan [data-pp="donetext"]').textContent = `Tu plan ${p.name.toLowerCase()} está ${prev ? "agregado" : "activo"} para ${vehicle.brand} ${vehicle.model} · ${vehicle.plate}.`;
   renderWallet(); renderPlanState(); if (typeof renderNotifs === "function") renderNotifs();
@@ -1834,7 +1871,7 @@ function renderFoodList() {
   document.getElementById("foodKioscos").closest("[data-group]").classList.toggle("q-empty", !kios.length);
   const empty = document.getElementById("foodEmpty");
   empty.hidden = res.length > 0;
-  empty.innerHTML = ffActiveCount() ? `No hay locales ni productos con estos filtros. <button class="link b" type="button" data-ff-clear>Limpiar filtros</button>` : "No encontramos productos ni locales con esa búsqueda.";
+  empty.innerHTML = ffActiveCount() ? emptyState("filter-x", "Nada coincide con estos filtros", "Prueba quitando alguno.", `<button class="btn ghost sm" type="button" data-ff-clear>Limpiar filtros</button>`) : emptyState("search-x", "No encontramos productos ni locales", "Revisa cómo lo escribiste o busca algo más general, como \"café\" o \"almuerzo\".");
   const cc = document.getElementById("foodCartCard"), cl = cartLocal();
   cc.hidden = !cl || !cart.lines.length;
   if (!cc.hidden) cc.innerHTML = `<h3 class="h3">Tu carrito</h3><p class="small" style="font-size:13px">${plural(cartCount(), "producto", "productos")} · ${esc(cl.name)}</p>
@@ -2067,7 +2104,7 @@ function confirmOrder(o) {
   curOrder = o.id;
   const l = localById(o.local), n = o.lines.reduce((a, x) => a + x.qty, 0);
   addMovement(o.lines.length === 1 ? o.lines[0].name : `Pedido · ${plural(n, "producto", "productos")}`, `${l.name} · ${l.place}`, "−" + money(o.total), "Pagado", "ok",
-    { icon: "utensils", go: "pedido", goLabel: "Ver pedido ›", order: o.id, date: `${o.date} · ${o.time}` });
+    { icon: "utensils", go: "pedido", goLabel: "Ver pedido →", order: o.id, date: `${o.date} · ${o.time}` });
   trackId = o.id; toast(o.scheduledFor ? `Pago confirmado. Tu pedido quedó programado para ${whenTxt(o.scheduledFor)}.` : "Pago confirmado. Ya están preparando tu pedido.");
   go("pedido");
 }
@@ -2436,7 +2473,7 @@ function renderGestion() {
       <div>${stPill(t.status)}</div>
       <div>${isOpen(t) ? assignSelect(t) : `<span class="small">${esc(t.mod ? nameOf(t.mod) : "—")}</span>`}</div>
       <div><span class="prio ${t.prio}">${TK_PRIO[t.prio]}</span></div>
-    </div>`).join("") || `<p class="nempty" style="padding:18px">No hay tickets con esos filtros.</p>`)
+    </div>`).join("") || emptyState("inbox", "No hay tickets con esos filtros", "Prueba con otro estado o servicio."))
     + `<div class="tk-foot"><span class="small">${list.length} de ${tickets.length} tickets</span></div>`;
   document.getElementById("gsSide").innerHTML = inviteCard() + teamCard() + ADMIN_NOTE;
   icons();
@@ -2451,7 +2488,7 @@ function renderEquipo() {
       : `<button class="link" type="button" style="color:var(--danger)" data-mod-off="${r.email}">Desactivar</button>`;
     return `<div class="tk-row eq"><div class="row start"><span class="avatar sm">${r.kind === "inv" ? `<i data-lucide="mail"></i>` : initialsOf(r.name)}</span><div style="min-width:0"><b style="font-size:13px">${esc(r.name)}</b><p class="tiny">${r.kind === "inv" ? `Invitado como moderador · ${invNote(invByEmail(r.email))}` : esc(r.email)}</p></div></div>
       <div><span class="tk-lbl">Abiertos</span>${r.kind === "inv" ? "—" : open}</div><div><span class="tk-lbl">Resueltos</span>${r.kind === "inv" ? "—" : done}</div><div>${st}</div><div>${act}</div></div>`;
-  }).join("") || `<p class="nempty" style="padding:18px">Aún no hay moderadores. Invita al primero.</p>`);
+  }).join("") || emptyState("users", "Aún no hay moderadores", "Invita al primero para que responda los tickets de los estudiantes."));
   document.getElementById("eqSide").innerHTML = inviteCard() + `<div class="notice"><i data-lucide="info"></i><p>Al desactivar a un moderador pierde el acceso a la moderación, pero puede seguir usando Nexo como usuario. Sus tickets abiertos quedan sin asignar para que los repartas.</p></div>`;
   icons();
 }
@@ -2595,7 +2632,7 @@ function ticketAction(t, type) {
     : `Cancelamos tu compra ${p.num} y devolvimos ${money(p.amount)} a tu ${p.method}.` });
   if (t.status === "abierto") t.status = "revision";
   saveTickets();
-  pushStudentMove(t.student.email, { title: type === "refund" ? `Reembolso · ${t.id}` : `Compra cancelada · ${t.id}`, detail: p.place, amount: "+" + money(p.amount), pill: "Reembolsado", pillCls: "ok", date: fmtD(new Date(now)), icon: "rotate-ccw", go: "soporte", goLabel: "Ver solicitud ›" });
+  pushStudentMove(t.student.email, { title: type === "refund" ? `Reembolso · ${t.id}` : `Compra cancelada · ${t.id}`, detail: p.place, amount: "+" + money(p.amount), pill: "Reembolsado", pillCls: "ok", date: fmtD(new Date(now)), icon: "rotate-ccw", go: "soporte", goLabel: "Ver solicitud →" });
   logAudit("reembolso", type === "refund" ? `Reembolsó ${money(p.amount)} en ${t.id} (${t.student.name}).` : `Canceló la compra ${p.num} en ${t.id} (${t.student.name}).`);
   toast(type === "refund" ? `Reembolso de ${money(p.amount)} registrado.` : "Compra cancelada y reembolsada.");
 }
@@ -2617,7 +2654,7 @@ function renderResueltos() {
     <div class="tk-main"><b style="font-size:12px">${esc(t.subject)}</b><p class="tiny">${esc(t.student.name)} · ${t.service}</p></div>
     <div><span class="small">${(t.actions || []).length ? t.actions.map(actionLabel).join(", ") : "Respuesta"}</span></div>
     <div><span class="tiny">${t.resolved ? ago(t.resolved) : "—"}</span></div>
-    <div><button class="link b" type="button" data-md-open="${t.id}">Ver caso</button></div></div>`).join("") || `<p class="nempty" style="padding:18px">Aún no has resuelto tickets.</p>`);
+    <div><button class="link b" type="button" data-md-open="${t.id}">Ver caso</button></div></div>`).join("") || emptyState("check-check", "Aún no has resuelto tickets", "Los que resuelvas aparecerán aquí.", `<button class="btn ghost sm" type="button" data-go="moderacion">Ir a mis tickets</button>`));
   icons();
 }
 
@@ -2642,7 +2679,7 @@ function renderSoporte() {
         <button class="link b" type="button" style="font-size:12px" data-sup-open="${t.id}">${expanded ? "Ocultar conversación" : "Ver conversación →"}</button>
         ${expanded ? `<div class="sep"></div>${convHTML(t, "student")}${isOpen(t) ? `<form class="stack s14" data-sup-reply="${t.id}"><div class="input" style="padding:12px"><textarea rows="2" maxlength="600" placeholder="Escribe tu respuesta…" aria-label="Tu respuesta"></textarea></div><button class="btn" type="submit"><i data-lucide="send"></i>Enviar</button></form>` : `<p class="tiny">Esta solicitud está resuelta. Si el problema sigue, crea una nueva.</p>`}` : ""}
       </div>`;
-    }).join("") || `<p class="small">No hay solicitudes en este filtro.</p>`;
+    }).join("") || emptyState("inbox", supFilter === "open" ? "No tienes solicitudes abiertas" : "No tienes solicitudes resueltas", "", `<button class="btn ghost sm" type="button" data-sup-f="all">Ver todas</button>`);
   icons();
 }
 function openSupForm(show) {
@@ -2875,7 +2912,7 @@ function renderCreadorEquipo() {
     + (list.map(t => `<button class="tk-row ce${t.id === ceSel ? " on" : ""}" type="button" data-ce="${t.id}">
       <span><span class="tk-ref">${t.id}</span><span class="tiny" style="display:block">${ago(t.created)}</span></span>
       <span class="tk-main"><b style="font-size:12px">${esc(t.subject)}</b><span class="tiny" style="display:block">${esc(t.student.name)} · ${t.service}</span></span>
-      <span>${stPill(t.status)}</span><span class="prio ${t.prio}">${TK_PRIO[t.prio]}</span></button>`).join("") || `<p class="nempty" style="padding:18px">No hay tickets con esos filtros.</p>`)
+      <span>${stPill(t.status)}</span><span class="prio ${t.prio}">${TK_PRIO[t.prio]}</span></button>`).join("") || emptyState("inbox", "No hay tickets con esos filtros", "Prueba con otro estado o servicio."))
     + `<div class="tk-foot"><span class="small">${list.length} de ${all} tickets</span></div>`;
   renderCeTicket();
   icons();
@@ -2931,7 +2968,7 @@ function renderMovimientos() {
     const tx = allTransactions();
     box.innerHTML = `<div class="tk-row tk-head mv"><span>Fecha</span><span>Concepto</span><span>Método</span><span>Monto</span><span>Comisión</span></div>`
       + (tx.map(x => `<div class="tk-row mv"><span class="tiny">${x.t ? fullDate(x.t) : "—"}</span><span class="tk-main"><b style="font-size:12px">${esc(x.concept)}</b><span class="tiny" style="display:block">${esc(x.who)}</span></span><span class="small">${esc(x.method)}</span><b class="${x.amount < 0 ? "neg" : ""}" style="font-size:13px">${x.amount < 0 ? "−" + money(-x.amount) : money(x.amount)}</b><span class="small">${x.fee === null ? "—" : money(x.fee)}</span></div>`).join("")
-        || `<p class="nempty" style="padding:18px">Aún no hay compras en este navegador. Cuando un estudiante pague un pedido de comida, aparecerá aquí. Los totales del Resumen son datos de ejemplo.</p>`);
+        || emptyState("receipt-text", "Aún no hay compras", "Cuando un estudiante pague un pedido de comida, aparecerá aquí. Los totales del Resumen son datos de ejemplo."));
   } else {
     box.innerHTML = `<div class="tk-row tk-head au"><span>Cuándo</span><span>Quién</span><span>Cambio</span><span>Tipo</span></div>`
       + (audit.slice().sort((a, b) => b.t - a.t).map(a => `<div class="tk-row au"><span class="tiny">${ago(a.t)}</span><span><b style="font-size:12px">${esc(a.who)}</b><span class="tiny" style="display:block">${ROLE_LABEL[a.role] || ""}</span></span><span style="font-size:12px">${esc(a.text)}</span><span><span class="pill ${(AUDIT_TYPE[a.type] || AUDIT_TYPE.soporte)[1]}">${(AUDIT_TYPE[a.type] || AUDIT_TYPE.soporte)[0]}</span></span></div>`).join(""));
@@ -3118,7 +3155,7 @@ function renderPedido() {
       </div>
       <div class="card"><div class="row start"><i data-lucide="map-pin" style="color:var(--brand);font-size:20px"></i><b class="h3">${esc(l.name)}</b></div><p class="small" style="font-size:13px">${l.place} · Campus Central · Planta baja · Hoy ${todayHours(l)}</p></div>
       ${st === "cancelado" ? `<div class="notice warn"><i data-lucide="ban"></i><p>Si tienes dudas sobre la cancelación, escríbenos desde <button class="link b" type="button" data-go="soporte" style="font-size:12px">Soporte</button>.</p></div>` : ""}
-      ${["programado", "preparando"].includes(st) ? `<div class="notice"><i data-lucide="flask-conical"></i><p>Prototipo: <button class="link b" type="button" data-sim-ready="${o.id}" style="font-size:12px">simular que el pedido ya está listo</button> para no esperar ${l.eta}.</p></div>` : ""}
+      ${["programado", "preparando"].includes(st) ? `<div class="notice demo-only"><i data-lucide="flask-conical"></i><p>Prototipo: <button class="link b" type="button" data-sim-ready="${o.id}" style="font-size:12px">simular que el pedido ya está listo</button> para no esperar ${l.eta}.</p></div>` : ""}
       ${orders.length > 1 ? `<button class="link b" type="button" data-go="actividad">Ver todos mis pedidos en Actividad →</button>` : ""}
     </div>`;
   body.querySelectorAll("canvas[data-qr]").forEach(drawQR);
@@ -3296,7 +3333,7 @@ document.addEventListener("click", e => {
     const { email, id } = lpFind(cy.dataset.lpCancelYes), l = myLocal();
     const o = updateOrder(email, id, o => { o.cancelledAt = Date.now(); });
     if (o) {
-      pushStudentMove(email, { title: `Pedido cancelado · ${o.num}`, detail: `${l.name} · ${l.place}`, amount: "+" + money(o.total), pill: "Reembolsado", pillCls: "ok", date: fmtD(new Date()), icon: "rotate-ccw", go: "pedido", goLabel: "Ver pedido ›", order: o.id });
+      pushStudentMove(email, { title: `Pedido cancelado · ${o.num}`, detail: `${l.name} · ${l.place}`, amount: "+" + money(o.total), pill: "Reembolsado", pillCls: "ok", date: fmtD(new Date()), icon: "rotate-ccw", go: "pedido", goLabel: "Ver pedido →", order: o.id });
       toast(`Cancelaste ${o.num} y devolvimos ${money(o.total)}.`);
     }
     lpConfirm = null; renderLocalPedidos(); return;
@@ -3981,6 +4018,44 @@ document.addEventListener("click", e => {
 });
 if (current === "local") try { renderLocal(); } catch (err) {}
 if (current === "comida") try { renderFoodAgain(); } catch (err) {}
+
+/* ---------- Formularios cómodos en móvil ----------
+   Enter en un campo pasa al siguiente (el teclado muestra "Siguiente"); en el último, envía.
+   Los formularios largos (4+ campos) dejan el botón de enviar fijo abajo en móvil (.longform). */
+const formFields = f => [...f.querySelectorAll("input, select, textarea")].filter(x => !x.disabled && !x.readOnly && x.type !== "hidden" && x.type !== "checkbox" && x.type !== "radio" && x.type !== "file" && x.offsetParent !== null);
+document.addEventListener("focusin", e => {
+  const x = e.target, f = x.form; if (!f || !x.matches("input, select")) return;
+  const fs = formFields(f), i = fs.indexOf(x); if (i < 0) return;
+  if (x.tagName === "INPUT" && !x.hasAttribute("enterkeyhint")) x.setAttribute("enterkeyhint", i < fs.length - 1 ? "next" : x.type === "search" ? "search" : "go");
+  f.classList.toggle("longform", fs.length >= 4 && !!f.querySelector('button[type="submit"], button:not([type])'));
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter" || e.isComposing) return;
+  const x = e.target, f = x.form;
+  if (!f || x.tagName !== "INPUT" || ["checkbox", "radio", "search", "submit", "button"].includes(x.type)) return;
+  const fs = formFields(f), i = fs.indexOf(x);
+  if (i > -1 && i < fs.length - 1) { e.preventDefault(); fs[i + 1].focus(); }
+});
+
+/* ---------- Modo demostración ----------
+   Las herramientas de prueba (fecha simulada, simular pedido listo) solo se ven con este modo activo.
+   Viene activo en la cuenta demo; las demás lo encienden en Mi cuenta. Al apagarlo, la fecha vuelve a hoy. */
+let demoMode = isDemo;
+try { const v = localStorage.getItem(K("nexo-demomode")); if (v !== null) demoMode = v === "1"; } catch (err) {}
+function applyDemoMode() {
+  document.body.classList.toggle("no-demo", !demoMode);
+  document.querySelectorAll("[data-demo-mode]").forEach(b => b.setAttribute("aria-checked", demoMode));
+}
+applyDemoMode();
+if (!demoMode && isoD(simDate) !== isoD(realToday())) { simDate = realToday(); try { localStorage.removeItem(K("nexo-sim")); } catch (err) {} }
+document.addEventListener("click", e => {
+  if (!e.target.closest("[data-demo-mode]")) return;
+  demoMode = !demoMode;
+  try { localStorage.setItem(K("nexo-demomode"), demoMode ? "1" : "0"); } catch (err) {}
+  if (!demoMode) { try { setSim(realToday()); } catch (err) {} try { localStorage.removeItem(K("nexo-sim")); } catch (err) {} }
+  applyDemoMode();
+  toast(demoMode ? "Modo demostración activo: verás las herramientas de prueba." : "Modo demostración apagado. Todo usa la fecha de hoy.");
+});
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();

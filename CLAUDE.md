@@ -78,6 +78,8 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 
 **Pedir de nuevo y favoritos.** Las líneas de cada pedido guardan `item` y `sel` (los pedidos viejos se reconstruyen por nombre y por el texto de las opciones). `reorder(o)` arma el carrito (salta agotados, respeta la pausa, "Deshacer" si había otro carrito); botón `[data-reorder]` en `#pedido` (listo, retirado o cancelado) y en `#foodAgain` de `#comida` (`renderFoodAgain`: últimos 3 pedidos distintos + favoritos). Favoritos por cuenta en `nexo-favs` (`"local:item"`); el corazón `favBtn()` es un botón hermano de la tarjeta del producto (`.favwrap`), nunca anidado.
 
+**Pulido.** `emptyState(icon, título, texto, acción)` da el mismo estado vacío en todas las listas (clase `.empty`). Formularios: Enter pasa al siguiente campo y pone `enterkeyhint` (último = enviar); con 4+ campos el botón de enviar queda fijo abajo en móvil (`.longform`). Botón atrás (`[data-back-btn]` en la barra móvil y "Volver"): usa el recorrido real `navTrail` (sessionStorage `nexo-trail`, se reinicia al iniciar sesión), salta pantallas de paso (`NO_BACK`, carrito vacío, cambio gestión/usuario) y si no hay a dónde volver usa `data-back`. Modo demostración (`nexo-demomode:<correo>`, interruptor en Mi cuenta; activo por defecto solo en la cuenta demo): sin él, `body.no-demo` oculta `.demo-only` (fecha simulada, simular pedido listo) y la fecha vuelve a hoy. Textos: "Pago Móvil" con mayúscula y enlaces con "→".
+
 ## Cómo trabajar con el usuario
 
 - Cuando haya que elegir entre opciones (qué mejorar, decisiones de diseño, etc.), preséntalas siempre como un formulario de un clic (herramienta de preguntas con opciones), no como una lista en texto. Marca la recomendada.
