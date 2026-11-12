@@ -1258,3 +1258,8 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .court-art{background:color-mix(in srgb,var(--fa) 22%,var(--surface))}}
 :root[data-theme="dark"] .court-art{background:color-mix(in srgb,var(--fa) 22%,var(--surface))}
 .svc .head.svc-head{justify-content:flex-start}
+/* Datos reales (dueño) */
+.tk-row.dn-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (min-width:700px){.tk-row.dn-row{grid-template-columns:minmax(0,1.2fr) minmax(0,1.3fr) minmax(0,1fr);min-height:56px}}
+.dn-row b{font-weight:600}
+#dnActs .btn{white-space:nowrap}

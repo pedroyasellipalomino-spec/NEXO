@@ -1173,7 +1173,7 @@
         <div class="sep"></div><div class="kv total"><span>Total en USD</span><b data-r="total">$12,60</b></div>
       </div>
       <div class="notice"><i data-lucide="shield-check"></i><p>Pago protegido. Tu QR estará disponible al confirmar. Cancelación gratuita hasta las 16:00.</p></div>
-      <button class="btn" type="button" data-go="qr"><i data-lucide="lock-keyhole"></i>Confirmar pago · <span data-r="total">$12,60</span></button>
+      <button class="btn" type="button" data-go="qr" data-court-pay><i data-lucide="lock-keyhole"></i>Confirmar pago · <span data-r="total">$12,60</span></button>
       <p class="tiny">Al continuar, aceptas las condiciones de reserva del campus. Entorno conceptual: no se procesará un pago real.</p>
     </div>
   </div>
@@ -1332,6 +1332,11 @@
 </section>
 
 <!-- G9 · Creador · Configuración -->
+<section class="screen app" id="dueno" data-staff="owner" data-title="Datos reales" data-tab="dueno" data-crumb="Dueño  /  Datos reales" hidden>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap;gap:12px"><div><p class="eyebrow">CUENTA DE DUEÑO</p><h1 class="h1">Datos reales de Nexo</h1><p class="lead" id="dnLead">Usuarios y pagos reales hechos en nexouni.netlify.app.</p></div>
+    <div class="row start" style="gap:8px" id="dnActs"></div></div>
+  <div id="dnBody" class="stack"></div>
+</section>
 <section class="screen app" id="config" data-staff="creator" data-title="Configuración" data-tab="config" data-crumb="Gestión  /  Creador  /  Configuración" hidden>
   <div><h1 class="h1">Configuración de la plataforma</h1><p class="lead">Ajusta las comisiones por servicio y los datos del prototipo.</p></div>
   <div class="cols">

@@ -42,10 +42,11 @@ const STAFF_NAV = {
   admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"], ["validar","badge-check","Pagos por validar","validar"]],
   mod: [["moderacion","inbox","Tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]],
   local: [["local-pedidos","chef-hat","Pedidos","local-pedidos"], ["local-menu","book-open","Menú y horario","local-menu"]],
+  owner: [["dueno","shield-check","Datos reales","dueno"]],
   creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["validar","badge-check","Pagos por validar","validar"], ["config","settings","Configuración","config"]]
 };
-const ROLE_LABEL = { local: "Comercio", creator: "Creador", admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
-const ROLE_HOME = { local: "local-pedidos", creator: "creador", admin: "gestion", mod: "moderacion", estudiante: "inicio" };
+const ROLE_LABEL = { owner: "Dueño", local: "Comercio", creator: "Creador", admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
+const ROLE_HOME = { owner: "dueno", local: "local-pedidos", creator: "creador", admin: "gestion", mod: "moderacion", estudiante: "inicio" };
 
 document.querySelectorAll("[data-account]").forEach(el => el.append(document.getElementById("account-tpl").content.cloneNode(true)));
 
@@ -220,7 +221,7 @@ function enterApp(email, remember, flash) {
   try { sessionStorage.setItem("nexo-flash", flash); } catch (err) {}
   const r = roleOf(accounts.find(a => a.email === email));
   let mode = null; try { mode = localStorage.getItem("nexo-mode:" + email); } catch (err) {}
-  history.replaceState(null, "", "#" + (["creator", "admin", "mod"].includes(r) && mode === "usuario" ? "inicio" : ROLE_HOME[r]));
+  history.replaceState(null, "", "#" + (["owner", "creator", "admin", "mod"].includes(r) && mode === "usuario" ? "inicio" : ROLE_HOME[r]));
   location.reload();
 }
 
@@ -261,14 +262,14 @@ window.addEventListener("click", e => {
   go(to);
 }, true);
 const PUBLIC = ["tutorial", "login", "registro", "ayuda", "invitacion", "recuperar"];
-const STAFF_SCREENS = { gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator"] };
+const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator"] };
 function show(id) {
   if (/^invitacion-[A-Z0-9]+$/.test(id)) { ivToken = id.slice(11); id = "invitacion"; }
   if (!screens.includes(id)) id = sessionEmail ? "inicio" : "tutorial";
   if (!sessionEmail && !PUBLIC.includes(id)) { id = "login"; if (location.hash !== "#login") history.replaceState(null, "", "#login"); setTimeout(() => toast("Inicia sesión para continuar."), 0); }
   if (sessionEmail && !PUBLIC.includes(id)) {
     const role = roleOf(account), need = STAFF_SCREENS[id];
-    const dual = ["creator", "admin", "mod"].includes(role); // el personal puede usar Nexo como usuario
+    const dual = ["owner", "creator", "admin", "mod"].includes(role); // el personal puede usar Nexo como usuario
     const okRole = Array.isArray(need) ? need.includes(role) : need === role;
     if (role === "estudiante" ? need : dual ? (need && !okRole) : !okRole) { id = ROLE_HOME[role]; history.replaceState(null, "", "#" + id); }
     if (!need && !account?.carnet && ["materias", "caja", "tarjeta", "inscripcion", "revision"].includes(id)) {
@@ -290,6 +291,7 @@ function show(id) {
   if (id === "invitacion" && typeof renderInvitacion === "function") renderInvitacion();
   if (id === "recuperar" && typeof renderRecuperar === "function") renderRecuperar();
   if (id === "inicio" && typeof renderHome === "function") try { renderHome(); } catch (err) {}
+  if (id === "dueno" && typeof renderDueno === "function") try { renderDueno(); } catch (err) {}
   if (id === "comida" && typeof renderFoodList === "function") renderFoodList();
   if (id === "comida" && typeof renderFoodOrders === "function") try { renderFoodOrders(); } catch (err) {}
   if (id === "comida" && typeof renderFoodAgain === "function") try { renderFoodAgain(); } catch (err) {}
@@ -725,6 +727,7 @@ function drawMovement(m) {
   card.querySelector("h2").after(el);
 }
 function addMovement(title, detail, amount, pill, pillCls, extra = {}) {
+  try { trackMove(title, detail, amount, pill, extra); } catch (err) {}
   const m = { id: "m" + Date.now(), title, detail, amount, pill, pillCls, date: fmtD(day0(simDate)), ...extra };
   moves.push(m);
   try { localStorage.setItem(K("nexo-moves"), JSON.stringify(moves)); } catch (err) {}
@@ -976,7 +979,7 @@ function loginError(title, text, offerSignup) {
   document.getElementById("loginToSignup").hidden = !offerSignup;
   box.hidden = false;
 }
-document.getElementById("loginForm").addEventListener("submit", e => {
+document.getElementById("loginForm").addEventListener("submit", async e => {
   e.preventDefault();
   const idEl = document.getElementById("l-mail"), passEl = document.getElementById("l-pass");
   [idEl, passEl].forEach(i => i.closest(".field").classList.remove("bad"));
@@ -987,6 +990,7 @@ document.getElementById("loginForm").addEventListener("submit", e => {
     (!ident ? idEl : passEl).focus(); return;
   }
   const byDigits = /^\d+$/.test(ident);
+  if (!byDigits && await isOwnerEmail(normEmail(ident))) return ownerLogin(normEmail(ident), pass, document.getElementById("l-rem").checked);
   const acc = accounts.find(a => byDigits ? a.carnet === ident : a.email === normEmail(ident));
   if (!acc) {
     idEl.closest(".field").classList.add("bad");
@@ -1017,7 +1021,7 @@ function signupError(title, text, el) {
   if (el) { el.closest(".field").classList.add("bad"); el.focus(); }
 }
 document.getElementById("registerForm").addEventListener("input", () => { document.getElementById("signupError").hidden = true; });
-document.getElementById("registerForm").addEventListener("submit", e => {
+document.getElementById("registerForm").addEventListener("submit", async e => {
   e.preventDefault();
   const f = e.target;
   const nameEl = f.querySelector("#r-name"), carnetEl = f.querySelector("#r-carnet"), mailEl = f.querySelector("#r-mail"), passEl = f.querySelector("#r-pass");
@@ -1032,6 +1036,7 @@ document.getElementById("registerForm").addEventListener("submit", e => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return signupError("Revisa tu correo.", "Escribe un correo válido, por ejemplo nombre@correo.unimet.edu.ve.", mailEl);
   if (passEl.value.length < 8 || !/\d/.test(passEl.value)) return signupError("Contraseña muy débil.", "Usa al menos 8 caracteres y un número.", passEl);
   if (!f.querySelector("#r-terms").checked) return signupError("Falta aceptar los términos.", "Marca la casilla de términos de uso para continuar.", null);
+  if (await isOwnerEmail(email)) return signupError("Ese correo es de la cuenta de dueño.", "Entra con él desde Iniciar sesión.", mailEl);
   if (accounts.some(a => a.email === email)) return signupError("Ese correo ya tiene una cuenta.", "Inicia sesión con él o usa otro correo.", mailEl);
   if (accounts.some(a => a.carnet === carnetEl.value)) return signupError("Ese carnet ya está registrado.", "Cada carnet solo puede tener una cuenta. Inicia sesión o revisa los dígitos.", carnetEl);
   const full = cleanName(nameEl.value);
@@ -1041,6 +1046,7 @@ document.getElementById("registerForm").addEventListener("submit", e => {
   accounts.push({ full, carnet: carnetEl.value, email, pass: passKey(passEl.value), created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`, ...(inv ? { role: inv.role } : {}) });
   saveAccounts();
   if (inv) { invites = invites.filter(i => i !== inv); saveInvites(); }
+  trackEvent({ type: "signup" }, email);
   enterApp(email, true, inv ? `Cuenta creada. Ya eres parte del equipo de ${inv.role === "admin" ? "administración" : "moderación"}, ${full.split(" ")[0]}.` : `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
 });
 document.addEventListener("click", e => {
@@ -3898,6 +3904,7 @@ document.addEventListener("submit", e => {
     accounts.push({ full, carnet: "", email: inv.email, pass: passKey(p1.value), role: inv.role, created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}` });
     saveAccounts();
     invites = invites.filter(i => i !== inv); saveInvites();
+    trackEvent({ type: "signup", staff: true }, inv.email);
     audit.push({ t: Date.now(), who: full, role: inv.role, type: "rol", text: `Activó su cuenta de ${ROLE_LABEL[inv.role].toLowerCase()} (invitación de ${inv.byName || "la administración"}).` });
     try { localStorage.setItem("nexo-audit", JSON.stringify(audit)); } catch (err) {}
     ivError = ""; ivToken = null; ivEmail = "";
@@ -3929,9 +3936,9 @@ document.addEventListener("click", e => {
 /* ---------- Menú de usuario y cambio de modo ----------
    El avatar (barra móvil, barra de escritorio y menú lateral) abre este menú. Administración, moderación y el creador
    pueden pasar de su espacio de gestión a usar Nexo como cualquier usuario (pedir comida, estacionamiento, canchas). */
-const DUAL = ["creator", "admin", "mod"].includes(roleOf(account));
+const DUAL = ["owner", "creator", "admin", "mod"].includes(roleOf(account));
 const inStaffScreen = () => !!STAFF_SCREENS[current];
-const HOME_LABEL = { creator: "Resumen de Nexo", admin: "Tickets abiertos", mod: "Bandeja de tickets", local: "Pedidos del local" };
+const HOME_LABEL = { owner: "Datos reales", creator: "Resumen de Nexo", admin: "Tickets abiertos", mod: "Bandeja de tickets", local: "Pedidos del local" };
 function userMenuHTML() {
   const role = roleOf(account), staffNow = inStaffScreen();
   const item = (attrs, icon, label, sub = "") => `<button class="um-item" type="button" role="menuitem" ${attrs}><i data-lucide="${icon}"></i><span class="grow">${label}${sub ? `<span class="tiny">${sub}</span>` : ""}</span></button>`;
@@ -4773,6 +4780,125 @@ document.addEventListener("click", e => {
   const btn = document.querySelector('#loginForm button[type="submit"]'); if (btn) btn.focus();
   toast("Listo: toca Iniciar sesión.");
 });
+
+/* ---------- Cuenta de dueño y datos reales ----------
+   Nexo no tiene servidor propio: cada registro y pago real hecho en nexouni.netlify.app se anota en un contador
+   central (funciones de Netlify /api/track y /api/owner, guardado en Netlify Blobs) sin nombres ni correos:
+   solo una huella del usuario, el servicio, el monto, el estado y el método. Las cuentas de prueba no cuentan.
+   El dueño se identifica por la huella de su correo (el correo no está en el código) y una clave que se crea
+   una sola vez en el servidor; desde ahí solo esa clave abre una sesión de 12 h. Ver netlify/functions/. */
+const OWNER_HASH = "0f39373b257a2943c5a75723fbf9acedf700e2c245db92d672002b6b533b4e83";
+const API_OK = /^https?:$/.test(location.protocol) && (/\.netlify\.app$/.test(location.hostname) || location.hostname === "localhost");
+async function sha256hex(t) {
+  try { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join(""); } catch (err) { return ""; }
+}
+async function isOwnerEmail(email) { return (await sha256hex(normEmail(email))) === OWNER_HASH; }
+const isTestAccount = email => !email || email === DEMO_EMAIL || /@comercio\.nexo$/.test(email) || STAFF0.some(a => a.email === email);
+async function trackEvent(data, email = sessionEmail) {
+  if (!API_OK || isTestAccount(email)) return;
+  const uh = (await sha256hex("nexo:" + normEmail(email))).slice(0, 32);
+  try { fetch("/.netlify/functions/track", { method: "POST", keepalive: true, headers: { "content-type": "application/json" }, body: JSON.stringify({ ...data, uh }) }).catch(() => {}); } catch (err) {}
+}
+function trackMove(title, detail, amount, pill, extra) {
+  const a = String(amount || ""), d = String(detail || ""), v = parseFloat(a.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
+  if (!v || a.startsWith("+") && title !== "Recarga de wallet") return; // reembolsos y otros abonos no son pagos
+  const service = title === "Recarga de wallet" ? "recarga" : d.startsWith("Universidad") ? "materias" : extra.icon === "car-front" ? "estacionamiento" : extra.icon === "dribbble" ? "canchas" : extra.order || extra.icon === "utensils" ? "comida" : null;
+  if (!service || !["Pagado", "En revisión", "Acreditada", "Aprobado"].includes(pill)) return;
+  const o = extra.order ? (orders || []).find(x => x.id === extra.order) : null;
+  const method = /Pago Móvil/.test(d) ? "pago-movil" : /Wallet/.test(d) ? "wallet" : /Transferencia/.test(d) || (o && o.method === "transfer") ? "transferencia" : (o && o.method === "card") || /Visa|Mastercard|····/.test(d) || service === "canchas" ? "tarjeta" : "otro";
+  trackEvent({ type: "pay", service, amount: v, status: pill, method });
+}
+// Pago de canchas: antes no quedaba en Actividad ni en los gastos del mes
+document.addEventListener("click", e => {
+  if (!e.target.closest("[data-court-pay]")) return;
+  const sp = SPORTS[res.sport], fee = Math.round(sp.price * 5) / 100, end = pad2(parseInt(res.slot) + 1) + ":00";
+  addMovement(sp.court, `Canchas · ${res.dname} ${res.day} nov · ${res.slot}–${end}`, "−" + money(sp.price + fee), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
+});
+// Inicio de sesión del dueño (el primer ingreso crea la clave en el servidor)
+const OWNER_TK = "nexo-owner-token";
+const ownerToken = () => { try { const t = JSON.parse(sessionStorage.getItem(OWNER_TK) || "null"); return t && t.exp > Date.now() ? t.token : null; } catch (err) { return null; } };
+async function ownerApi(body) {
+  const r = await fetch("/.netlify/functions/owner", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  let d = {}; try { d = await r.json(); } catch (err) {}
+  return { ok: r.ok, status: r.status, ...d };
+}
+function ownerErr(d) {
+  return d.error === "weak" ? ["Clave muy débil.", "Usa al menos 10 caracteres, con letras y números."]
+    : d.error === "bad" ? ["La clave de dueño no es correcta.", d.left ? `Te quedan ${d.left} intentos antes de un bloqueo de 15 minutos.` : "Por seguridad, la cuenta quedó bloqueada 15 minutos."]
+    : d.error === "locked" ? ["Demasiados intentos.", "Espera 15 minutos e inténtalo de nuevo."]
+    : ["No pudimos conectarnos.", "Revisa tu conexión e inténtalo otra vez."];
+}
+async function ownerUnlock(email, pass) {
+  const d = await ownerApi({ action: "login", emailHash: await sha256hex(normEmail(email)), password: pass }).catch(() => ({ ok: false }));
+  if (d.ok && d.token) { try { sessionStorage.setItem(OWNER_TK, JSON.stringify({ token: d.token, exp: d.exp })); } catch (err) {} }
+  return d;
+}
+async function ownerLogin(email, pass, remember) {
+  if (!API_OK) return loginError("La cuenta de dueño solo funciona en la app publicada.", "Entra desde https://nexouni.netlify.app: este archivo no se conecta al servidor.", false);
+  const st = await ownerApi({ action: "status" }).catch(() => ({ ok: false }));
+  if (!st.ok) return loginError(...ownerErr({}), false);
+  const go2 = async () => {
+    const d = await ownerUnlock(email, pass);
+    if (!d.ok) { const [t, x] = ownerErr(d); loginError(t, x, false); document.getElementById("l-pass").closest(".field").classList.add("bad"); return; }
+    let acc = accounts.find(a => a.email === email);
+    const now = new Date(), created = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    if (!acc) { acc = { full: "Dueño de Nexo", carnet: "", email, created }; accounts.push(acc); }
+    Object.assign(acc, { role: "owner", pass: passKey(pass), disabled: false }); saveAccounts();
+    try { localStorage.setItem("nexo-mode:" + email, "gestion"); } catch (err) {}
+    enterApp(email, remember, d.firstClaim ? "Listo: creaste tu clave de dueño. Solo con ella se abren los datos reales." : "Hola de nuevo. Estos son los datos reales de Nexo.");
+  };
+  if (!st.claimed) askConfirm({ icon: "shield-check", title: "Crea tu clave de dueño", text: "Es la primera vez que entras como dueño de Nexo. La contraseña que escribiste quedará como tu clave de dueño (al menos 10 caracteres, con letras y números). Después nadie más podrá reclamar esta cuenta.", ok: "Crear y entrar", cancel: "Volver", onOk: go2 });
+  else go2();
+}
+// Pantalla "Datos reales"
+const SV_LBL = { comida: ["Comida", "utensils"], estacionamiento: ["Estacionamiento", "car-front"], materias: ["Materias", "graduation-cap"], canchas: ["Canchas", "dribbble"], recarga: ["Recargas de wallet", "wallet"] };
+const MT_LBL = { tarjeta: "Tarjeta", transferencia: "Transferencia", "pago-movil": "Pago Móvil", wallet: "Wallet Nexo", otro: "Otro" };
+const fullDT = t => { const d = new Date(t); return `${d.getDate()} ${MES_CORTO[d.getMonth()]} ${d.getFullYear()}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+let dnBusy = false;
+async function renderDueno() {
+  const body = document.getElementById("dnBody"), acts = document.getElementById("dnActs"); if (!body) return;
+  if (!API_OK) { acts.innerHTML = ""; body.innerHTML = `<div class="notice warn"><i data-lucide="globe"></i><p>Los datos reales solo se ven en la app publicada: abre <strong>https://nexouni.netlify.app</strong> y entra con tu cuenta de dueño. Este archivo no se conecta al servidor.</p></div>`; icons(); return; }
+  const tk = ownerToken();
+  if (!tk) {
+    acts.innerHTML = "";
+    body.innerHTML = `<form class="card" id="dnUnlock" style="max-width:460px" novalidate><div class="row start" style="gap:12px"><span class="ico lg"><i data-lucide="lock-keyhole"></i></span><div><h2 class="h2">Abre los datos reales</h2><p class="small" style="font-size:13px">Escribe tu clave de dueño. La sesión dura 12 horas en esta pestaña.</p></div></div>
+      <div class="field"><label for="dn-pass">Clave de dueño</label><div class="input"><input id="dn-pass" type="password" autocomplete="current-password"><button class="eye" type="button" data-eye="dn-pass" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div></div>
+      <p class="tiny pm-err" id="dnErr" hidden></p><button class="btn" type="submit"><i data-lucide="shield-check"></i>Abrir datos</button></form>`;
+    icons(); return;
+  }
+  if (dnBusy) return; dnBusy = true;
+  acts.innerHTML = `<button class="btn ghost sm" type="button" data-dn-refresh><i data-lucide="refresh-cw"></i>Actualizar</button><button class="btn ghost sm" type="button" data-dn-lock><i data-lucide="lock"></i>Cerrar datos</button>`;
+  if (!body.querySelector(".dn-kpis")) body.innerHTML = `<p class="small">Cargando datos reales…</p>`;
+  icons();
+  const d = await ownerApi({ action: "stats", token: tk }).catch(() => ({ ok: false }));
+  dnBusy = false;
+  if (!d.ok) { if (d.status === 401) { try { sessionStorage.removeItem(OWNER_TK); } catch (err) {} return renderDueno(); } body.innerHTML = `<div class="notice warn"><i data-lucide="wifi-off"></i><p>No pudimos cargar los datos. Revisa tu conexión y toca Actualizar.</p></div>`; icons(); return; }
+  document.getElementById("dnLead").textContent = d.since ? `Cuenta todo lo que pasó en nexouni.netlify.app desde el ${fullDT(d.since)}. No incluye cuentas de prueba ni datos de ejemplo. Lo anterior a esa fecha no quedó registrado en ningún lugar.` : "Todavía no hay registros ni pagos reales. Desde ahora, cada registro y pago hecho en nexouni.netlify.app aparecerá aquí.";
+  const k = (lbl, val, sub, ic) => `<div class="card kpi static"><div class="row"><span class="small">${lbl}</span><i data-lucide="${ic}" style="color:var(--muted)"></i></div><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
+  const svRows = Object.keys(SV_LBL).map(key => { const x = d.byService[key] || { n: 0, usd: 0, rev: 0, revUsd: 0 };
+    return `<div class="tk-row dn-row"><span class="row start" style="gap:10px"><span class="ico"><i data-lucide="${SV_LBL[key][1]}"></i></span><b style="font-size:13px">${SV_LBL[key][0]}</b></span><span><span class="tk-lbl">Confirmados</span>${x.n} · <b>${money(x.usd)}</b></span><span><span class="tk-lbl">En revisión</span>${x.rev ? `${x.rev} · ${money(x.revUsd)}` : "—"}</span></div>`; }).join("");
+  const recent = d.recent.length ? d.recent.map(e => `<div class="tk-row dn-row"><span class="tiny">${fullDT(e.t)}</span><span class="row start" style="gap:8px"><i data-lucide="${SV_LBL[e.service][1]}" style="color:var(--brand);width:16px"></i>${SV_LBL[e.service][0]} · ${MT_LBL[e.method] || "Otro"}</span><span class="row start" style="gap:8px;justify-content:space-between"><span class="pill ${e.status === "En revisión" ? "warn" : "ok"}">${e.status}</span><b>${money(e.amount)}</b></span></div>`).join("")
+    : emptyState("receipt-text", "Aún no hay pagos reales", "Cuando alguien pague en nexouni.netlify.app, aparecerá aquí al instante (sin nombres ni datos de pago).");
+  body.innerHTML = `<div class="kpis dn-kpis">${k("Usuarios registrados", d.users.total, `${d.users.today} hoy · ${d.users.last7} en los últimos 7 días`, "users")}${k("Pagos confirmados", d.payments.count, `${money(d.payments.usd)} en total · ${d.payments.payers} ${d.payments.payers === 1 ? "persona pagó" : "personas pagaron"}`, "badge-check")}${k("Pagos en revisión", d.payments.review, d.payments.review ? `${money(d.payments.reviewUsd)} esperando validación` : "Nada pendiente", "hourglass")}</div>
+    <div class="card" style="padding:0;gap:0"><div class="tk-row tk-head dn-row"><span>Servicio</span><span>Confirmados</span><span>En revisión</span></div>${svRows}</div>
+    <div class="card" style="padding:0;gap:0"><div class="row" style="padding:16px 18px 8px"><h2 class="sec">Últimos movimientos reales</h2><span class="tiny">Actualizado ${fullDT(d.now)}</span></div><div class="tk-row tk-head dn-row"><span>Fecha</span><span>Servicio y método</span><span>Estado y monto</span></div>${recent}</div>
+    <div class="notice"><i data-lucide="shield-check"></i><p>Para cuidar la privacidad, el contador no guarda nombres, correos, cédulas ni datos de tarjeta: solo una huella anónima por persona, el servicio, el monto en USD, el estado y el método. Los pagos "en revisión" son los que el estudiante reportó y Caja aún no valida.</p></div>`;
+  icons();
+}
+document.addEventListener("submit", async e => {
+  if (e.target.id !== "dnUnlock") return;
+  e.preventDefault();
+  const p = document.getElementById("dn-pass"), err = document.getElementById("dnErr");
+  if (!p.value) { p.closest(".field").classList.add("bad"); p.focus(); return; }
+  const d = await ownerUnlock(sessionEmail, p.value);
+  if (!d.ok) { const [t, x] = ownerErr(d); err.hidden = false; err.textContent = `${t} ${x}`; p.closest(".field").classList.add("bad"); p.select(); return; }
+  renderDueno();
+});
+document.addEventListener("click", async e => {
+  if (e.target.closest("[data-dn-refresh]")) { renderDueno(); return; }
+  if (e.target.closest("[data-dn-lock]")) { const tk = ownerToken(); try { sessionStorage.removeItem(OWNER_TK); } catch (err) {} if (tk) ownerApi({ action: "logout", token: tk }).catch(() => {}); renderDueno(); toast("Cerraste los datos reales en esta pestaña."); }
+});
+if (current === "dueno") try { renderDueno(); } catch (err) {}
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();

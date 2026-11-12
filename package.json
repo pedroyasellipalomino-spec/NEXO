@@ -10,5 +10,11 @@
     "build:app": "python3 scripts/build_pwa.py",
     "deploy": "python3 scripts/deploy_netlify.py",
     "deploy:borrador": "python3 scripts/deploy_netlify.py --borrador"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  },
+  "devDependencies": {
+    "@netlify/zip-it-and-ship-it": "^9.42.1"
   }
 }
