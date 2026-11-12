@@ -31,7 +31,10 @@ site_dir = ROOT / "dist" / "nexo-app"
 files = {"/" + p.relative_to(site_dir).as_posix(): p for p in site_dir.rglob("*") if p.is_file()}
 digest = {k: hashlib.sha1(p.read_bytes()).hexdigest() for k, p in files.items()}
 fdig = {f["name"]: hashlib.sha256((ROOT / f["path"]).read_bytes()).hexdigest() for f in fns}
-d = call("POST", f"/sites/{SITE_ID}/deploys", {"files": digest, "functions": fdig, "draft": draft, "async": False})
+# Metadatos de cada función (como los manda Netlify CLI): v2 = Request/Response, respuesta en modo "stream"
+fcfg = {f["name"]: {"display_name": f["name"], "generator": "nexo-deploy", "build_data": {"runtimeAPIVersion": f["apiVersion"]}, "priority": f.get("priority") or 10,
+                    "routes": f.get("routes") or [], "excluded_routes": []} for f in fns}
+d = call("POST", f"/sites/{SITE_ID}/deploys", {"files": digest, "functions": fdig, "functions_config": fcfg, "draft": draft, "async": False})
 dep = d["id"]
 need = set(d.get("required") or [])
 for k, p in files.items():
@@ -39,7 +42,8 @@ for k, p in files.items():
         call("PUT", f"/deploys/{dep}/files{urllib.request.quote(k)}", p.read_bytes(), "application/octet-stream")
 for f in fns:
     if fdig[f["name"]] in set(d.get("required_functions") or []):
-        call("PUT", f"/deploys/{dep}/functions/{f['name']}?runtime={f['runtime']}", (ROOT / f["path"]).read_bytes(), "application/octet-stream")
+        q = f"runtime={f['runtime']}" + (f"&invocation_mode={f['invocationMode']}" if f.get("invocationMode") else "")
+        call("PUT", f"/deploys/{dep}/functions/{f['name']}?{q}", (ROOT / f["path"]).read_bytes(), "application/octet-stream")
 for _ in range(60):
     st = call("GET", f"/deploys/{dep}")
     if st["state"] in ("ready", "error"):

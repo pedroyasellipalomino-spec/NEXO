@@ -1,6 +1,20 @@
 // Cuenta de dueño: se reclama una sola vez con una contraseña (se guarda con PBKDF2, nunca en claro).
 // Después solo esa contraseña abre una sesión de 12 h para ver los datos reales. 5 intentos fallidos bloquean 15 min.
-import { store, json, sameOrigin, safeEq, crypto, OWNER_HASH } from "../lib/shared.mjs";
+// --- compartido (va dentro de cada función para que el paquete no dependa de otros archivos) ---
+// Utilidades compartidas por las funciones de Nexo (se ejecutan en Netlify, no en el navegador).
+import { getStore } from "@netlify/blobs";
+import crypto from "node:crypto";
+
+// Huella SHA-256 del correo del dueño. El correo no aparece en el código.
+const OWNER_HASH = "0f39373b257a2943c5a75723fbf9acedf700e2c245db92d672002b6b533b4e83";
+const store = () => getStore({ name: "nexo-datos", consistency: "strong" });
+const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+const sameOrigin = req => {
+  const o = req.headers.get("origin") || "";
+  return /^https:\/\/([a-z0-9-]+--)?nexouni\.netlify\.app$/.test(o) || /^http:\/\/localhost(:\d+)?$/.test(o);
+};
+const safeEq = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
+// --- fin de lo compartido ---
 
 const HOUR = 3600e3;
 const hashPw = (pw, salt) => crypto.pbkdf2Sync(pw, salt, 210000, 32, "sha256").toString("hex");
