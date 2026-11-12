@@ -3574,6 +3574,7 @@ function userMenuHTML() {
       ${role === "estudiante" || (DUAL && !staffNow) ? item(`data-um-go="soporte"`, "message-circle", "Ayuda y soporte") : ""}
     </div>
     <div class="um-theme"><span class="tiny">Apariencia</span><div data-theme-seg>${themeSeg()}</div></div>
+    ${(() => { try { return installable() ? `<div class="um-list">${item(`data-install`, "download", "Instalar la app", "En tu pantalla de inicio")}</div>` : ""; } catch (err) { return ""; } })()}
     <div class="um-list">${item(`data-logout`, "log-out", "Cerrar sesión")}</div>`;
 }
 let umOpen = null;
@@ -4295,6 +4296,63 @@ document.addEventListener("click", e => {
   toast(+n >= 4 ? "¡Gracias! Le haremos llegar tu comentario al equipo." : "Gracias por contarnos. Lo usaremos para mejorar la atención.");
   renderSoporte();
 });
+
+/* ---------- App instalable (PWA) ----------
+   sw.js guarda la app para abrir sin conexión (solo funciona servida por https o localhost, no como archivo suelto).
+   "Instalar Nexo": en Android/Chrome/Edge usa el aviso nativo (beforeinstallprompt); en iPhone/iPad explica
+   Compartir → Añadir a pantalla de inicio. Si ya se abre como app, no se ofrece. */
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: window-controls-overlay)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const canServeWorker = "serviceWorker" in navigator && /^https?:$/.test(location.protocol);
+let installEvt = null;
+const installable = () => !isStandalone() && (!!installEvt || (isIOS() && canServeWorker));
+let installDismissed = false; try { installDismissed = localStorage.getItem("nexo-installdismiss") === "1"; } catch (err) {}
+function renderInstallUI() {
+  document.documentElement.classList.toggle("standalone", isStandalone());
+  document.querySelectorAll("[data-install-card]").forEach(c => {
+    c.hidden = !installable() && !isStandalone();
+    if (c.hidden) return;
+    c.innerHTML = isStandalone()
+      ? `<div class="row start" style="gap:12px"><img src="icons/icon-192.png" alt="" class="inst-ic"><div><h2 class="h2">Estás usando la app de Nexo</h2><p class="small" style="font-size:13px">Nexo está instalada en este dispositivo y abre aunque no tengas conexión.</p></div></div>`
+      : `<div class="row start" style="gap:12px"><img src="icons/icon-192.png" alt="" class="inst-ic"><div><h2 class="h2">Instala Nexo</h2><p class="small" style="font-size:13px">Tenla en tu pantalla de inicio, a pantalla completa y disponible sin conexión.</p></div></div><button class="btn" type="button" data-install><i data-lucide="download"></i>Instalar la app</button>`;
+  });
+  const banner = document.getElementById("installBanner");
+  if (banner) {
+    banner.hidden = !installable() || installDismissed;
+    if (!banner.hidden) banner.innerHTML = `<img src="icons/icon-192.png" alt="" class="inst-ic"><div class="grow"><b>Instala Nexo</b><span>Más rápida y sin conexión.</span></div><button class="btn sm" type="button" data-install>Instalar</button><button class="inst-x" type="button" data-install-close aria-label="No mostrar más"><i data-lucide="x"></i></button>`;
+  }
+  try { lucide.createIcons(); } catch (err) {}
+}
+async function doInstall() {
+  if (installEvt) {
+    installEvt.prompt();
+    const { outcome } = await installEvt.userChoice.catch(() => ({ outcome: "dismissed" }));
+    installEvt = null;
+    toast(outcome === "accepted" ? "¡Listo! Encontrarás Nexo en tu pantalla de inicio." : "Puedes instalarla cuando quieras desde Mi cuenta.");
+    renderInstallUI(); return;
+  }
+  if (isIOS()) askConfirm({ icon: "share", title: "Instala Nexo en tu iPhone", text: "1. Toca el botón Compartir (el cuadrado con la flecha) en la barra de Safari.<br>2. Elige <strong>Añadir a pantalla de inicio</strong>.<br>3. Toca <strong>Añadir</strong>. Nexo aparecerá con su ícono.", ok: "Entendido", cancel: "Cerrar" });
+}
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; renderInstallUI(); });
+window.addEventListener("appinstalled", () => { installEvt = null; renderInstallUI(); });
+document.addEventListener("click", e => {
+  if (e.target.closest("[data-install]")) { try { closeUserMenu(); } catch (err) {} doInstall(); return; }
+  if (e.target.closest("[data-install-close]")) { installDismissed = true; try { localStorage.setItem("nexo-installdismiss", "1"); } catch (err) {} renderInstallUI(); toast("Listo. Puedes instalarla cuando quieras desde Mi cuenta."); }
+});
+if (canServeWorker) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      const offer = w => toast("Hay una versión nueva de Nexo.", { persist: true, action: "Actualizar", onAction: () => w.postMessage("skipWaiting") });
+      if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+      reg.addEventListener("updatefound", () => { const w = reg.installing; w && w.addEventListener("statechange", () => { if (w.state === "installed" && navigator.serviceWorker.controller) offer(w); }); });
+    }).catch(() => {});
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (!reloaded) { reloaded = true; location.reload(); } });
+  });
+}
+window.addEventListener("online", () => toast("Volviste a tener conexión."));
+window.addEventListener("offline", () => toast("Sin conexión: puedes seguir usando Nexo; los datos se guardan en este dispositivo.", { persist: true }));
+renderInstallUI();
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();

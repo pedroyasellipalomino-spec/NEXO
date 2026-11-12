@@ -1062,3 +1062,14 @@ button.card.tap:hover .svc-go svg{transform:translateX(3px)}
   .hh-tile b{font-size:20px}
   .hh-ic,.hh-ring{margin-bottom:4px}
 }
+/* App instalable */
+.inst-ic{width:48px;height:48px;border-radius:12px;flex-shrink:0;box-shadow:0 6px 14px -6px rgba(8,90,80,.6)}
+.inst-banner{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:var(--surface);border:1px solid var(--line);box-shadow:0 8px 24px -14px rgba(16,63,60,.25)}
+.inst-banner .inst-ic{width:42px;height:42px;border-radius:11px}
+.inst-banner b{display:block;font-size:14px;font-weight:600}
+.inst-banner span{display:block;font-size:12px;color:var(--muted)}
+.inst-banner .btn{width:auto;flex-shrink:0}
+.inst-x{background:none;border:0;padding:6px;color:var(--muted);border-radius:8px;display:grid;place-items:center}
+.inst-x svg{width:18px;height:18px}
+/* Abierta como app: respeta la zona de la cámara/notch en la barra superior móvil */
+html.standalone .mbar{padding-top:max(10px,env(safe-area-inset-top,0px))}
