@@ -1767,6 +1767,61 @@ function foodArt(id, cls = "") {
   return `<span class="food-art ${cls}" style="--fa:${a.bg}" aria-hidden="true"><svg viewBox="0 0 120 120">${a.svg.replace("{{SIGN}}", sign)}</svg></span>`;
 }
 
+/* Ilustraciones de productos (SVG 64×64, mismo estilo que FOOD_ART). Se reutilizan entre locales por id de producto. */
+const PA_BG = { cafe: "#f1dcc4", fria: "#d6ecfb", comida: "#ffe2a8", grill: "#ffd2c2", bowl: "#d4f0dd", horno: "#fbe2bd", snack: "#fbd9e8" };
+const paSh = `<ellipse cx="32" cy="56" rx="20" ry="3" fill="#000" opacity=".08"/>`;
+const paCup = (fill, top = "") => `${paSh}<path d="M46 30h3a6 6 0 0 1 0 12h-3" stroke="#fff" stroke-width="3.5" fill="none"/><path d="M16 26h32v12a16 14 0 0 1-32 0z" fill="#fff"/><ellipse cx="32" cy="52" rx="20" ry="3.5" fill="#fff"/><ellipse cx="32" cy="26" rx="16" ry="4" fill="${fill}"/>${top}<path d="M27 18c-2-3 2-5 0-8M35 18c-2-3 2-5 0-8" stroke="#fff" stroke-width="2.2" stroke-linecap="round" fill="none" opacity=".9"/>`;
+const paGlass = (liq, extra = "") => `${paSh}<path d="M19 14h26l-3 40H22z" fill="#fff" opacity=".75"/><path d="M20.5 24h23l-2.3 29H22.8z" fill="${liq}"/>${extra}<path d="M19 14h26" stroke="#fff" stroke-width="2"/>`;
+const paBowl = top => `${paSh}${top}<path d="M10 32h44c0 12-10 21-22 21S10 44 10 32z" fill="#0e8c7b"/><path d="M14 36c2 7 9 12 18 12" stroke="#4cc3ae" stroke-width="2.5" stroke-linecap="round" fill="none"/><rect x="10" y="30" width="44" height="4" rx="2" fill="#12a690"/>`;
+const paBurger = patty => `${paSh}<path d="M14 40h36v3c0 5-4 8-9 8H23c-5 0-9-3-9-8z" fill="#d48b34"/><rect x="13" y="34" width="38" height="7" rx="3.5" fill="${patty}"/><path d="M13 34c4-3 6 2 10-1s6 2 10-1 6 2 10-1 6 2 8 0v3H13z" fill="#5cb85c"/><path d="M17 33l7-5 6 5z" fill="#ffd35c"/><path d="M14 31c0-9 8-15 18-15s18 6 18 15z" fill="#f2b45f"/><circle cx="26" cy="22" r="1" fill="#fff3d6"/><circle cx="34" cy="20" r="1" fill="#fff3d6"/><circle cx="40" cy="24" r="1" fill="#fff3d6"/>`;
+const PROD_ART = {
+  almuerzo: ["comida", `${paSh}<ellipse cx="32" cy="38" rx="24" ry="13" fill="#fff"/><ellipse cx="32" cy="37" rx="18" ry="9" fill="#f1f1ec"/><ellipse cx="25" cy="35" rx="8" ry="5" fill="#fff"/><circle cx="23" cy="34" r=".8" fill="#e9e5da"/><circle cx="27" cy="36" r=".8" fill="#e9e5da"/><path d="M33 30c6-3 12 0 11 5-1 4-8 5-12 2z" fill="#a8622f"/><ellipse cx="34" cy="42" rx="6" ry="3" fill="#5cb85c"/><path d="M40 41c3-2 7-1 7 1-2 2-5 2-7-1z" fill="#ffc23d"/><circle cx="30" cy="42" r="2" fill="#e2483d"/>`],
+  pincho: ["grill", `${paSh}<path d="M34 50h18l-3-16H37z" fill="#e2483d"/><path d="M39 34l-1-10M43 34l1-12M47 34l1-9M41 34v-8" stroke="#ffc23d" stroke-width="3" stroke-linecap="round"/><path d="M8 48L36 14" stroke="#b07a45" stroke-width="2.5" stroke-linecap="round"/><rect x="13" y="34" width="8" height="10" rx="3" transform="rotate(-50 17 39)" fill="#9b4a2c"/><rect x="20" y="26" width="7" height="9" rx="3" transform="rotate(-50 23.5 30.5)" fill="#f06a3c"/><rect x="26" y="18" width="8" height="10" rx="3" transform="rotate(-50 30 23)" fill="#9b4a2c"/>`],
+  wrap: ["comida", `${paSh}<g transform="rotate(-25 32 34)"><rect x="12" y="24" width="40" height="20" rx="10" fill="#f3d9a4"/><ellipse cx="50" cy="34" rx="6" ry="10" fill="#fff4d8"/><circle cx="49" cy="31" r="3" fill="#5cb85c"/><circle cx="51" cy="37" r="2.5" fill="#e2483d"/><circle cx="48" cy="38" r="2" fill="#c98a52"/><path d="M18 28h22M18 40h22" stroke="#e2c27f" stroke-width="2" stroke-linecap="round"/></g>`],
+  sandjq: ["comida", `${paSh}<path d="M10 48l22-32 22 32z" fill="#f2c27a"/><path d="M14 44l18-25 18 25z" fill="#fff4d8"/><path d="M12 46l20-28 20 28" stroke="#f19aa8" stroke-width="3" fill="none"/><path d="M16 48l16-22 16 22" stroke="#ffd35c" stroke-width="3" fill="none"/>`],
+  reina: ["comida", `${paSh}<ellipse cx="32" cy="42" rx="20" ry="9" fill="#e9c27d"/><path d="M14 38c6-4 30-4 36 0-2 3-34 3-36 0z" fill="#9bd36e"/><circle cx="22" cy="36" r="3" fill="#7cc46a"/><circle cx="32" cy="34" r="3.5" fill="#b9e08a"/><circle cx="42" cy="36" r="3" fill="#7cc46a"/><path d="M12 34c0-8 9-12 20-12s20 4 20 12z" fill="#f2d28f"/><circle cx="24" cy="27" r="1.2" fill="#d9a85a"/><circle cx="38" cy="26" r="1.2" fill="#d9a85a"/>`],
+  limonada: ["fria", paGlass("#d9f06a", `<rect x="26" y="28" width="7" height="7" rx="1.5" fill="#fff" opacity=".6"/><circle cx="44" cy="16" r="7" fill="#c6e84a"/><circle cx="44" cy="16" r="5" fill="#eaf8a6"/><path d="M44 11v10M39 16h10" stroke="#c6e84a" stroke-width="1"/><path d="M36 6l-4 40" stroke="#0e8c7b" stroke-width="2.5" stroke-linecap="round"/>`)],
+  papelon: ["fria", paGlass("#c8893e", `<rect x="27" y="30" width="7" height="7" rx="1.5" fill="#fff" opacity=".5"/><circle cx="44" cy="16" r="7" fill="#7cc46a"/><circle cx="44" cy="16" r="5" fill="#c9eea6"/>`)],
+  guayoyo: ["cafe", paCup("#5a3420")],
+  negro: ["cafe", paCup("#3d2414")],
+  marron: ["cafe", paCup("#a46a3f")],
+  conleche: ["cafe", paCup("#c99566")],
+  capuchino: ["cafe", paCup("#e8d2b6", `<path d="M32 30c-3-3-7 0-4 3l4 3 4-3c3-3-1-6-4-3z" fill="#a46a3f"/>`)],
+  empanada: ["horno", `${paSh}<path d="M10 42c0-14 10-24 22-24s22 10 22 24z" fill="#f0b257"/><path d="M10 42h44" stroke="#d48b34" stroke-width="4" stroke-linecap="round"/><path d="M14 42l2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3 2-3 2 3" stroke="#c97c2a" stroke-width="1.6" fill="none"/><path d="M20 30c4-5 10-7 16-6" stroke="#ffd58f" stroke-width="2.5" stroke-linecap="round" fill="none"/>`],
+  cachito: ["horno", `${paSh}<path d="M8 40c4-14 16-22 24-22s20 8 24 22c-6 2-10-2-12-6-3 5-8 7-12 7s-9-2-12-7c-2 4-6 8-12 6z" fill="#e9a24a"/><path d="M20 26c2 4 2 9 0 12M32 22c2 5 2 11 0 16M44 26c2 4 2 9 0 12" stroke="#c97c2a" stroke-width="2" stroke-linecap="round" fill="none"/>`],
+  pastelito: ["horno", `${paSh}<rect x="12" y="24" width="40" height="24" rx="5" fill="#f0b257"/><rect x="12" y="24" width="40" height="8" rx="4" fill="#f6c879"/><path d="M18 38h4M26 38h4M34 38h4M42 38h4M18 43h4M26 43h4M34 43h4M42 43h4" stroke="#d48b34" stroke-width="1.6" stroke-linecap="round"/>`],
+  golfeado: ["horno", `${paSh}<ellipse cx="32" cy="40" rx="20" ry="11" fill="#c97c2a"/><ellipse cx="32" cy="36" rx="20" ry="11" fill="#e2973f"/><path d="M32 36m-3 0a3 3 0 1 1 6 0a7 7 0 1 1-14 0a11 11 0 1 1 22 0a15 9 0 1 1-30 0" stroke="#a55a1d" stroke-width="2.2" fill="none"/><path d="M18 30c6-4 14-5 22-2" stroke="#fff3d6" stroke-width="2" stroke-linecap="round" fill="none" opacity=".8"/>`],
+  torta: ["snack", `${paSh}<path d="M12 30l34-12 6 6v26H12z" fill="#5a3420"/><path d="M12 38h40M12 45h40" stroke="#f6d7c4" stroke-width="2.5"/><path d="M12 30l34-12 6 6-40 6z" fill="#7a4a2a"/><path d="M12 30h40v3H12z" fill="#3d2414"/><circle cx="44" cy="17" r="4" fill="#e2483d"/><path d="M44 13c1-3 3-4 5-4" stroke="#5cb85c" stroke-width="1.5" fill="none"/>`],
+  parrilla: ["grill", `${paSh}<rect x="8" y="40" width="48" height="10" rx="3" fill="#c9915a"/><path d="M12 38c0-10 10-16 22-16s18 6 18 12-6 6-14 6z" fill="#8a3b22"/><path d="M20 28l8 10M28 25l10 12M38 25l8 9" stroke="#5e2414" stroke-width="2.4" stroke-linecap="round"/><path d="M44 36c3 0 6-1 7-4" stroke="#f3d1b8" stroke-width="2.5" stroke-linecap="round" fill="none"/>`],
+  brasa: ["grill", `${paSh}<path d="M40 14c10 0 16 8 12 18-3 8-12 12-20 10l-8 10c-2 3-7 2-7-2-3 0-5-4-2-6l10-8c-2-8 2-22 15-22z" fill="#c8732e"/><path d="M44 18c5 1 7 6 5 11" stroke="#f0a95a" stroke-width="2.5" stroke-linecap="round" fill="none"/><circle cx="17" cy="51" r="3" fill="#f3e6d6"/><circle cx="14" cy="47" r="3" fill="#f3e6d6"/>`],
+  clasica: ["grill", paBurger("#7a3b20")],
+  hpollo: ["grill", paBurger("#d08a45")],
+  refresco: ["fria", `${paSh}<rect x="20" y="12" width="24" height="42" rx="5" fill="#e2483d"/><rect x="20" y="12" width="24" height="5" rx="2.5" fill="#c9ced3"/><rect x="20" y="49" width="24" height="5" rx="2.5" fill="#c9ced3"/><path d="M24 26c6 6 10 4 16 10" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none"/><rect x="22" y="20" width="3" height="26" rx="1.5" fill="#fff" opacity=".35"/>`],
+  agua: ["fria", `${paSh}<rect x="27" y="8" width="10" height="6" rx="2" fill="#2a78d6"/><path d="M24 16c0-2 2-3 3-3h10c1 0 3 1 3 3l2 6v30c0 2-2 4-4 4H26c-2 0-4-2-4-4V22z" fill="#cfe8fb"/><rect x="22" y="28" width="20" height="12" fill="#2a78d6"/><path d="M28 34h8" stroke="#fff" stroke-width="2" stroke-linecap="round"/><rect x="25" y="20" width="3" height="30" rx="1.5" fill="#fff" opacity=".7"/>`],
+  teriyaki: ["bowl", paBowl(`<ellipse cx="32" cy="30" rx="20" ry="7" fill="#fff"/><path d="M22 28c4-4 10-4 12 0-4 3-9 3-12 0zM32 26c4-4 10-3 11 1-4 3-9 2-11-1z" fill="#a8622f"/><circle cx="26" cy="27" r="1" fill="#f3e6d6"/><circle cx="38" cy="26" r="1" fill="#f3e6d6"/><path d="M42 30l4-3" stroke="#5cb85c" stroke-width="2.5" stroke-linecap="round"/>`)],
+  veggie: ["bowl", paBowl(`<circle cx="22" cy="28" r="6" fill="#5aa84a"/><circle cx="32" cy="25" r="7" fill="#8fd16f"/><circle cx="42" cy="28" r="6" fill="#5aa84a"/><circle cx="28" cy="30" r="3" fill="#ff7a45"/><circle cx="38" cy="30" r="3" fill="#ffd35c"/>`)],
+  cesar: ["bowl", paBowl(`<path d="M14 30c2-8 10-10 14-6 3-6 12-6 14 0 4-4 10 0 8 6z" fill="#b9e08a"/><rect x="24" y="24" width="5" height="5" rx="1" fill="#e9b25a"/><rect x="34" y="23" width="5" height="5" rx="1" fill="#e9b25a"/><path d="M26 30c3-2 8-2 12 0" stroke="#a8622f" stroke-width="3" stroke-linecap="round"/>`)],
+  atun: ["bowl", paBowl(`<path d="M14 30c2-7 9-9 13-5 4-5 11-5 14 0 4-3 9 0 9 5z" fill="#8fd16f"/><ellipse cx="32" cy="27" rx="7" ry="4" fill="#e8a99a"/><circle cx="22" cy="28" r="2.5" fill="#e2483d"/><circle cx="43" cy="28" r="2.5" fill="#2f3438"/>`)],
+  tefrio: ["fria", paGlass("#e0943f", `<rect x="25" y="28" width="7" height="7" rx="1.5" fill="#fff" opacity=".5"/><rect x="33" y="34" width="7" height="7" rx="1.5" fill="#fff" opacity=".5"/><circle cx="44" cy="16" r="6.5" fill="#ffb27a"/><path d="M44 10c2 2 2 4 0 6" stroke="#5cb85c" stroke-width="1.5" fill="none"/>`)],
+  batido: ["fria", `${paSh}<path d="M20 18h24l-3 36H23z" fill="#7cc46a"/><path d="M19 18h26v4H19z" fill="#fff"/><path d="M36 4l-4 30" stroke="#e94f86" stroke-width="3" stroke-linecap="round"/><path d="M23 26h18" stroke="#a6dc8a" stroke-width="2.5" stroke-linecap="round"/><circle cx="28" cy="36" r="1.5" fill="#5aa84a"/><circle cx="35" cy="42" r="1.5" fill="#5aa84a"/>`],
+  tequenos: ["horno", `${paSh}${[0, 1, 2].map(i => `<g transform="rotate(${-20 + i * 14} 32 34) translate(0 ${i * 2})"><rect x="10" y="${26 + i * 6}" width="40" height="8" rx="4" fill="#e9a24a"/><path d="M14 ${30 + i * 6}h32" stroke="#c97c2a" stroke-width="1.2" stroke-dasharray="3 3"/><ellipse cx="50" cy="${30 + i * 6}" rx="2.5" ry="3" fill="#fff4d8"/></g>`).join("")}`],
+  galletas: ["snack", `${paSh}<circle cx="26" cy="38" r="14" fill="#d9a25a"/><circle cx="40" cy="30" r="13" fill="#e9b56a"/><circle cx="36" cy="26" r="2" fill="#5a3420"/><circle cx="44" cy="32" r="2" fill="#5a3420"/><circle cx="38" cy="36" r="1.6" fill="#5a3420"/><circle cx="20" cy="36" r="2" fill="#5a3420"/><circle cx="28" cy="44" r="1.6" fill="#5a3420"/>`],
+  jugo: ["fria", `${paSh}<path d="M20 20l4-8h16l4 8v34H20z" fill="#ff9a2e"/><path d="M20 20h24v6H20z" fill="#ffb95c"/><circle cx="32" cy="38" r="8" fill="#ffd35c"/><circle cx="32" cy="38" r="5" fill="#fff0b8"/><path d="M38 12l6-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>`],
+  energizante: ["snack", `${paSh}<rect x="20" y="10" width="24" height="44" rx="5" fill="#2f3438"/><rect x="20" y="10" width="24" height="5" rx="2.5" fill="#c9ced3"/><path d="M34 20l-8 14h6l-3 12 9-16h-6l3-10z" fill="#ffd35c"/>`],
+  papitas: ["snack", `${paSh}<path d="M16 12h32l-2 6 2 6-2 24 2 6H16l2-6-2-24 2-6z" fill="#ffd35c"/><path d="M16 12h32M16 54h32" stroke="#e2483d" stroke-width="3"/><ellipse cx="32" cy="34" rx="9" ry="7" fill="#f6b73c"/><path d="M27 33c3-2 7-2 10 0" stroke="#d48b34" stroke-width="1.5" fill="none"/>`],
+  chocolate: ["snack", `${paSh}<g transform="rotate(-18 32 34)"><rect x="12" y="24" width="40" height="22" rx="3" fill="#5a3420"/><path d="M22 24v22M32 24v22M42 24v22M12 35h40" stroke="#3d2414" stroke-width="1.5"/><path d="M32 22h22v26H32z" fill="#e94f86"/><path d="M36 30h14" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></g>`],
+  mani: ["snack", `${paSh}<path d="M12 34h40c0 10-9 18-20 18s-20-8-20-18z" fill="#fff"/><path d="M12 34h40" stroke="#e8e2d6" stroke-width="2"/>${[[20, 30], [27, 27], [34, 29], [41, 27], [24, 33], [38, 32]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="4" ry="3" fill="#d9a25a"/><path d="M${x - 1} ${y - 1}v2" stroke="#b07a45" stroke-width="1"/>`).join("")}`],
+};
+const PROD_BY_NAME = {};
+function prodArt(id, fallbackIcon, cls = "", name = "") {
+  const k = PROD_ART[id] ? id : PROD_BY_NAME[name];
+  const a = k && PROD_ART[k];
+  if (!a) return `<span class="ico ${cls === "lg" ? "lg" : ""}"><i data-lucide="${fallbackIcon || "utensils"}"></i></span>`;
+  return `<span class="food-art p-art ${cls}" style="--fa:${PA_BG[a[0]]}" aria-hidden="true"><svg viewBox="0 0 64 64">${a[1]}</svg></span>`;
+}
+
+/* "Pincho Pan abre mañana a las 11:30" / "Pincho Pan está cerrado por hoy" (antes salía "está abre…") */
+const closedTxt = st => /^abre/i.test(st.label) ? st.label.charAt(0).toLowerCase() + st.label.slice(1) : "está " + st.label.toLowerCase();
 const LOCALES = [
   { id: "pinchopan", kind: "local", name: "Pincho Pan", icon: "sandwich", place: "Feria Central", eta: "10–15 min", hours: "11:30–15:00",
     tagline: "Pinchos, sándwiches y almuerzos caseros.", pref: "PP", cats: [
@@ -1859,6 +1914,7 @@ const LOCALES = [
       { id: "chocolate", name: "Chocolate", desc: "Barra de 40 g.", price: 1.8, icon: "candy" },
       { id: "mani", name: "Maní salado", desc: "Bolsa de 50 g.", price: 1.2, icon: "cookie" }] }] }
 ];
+LOCALES.forEach(l => l.cats.forEach(c => c.items.forEach(it => { PROD_BY_NAME[it.name] = it.id; })));
 const localById = id => LOCALES.find(l => l.id === id);
 /* Estado que maneja cada comercio: pedidos en pausa y productos agotados (global: lo ven todas las cuentas) */
 let localState = {};
@@ -2082,7 +2138,7 @@ function renderLocal() {
   document.getElementById("localChips").innerHTML = cats.map(c => `<button class="pill ${c === curCat ? "ok" : "neutral"}" type="button" data-food-cat="${esc(c)}">${esc(c)}</button>`).join("");
   document.getElementById("localMenu").innerHTML = l.cats.filter(c => curCat === "Todos" || c.name === curCat).map(c => `<h2 class="h2">${esc(c.name)}</h2>` + c.items.map(it =>
     `<div class="favwrap">${favBtn(l.id, it)}<button class="card row${isSoldOut(l.id, it.id) ? " soldout" : ""}" type="button" data-open-item="${it.id}" style="text-align:left;flex-direction:row"${isSoldOut(l.id, it.id) ? ` aria-disabled="true"` : ""}>
-      <span class="ico lg"><i data-lucide="${it.icon}"></i></span>
+      ${prodArt(it.id, it.icon, "sm")}
       <div style="flex:1;min-width:0"><b class="h3">${esc(it.name)}</b><p class="small">${esc(it.desc)}</p><div class="row start" style="gap:4px 8px;margin-top:4px;flex-wrap:wrap"><b style="font-size:17px;font-weight:600">${money(it.price)}</b><span class="bsv inline">${bsOf(it.price)}</span>${isSoldOut(l.id, it.id) ? `<span class="pill neutral">Agotado</span>` : it.tag ? `<span class="pill ok">${it.tag}</span>` : ""}${it.opts ? `<span class="tiny">Con opciones</span>` : ""}</div></div>
       <span class="ico"><i data-lucide="chevron-right"></i></span>
     </button></div>`).join("")).join("");
@@ -2121,7 +2177,7 @@ function renderDetalle(note) {
   const editing = editLine !== null;
   document.getElementById("detBody").innerHTML = `
     <div class="stack s14">
-      <div class="thumb"><i data-lucide="${it.icon}"></i></div>
+      ${prodArt(it.id, it.icon, "xl")}
       <div class="chips"><span class="pill ok">Disponible hoy</span><span class="pill neutral">${l.eta}</span></div>
       <div><h1 class="h1">${esc(it.name)}</h1><p class="lead">${esc(it.desc)}</p></div>
       <p style="font-size:30px" class="mono">${money(it.price)}</p>
@@ -2205,10 +2261,10 @@ function renderCarrito() {
   body.innerHTML = `
     <div class="stack">
       <div class="card">
-        <div class="row start"><i data-lucide="store" style="color:var(--brand);font-size:20px"></i><b class="h3">${esc(l.name)}</b></div>
+        <div class="row start">${foodArt(l.id, "xs")}<b class="h3">${esc(l.name)}</b></div>
         <p class="small" style="margin-top:-8px">${l.place} · ${plural(n, "producto", "productos")}</p>
         ${cart.lines.map((x, i) => { const li = lineInfo(l, x); if (!li) return ""; return `<div class="sep"></div>
-          <div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="${li.it.icon}"></i></div>
+          <div class="row start" style="align-items:flex-start">${prodArt(li.it.id, li.it.icon, "xs")}
             <div><b style="font-size:15px;font-weight:600">${esc(li.it.name)}</b>${li.opts.map(o => `<p class="small">${esc(o)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}<p class="mono" style="font-weight:600;margin-top:2px">${money(li.total)}</p></div></div>
           <div class="row"><span class="qty"><button type="button" aria-label="Quitar uno" data-cart-qty="${i}:-1"><i data-lucide="minus"></i></button>${x.qty}<button type="button" aria-label="Agregar uno" data-cart-qty="${i}:1"><i data-lucide="plus"></i></button></span>
             <div class="row" style="gap:16px"><button class="link b" type="button" data-cart-edit="${i}" style="font-size:12px">Editar</button><button class="link" type="button" style="color:var(--muted);font-size:12px" data-cart-del="${i}">Eliminar</button></div></div>`; }).join("")}
@@ -2218,7 +2274,7 @@ function renderCarrito() {
         <div class="row start"><i data-lucide="map-pin" style="color:var(--brand);font-size:20px"></i><b class="h3">Retiro en el local</b></div>
         <div><p style="font-size:13px">${esc(l.name)} · ${l.place}</p><p class="small">Campus Central · Planta baja</p></div>
         <div class="stack s14" style="gap:8px" role="radiogroup" aria-label="Cuándo retiras">
-          <button class="opt${pk.mode === "asap" ? " on" : ""}" type="button" role="radio" aria-checked="${pk.mode === "asap"}" data-pk-mode="asap"${st.open ? "" : " disabled"}><span class="dot"></span><span class="grow">Lo antes posible · ${l.eta}<br><span class="small" style="font-weight:400">${st.open ? "Empiezan a prepararlo al confirmar tu pago." : `No disponible: ${esc(l.name)} está ${st.label.toLowerCase()}.`}</span></span></button>
+          <button class="opt${pk.mode === "asap" ? " on" : ""}" type="button" role="radio" aria-checked="${pk.mode === "asap"}" data-pk-mode="asap"${st.open ? "" : " disabled"}><span class="dot"></span><span class="grow">Lo antes posible · ${l.eta}<br><span class="small" style="font-weight:400">${st.open ? "Empiezan a prepararlo al confirmar tu pago." : `No disponible: ${esc(l.name)} ${closedTxt(st)}.`}</span></span></button>
           <button class="opt${pk.mode === "sched" ? " on" : ""}" type="button" role="radio" aria-checked="${pk.mode === "sched"}" data-pk-mode="sched"><span class="dot"></span><span class="grow">Programar el retiro<br><span class="small" style="font-weight:400">Elige el día y la hora; lo tendrán listo para entonces.</span></span></button>
         </div>
         ${pk.mode === "sched" ? `<div class="grid2">
@@ -2283,7 +2339,7 @@ function confirmOrder(o) {
   trackId = o.id; toast(o.scheduledFor ? `Pago confirmado. Tu pedido quedó programado para ${whenTxt(o.scheduledFor)}.` : "Pago confirmado. Ya están preparando tu pedido.");
   go("pedido");
 }
-const orderLines = o => o.lines.map(x => `<div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="${x.icon}"></i></div><div><b style="font-size:13px">${esc(x.name)}</b>${x.opts.map(t => `<p class="small">${esc(t)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}<p class="small">Cantidad ${x.qty} · ${money(x.total)}</p></div></div>`).join("");
+const orderLines = o => o.lines.map(x => `<div class="row start" style="align-items:flex-start">${prodArt(x.item, x.icon, "xs", x.name)}<div><b style="font-size:13px">${esc(x.name)}</b>${x.opts.map(t => `<p class="small">${esc(t)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}<p class="small">Cantidad ${x.qty} · ${money(x.total)}</p></div></div>`).join("");
 const orderTotals = o => `<div class="kv"><span>Subtotal</span><b>${money(o.total)}</b></div><div class="kv"><span>Cargos adicionales</span><b>$0,00</b></div><div class="kv"><span>Retiro en el local</span><b>Gratis</b></div>
   <div class="sep"></div><div class="kv total"><span>Total</span><b>${money(o.total)}</b></div>`;
 function renderComprobante() {
@@ -2320,7 +2376,7 @@ function renderFactura() {
   document.getElementById("fcLead").textContent = card ? "El pago con tarjeta fue aprobado. Aquí está el detalle de tu pedido." : "La transferencia fue aprobada. Aquí está el detalle de tu pedido.";
   document.getElementById("fcNotice").innerHTML = `<i data-lucide="shield-check"></i><div><b>Confirmado · ${o.date} · ${o.time}</b>${card ? `Pagaste el pedido ${o.num} con tu tarjeta. Ya puedes retirarlo en el local.` : `El comercio validó el comprobante del pedido ${o.num}.`}</div>`;
   document.getElementById("fcCard").innerHTML = `<h2 class="h2">Factura de comida</h2>
-    <div class="row start"><span class="ico"><i data-lucide="store"></i></span><div><b style="font-size:17px;font-weight:600">${esc(l.name)}</b><p class="small" style="font-size:13px">${l.place} · Campus Central</p></div></div>
+    <div class="row start">${foodArt(l.id, "xs")}<div><b style="font-size:17px;font-weight:600">${esc(l.name)}</b><p class="small" style="font-size:13px">${l.place} · Campus Central</p></div></div>
     <span class="pill ok">Pagado · Confirmado</span><div class="sep"></div>
     <b style="font-size:13px">${esc(user.full)} · ${esc(user.carnet || user.email)}</b>
     <div class="kv"><span>Fecha de emisión</span><b>${o.date} · ${o.time}</b></div>
@@ -3341,7 +3397,7 @@ function renderPedido() {
       </div>
       <div class="card">
         <div class="row"><h2 class="h2">Tu pedido</h2><span class="small">${n} ${n === 1 ? "producto" : "productos"} · ${money(o.total)} · ${bsOf(o.total)}</span></div>
-        ${o.lines.map(x => `<div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="${x.icon}"></i></div><div><b style="font-size:13px">${x.qty} × ${esc(x.name)}</b>${x.opts.map(t => `<p class="small">${esc(t)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}</div></div>`).join("")}
+        ${o.lines.map(x => `<div class="row start" style="align-items:flex-start">${prodArt(x.item, x.icon, "xs", x.name)}<div><b style="font-size:13px">${x.qty} × ${esc(x.name)}</b>${x.opts.map(t => `<p class="small">${esc(t)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}</div></div>`).join("")}
         <div class="row" style="gap:8px;flex-wrap:wrap">${["retirado", "cancelado", "listo"].includes(st) ? `<button class="btn" type="button" data-reorder="${o.id}" style="flex:1"><i data-lucide="rotate-cw"></i>Pedir de nuevo</button>` : ""}<button class="btn ghost" type="button" data-go="factura" data-order="${o.id}" style="flex:1"><i data-lucide="receipt-text"></i>Ver factura</button></div>
       </div>
     </div>
@@ -3493,7 +3549,7 @@ function renderLocalMenu() {
       <p class="small" style="font-size:13px">Marca lo que se terminó hoy. Los estudiantes lo verán como agotado y no podrán pedirlo.</p>
       ${l.cats.map(c => `<h3 class="h3" style="margin-top:6px">${esc(c.name)}</h3>` + c.items.map(it => {
         const off = st.soldout.includes(it.id);
-        return `<div class="lm-item${off ? " off" : ""}"><span class="ico"><i data-lucide="${it.icon}"></i></span><span class="grow"><b>${esc(it.name)}</b><span class="tiny" style="display:block">${money(it.price)}${off ? " · Agotado" : ""}</span></span><button class="switch" type="button" role="switch" aria-checked="${!off}" aria-label="${esc(it.name)} disponible" data-lm-item="${it.id}"></button></div>`;
+        return `<div class="lm-item${off ? " off" : ""}">${prodArt(it.id, it.icon, "xs")}<span class="grow"><b>${esc(it.name)}</b><span class="tiny" style="display:block">${money(it.price)}${off ? " · Agotado" : ""}</span></span><button class="switch" type="button" role="switch" aria-checked="${!off}" aria-label="${esc(it.name)} disponible" data-lm-item="${it.id}"></button></div>`;
       }).join("")).join("")}
     </div>
     <div class="stack">
@@ -4268,7 +4324,7 @@ function renderFoodAgain() {
     ${recent.map(o => { const l = localById(o.local), n = o.lines.reduce((a, x) => a + x.qty, 0);
       return `<div class="again-row">${foodArt(l.id, "xs")}<div style="min-width:0;flex:1"><b style="font-size:13px">${esc(l.name)} · ${money(o.total)}</b><p class="tiny">${esc(o.lines.map(x => (x.qty > 1 ? x.qty + " × " : "") + x.name).join(", "))}</p><p class="tiny">${ago2(o).startsWith("hace") || ["hoy", "ayer"].includes(ago2(o)) ? ago2(o)[0].toUpperCase() + ago2(o).slice(1) : "El " + ago2(o)} · ${plural(n, "producto", "productos")}</p></div><button class="btn ghost sm" type="button" data-reorder="${o.id}"><i data-lucide="rotate-cw"></i>Pedir</button></div>`; }).join("")}</div>` : "")
     + (fv.length ? `<div class="card"><h3 class="h3">Tus favoritos</h3>
-    ${fv.map(({ l, it }) => `<div class="again-row"><button type="button" class="fav-open" data-fav-open="${l.id}:${it.id}"><span class="ico"><i data-lucide="${it.icon}"></i></span><span style="min-width:0"><b style="font-size:13px">${esc(it.name)}</b><span class="tiny" style="display:block">${esc(l.name)} · ${money(it.price)}${isSoldOut(l.id, it.id) ? " · Agotado" : ""}</span></span></button>${favBtn(l.id, it)}</div>`).join("")}</div>` : "");
+    ${fv.map(({ l, it }) => `<div class="again-row"><button type="button" class="fav-open" data-fav-open="${l.id}:${it.id}">${prodArt(it.id, it.icon, "xs")}<span style="min-width:0"><b style="font-size:13px">${esc(it.name)}</b><span class="tiny" style="display:block">${esc(l.name)} · ${money(it.price)}${isSoldOut(l.id, it.id) ? " · Agotado" : ""}</span></span></button>${favBtn(l.id, it)}</div>`).join("")}</div>` : "");
   icons();
 }
 document.addEventListener("click", e => {

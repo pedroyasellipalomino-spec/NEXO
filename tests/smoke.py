@@ -523,6 +523,11 @@ async def main() -> int:
         await pg.wait_for_timeout(300)
         check(await pg.locator("#comida .food-art svg").count() >= 7, "cada local y kiosco muestra su ilustración en Comida")
 
+        # cada producto del menú tiene su ilustración
+        await pg.evaluate("curLocal = 'migrill'; go('local')")
+        await pg.wait_for_timeout(300)
+        check(await pg.locator("#localMenu .p-art").count() == await pg.locator("#localMenu [data-open-item]").count() > 0, "cada producto del menú muestra su ilustración")
+
         # sin campos de fecha/hora nativos: los pagos eligen entre los últimos 7 días
         check(await pg.locator('input[type="date"], input[type="time"]').count() == 0 and await pg.locator("#pm-date option").count() == 7 and (await pg.locator("#pm-date option").first.inner_text()).startswith("Hoy"), "las fechas de pago se eligen entre los últimos 7 días, sin el campo nativo")
 
