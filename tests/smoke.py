@@ -509,6 +509,19 @@ async def main() -> int:
         await pg.wait_for_timeout(100)
         check(dlg == 1 and await pg.evaluate("location.hash") == "#inicio", "pide confirmar el cierre de sesión con un pedido en curso")
 
+        # tutorial y acceso con la identidad de Nexo: recorrido por pasos y cuentas de prueba que llenan el formulario
+        await pg.evaluate("localStorage.removeItem('nexo-session'); sessionStorage.removeItem('nexo-session')")
+        await pg.goto(URL + "#tutorial")
+        await pg.reload()
+        await pg.wait_for_timeout(400)
+        await pg.click("[data-tour='3']")
+        check(await pg.evaluate("document.querySelector('.tslide.on').dataset.ts") == "3" and await pg.locator("#tutorial .tf").count() == 4, "el tutorial muestra el recorrido por pasos y los servicios")
+        await pg.goto(URL + "#login")
+        await pg.wait_for_timeout(300)
+        await pg.click(".demo-accts summary")
+        await pg.click("[data-demo-fill^='lucia.rojas']")
+        check(await pg.input_value("#l-mail") == "lucia.rojas@unimet.edu.ve" and await pg.input_value("#l-pass") == "demo-mod-01", "las cuentas de prueba llenan el formulario de inicio de sesión")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 

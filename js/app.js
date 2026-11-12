@@ -51,15 +51,15 @@ document.querySelectorAll("[data-account]").forEach(el => el.append(document.get
 
 /* Ilustración de las pantallas de acceso: los servicios del campus conectados al logo (la idea de "nexo") */
 (function heroNet() {
-  const N = [["car-front", 17, 20, "Estacionamiento"], ["utensils", 83, 17, "Comida"], ["graduation-cap", 86, 70, "Materias"], ["dribbble", 15, 74, "Canchas"]];
+  const N = [["car-front", 17, 20, "Estacionamiento", "t-car"], ["utensils", 83, 17, "Comida", "t-food"], ["graduation-cap", 86, 70, "Materias", "t-uni"], ["dribbble", 15, 74, "Canchas", "t-court"]];
   const lines = N.map(([, x, y], i) => `<path class="hn-path" style="animation-delay:${i * -0.6}s" d="M50 47 Q ${(50 + x) / 2 + (i % 2 ? 8 : -8)} ${(47 + y) / 2 + (i < 2 ? 6 : -6)} ${x} ${y}"/>`).join("");
   const html = `<div class="hero-net" aria-hidden="true">
     <svg viewBox="0 0 100 100" preserveAspectRatio="none"><circle class="hn-ring" cx="50" cy="47" r="20"/><circle class="hn-ring r2" cx="50" cy="47" r="33"/>${lines}</svg>
     <span class="hn-core"><svg viewBox="0 0 24 24" fill="none"><path d="M7 17.5V8.2a1 1 0 0 1 1.8-.6l6.4 8.8a1 1 0 0 0 1.8-.6V6.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="6.2" r="2" fill="#b6f0e2"/><circle cx="17" cy="17.8" r="2" fill="#b6f0e2"/></svg></span>
-    ${N.map(([ic, x, y, l], i) => `<span class="hn-node" style="left:${x}%;top:${y}%;animation-delay:${i * 0.4}s"><i data-lucide="${ic}"></i><em>${l}</em></span>`).join("")}
+    ${N.map(([ic, x, y, l, c], i) => `<span class="hn-node ${c}" style="left:${x}%;top:${y}%;animation-delay:${i * 0.4}s"><span class="svt-ic"><i data-lucide="${ic}"></i></span><em>${l}</em></span>`).join("")}
     <span class="hn-spark" style="left:34%;top:16%"></span><span class="hn-spark" style="left:68%;top:84%"></span><span class="hn-spark" style="left:92%;top:42%"></span>
   </div>`;
-  document.querySelectorAll("aside.campus").forEach(a => a.insertAdjacentHTML("afterbegin", html));
+  document.querySelectorAll("aside.campus").forEach(a => a.insertAdjacentHTML("afterbegin", `<span class="hh-orb o1" aria-hidden="true"></span><span class="hh-orb o2" aria-hidden="true"></span>` + html));
 })();
 document.querySelectorAll("section.app").forEach(sec => {
   const tab = sec.dataset.tab, back = sec.dataset.back, title = sec.dataset.title, staff = sec.dataset.staff;
@@ -4353,6 +4353,53 @@ if (canServeWorker) {
 window.addEventListener("online", () => toast("Volviste a tener conexión."));
 window.addEventListener("offline", () => toast("Sin conexión: puedes seguir usando Nexo; los datos se guardan en este dispositivo.", { persist: true }));
 renderInstallUI();
+
+/* ---------- Tutorial: recorrido animado dentro de un teléfono ----------
+   4 pasos (Explora, Pide, Paga, Entra) que avanzan solos cada 4,5 s; se pausan al pasar el mouse, al enfocar
+   o con el botón; con prefers-reduced-motion no avanzan solos. */
+const TOUR_MS = 4500;
+let tourI = 0, tourTimer = null, tourPaused = matchMedia("(prefers-reduced-motion: reduce)").matches, tourHover = false;
+function tourGo(i) {
+  const t = document.getElementById("tour"); if (!t) return;
+  tourI = (i + 4) % 4;
+  t.querySelectorAll(".tslide").forEach(sl => { const on = +sl.dataset.ts === tourI; sl.classList.toggle("on", on); sl.classList.toggle("past", +sl.dataset.ts < tourI); });
+  t.querySelectorAll("[data-tour]").forEach(b => { const on = +b.dataset.tour === tourI; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); b.classList.toggle("done", +b.dataset.tour < tourI); });
+  t.style.setProperty("--tour-ms", TOUR_MS + "ms");
+  tourArm();
+}
+function tourArm() {
+  clearTimeout(tourTimer);
+  const t = document.getElementById("tour"); if (!t) return;
+  const run = !tourPaused && !tourHover && current === "tutorial" && !document.hidden;
+  t.classList.toggle("paused", !run);
+  const pp = t.querySelector("[data-tour-pp]");
+  if (pp) { pp.innerHTML = `<i data-lucide="${tourPaused ? "play" : "pause"}"></i>`; pp.setAttribute("aria-label", tourPaused ? "Reanudar el recorrido" : "Pausar el recorrido"); try { lucide.createIcons(); } catch (err) {} }
+  if (run) tourTimer = setTimeout(() => tourGo(tourI + 1), TOUR_MS);
+}
+(function tourInit() {
+  const t = document.getElementById("tour"); if (!t) return;
+  t.querySelectorAll("canvas[data-qr]").forEach(c => { try { drawQR(c); } catch (err) {} });
+  t.addEventListener("mouseenter", () => { tourHover = true; tourArm(); });
+  t.addEventListener("mouseleave", () => { tourHover = false; tourGo(tourI); });
+  t.addEventListener("click", e => {
+    const b = e.target.closest("[data-tour]"); if (b) { tourGo(+b.dataset.tour); return; }
+    if (e.target.closest("[data-tour-pp]")) { tourPaused = !tourPaused; tourArm(); }
+  });
+  t.addEventListener("keydown", e => { if (e.target.closest("[data-tour]") && (e.key === "ArrowRight" || e.key === "ArrowLeft")) { tourGo(tourI + (e.key === "ArrowRight" ? 1 : -1)); t.querySelector(`[data-tour="${tourI}"]`).focus(); e.preventDefault(); } });
+  document.addEventListener("visibilitychange", tourArm);
+  window.addEventListener("hashchange", () => { if (current === "tutorial") tourGo(0); else tourArm(); });
+  tourGo(0);
+})();
+/* Login: las cuentas de prueba llenan el formulario al tocarlas */
+document.addEventListener("click", e => {
+  const d = e.target.closest("[data-demo-fill]"); if (!d) return;
+  const [m, pw] = d.dataset.demoFill.split("|");
+  const mail = document.getElementById("l-mail"), pass = document.getElementById("l-pass");
+  if (!mail || !pass) return;
+  mail.value = m; pass.value = pw; mail.dispatchEvent(new Event("input", { bubbles: true }));
+  const btn = document.querySelector('#loginForm button[type="submit"]'); if (btn) btn.focus();
+  toast("Listo: toca Iniciar sesión.");
+});
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();

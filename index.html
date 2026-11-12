@@ -41,37 +41,68 @@
   <main class="t-wrap gutter">
     <div class="t-left">
       <div class="t-intro stack">
-        <p class="eyebrow">BIENVENIDA A NEXO</p>
-        <div><h1 class="h1">Todo tu campus, en un solo lugar.</h1>
-        <p class="lead">Descubre cómo comprar, pagar y retirar tu pedido. Te lo mostramos en un minuto.</p></div>
+        <span class="t-badge"><span class="t-dot"></span>Universidad Metropolitana · Campus Central</span>
+        <div><h1 class="h1 t-h1">Todo tu campus, <span class="grad">en un solo lugar.</span></h1>
+        <p class="lead">Paga tu cuota, pide comida, reserva canchas y entra al estacionamiento sin hacer fila.</p></div>
       </div>
-      <div class="steps">
-        <div class="step"><i data-lucide="layout-grid"></i><div><b>Explora tu campus</b><span>Encuentra comida, kioscos y servicios.</span></div></div>
-        <div class="step"><i data-lucide="credit-card"></i><div><b>Paga como prefieras</b><span>Usa tarjeta o transferencia bancaria.</span></div></div>
-        <div class="step"><i data-lucide="qr-code"></i><div><b>Retira sin filas</b><span>Presenta tu comprobante al retirar.</span></div></div>
+      <div class="steps t-feats">
+        <div class="tf t-car"><span class="svt-ic"><i data-lucide="car-front"></i></span><div><b>Estacionamiento</b><span>Tu credencial en el teléfono</span></div></div>
+        <div class="tf t-uni"><span class="svt-ic"><i data-lucide="graduation-cap"></i></span><div><b>Materias</b><span>Paga tu cuota con pronto pago</span></div></div>
+        <div class="tf t-food"><span class="svt-ic"><i data-lucide="utensils"></i></span><div><b>Comida</b><span>Pide y retira sin fila</span></div></div>
+        <div class="tf t-court"><span class="svt-ic"><i data-lucide="dribbble"></i></span><div><b>Canchas</b><span>Reserva tu turno en segundos</span></div></div>
       </div>
       <div class="access">
         <button class="btn" type="button" data-go="login"><i data-lucide="arrow-right"></i>Iniciar sesión</button>
         <button class="btn ghost" type="button" data-go="registro"><i data-lucide="user-plus"></i>Crear cuenta</button>
-        <p class="small center">Accede con tu cuenta institucional.</p>
+        <p class="small center">Accede con tu correo institucional o tu carnet.</p>
       </div>
     </div>
     <div class="t-video">
-      <div class="video">
-        <div class="video-cover">
-          <p class="tag">ASÍ FUNCIONA NEXO</p>
-          <div class="journey">
-            <span class="stage"><i data-lucide="layout-grid"></i></span><i data-lucide="arrow-right"></i>
-            <span class="stage"><i data-lucide="credit-card"></i></span><i data-lucide="arrow-right"></i>
-            <span class="stage"><i data-lucide="qr-code"></i></span>
+      <div class="tour" id="tour" aria-roledescription="carrusel" aria-label="Así funciona Nexo">
+        <span class="hh-orb o1" aria-hidden="true"></span><span class="hh-orb o2" aria-hidden="true"></span>
+        <p class="tour-tag">ASÍ FUNCIONA NEXO</p>
+        <div class="phone" aria-hidden="true"><span class="phone-notch"></span>
+          <div class="phone-screen">
+            <div class="tslide on" data-ts="0">
+              <div class="m-bar"><span class="emblem sm"><svg class="nexo-mark" viewBox="0 0 24 24" fill="none"><path d="M7 17.5V8.2a1 1 0 0 1 1.8-.6l6.4 8.8a1 1 0 0 0 1.8-.6V6.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="6.2" r="2" fill="#b6f0e2"/><circle cx="17" cy="17.8" r="2" fill="#b6f0e2"/></svg></span><b>nexo</b><span class="m-av">AT</span></div>
+              <div class="m-hero"><small>JUEVES, 12 NOV</small><b>Hola, Ana 👋</b><div class="m-stats"><div><span>Cuenta</span><b>$450,00</b></div><div><span>Wallet</span><b>$40,00</b></div></div></div>
+              <p class="m-label">Servicios</p>
+              <div class="m-tiles"><span class="t-car"><span class="svt-ic"><i data-lucide="car-front"></i></span>Parqueo</span><span class="t-uni"><span class="svt-ic"><i data-lucide="graduation-cap"></i></span>Materias</span><span class="t-food"><span class="svt-ic"><i data-lucide="utensils"></i></span>Comida</span><span class="t-court"><span class="svt-ic"><i data-lucide="dribbble"></i></span>Canchas</span></div>
+              <div class="m-tab"><i data-lucide="house"></i><i data-lucide="layout-grid"></i><i data-lucide="receipt-text"></i><i data-lucide="message-circle"></i></div>
+            </div>
+            <div class="tslide" data-ts="1">
+              <p class="m-title">Tu próxima pausa</p>
+              <div class="m-card"><span class="m-ic"><i data-lucide="sandwich"></i></span><div class="grow"><b>Pincho Pan</b><span>Almuerzo del día</span></div><b class="m-price">$8,50</b></div>
+              <div class="m-card"><span class="m-ic"><i data-lucide="coffee"></i></span><div class="grow"><b>La Pausa</b><span>Café guayoyo</span></div><b class="m-price">$1,50</b></div>
+              <div class="m-card"><span class="m-ic"><i data-lucide="salad"></i></span><div class="grow"><b>TEEB</b><span>Bowl de pollo</span></div><b class="m-price">$8,00</b></div>
+              <span class="m-btn m-add">Añadir al carrito · $8,50</span>
+              <span class="m-toast"><i data-lucide="check"></i>Añadimos Almuerzo del día</span>
+            </div>
+            <div class="tslide" data-ts="2">
+              <p class="m-title">Paga como prefieras</p>
+              <div class="m-opt on"><i data-lucide="credit-card"></i><span class="grow">Visa ···· 4242</span><span class="m-radio"></span></div>
+              <div class="m-opt"><i data-lucide="smartphone"></i><span class="grow">Pago Móvil</span><span class="m-radio"></span></div>
+              <div class="m-opt"><i data-lucide="landmark"></i><span class="grow">Transferencia</span><span class="m-radio"></span></div>
+              <div class="m-total"><span>Total</span><b>$8,50</b><small>Bs. 7.663,77</small></div>
+              <span class="m-btn">Pagar $8,50</span>
+              <div class="m-done"><span class="okmark"><svg viewBox="0 0 64 64"><circle class="ok-ring" cx="32" cy="32" r="26"/><path class="ok-tick" d="M21 33l7.5 7.5L44 25"/></svg><i></i><i></i><i></i><i></i><i></i><i></i></span><b>¡Pago confirmado!</b><span>Retira con el código 4821</span></div>
+            </div>
+            <div class="tslide" data-ts="3">
+              <p class="m-title">Tu acceso al campus</p>
+              <div class="m-pass"><div class="m-pass-h"><b>nexo</b><span>Plan mensual</span></div><span class="m-lbl">TITULAR</span><b class="m-name">Ana Torres</b>
+                <div class="m-plate"><small>VENEZUELA</small>AB123CD</div><div class="m-cut"></div><div class="m-qr"><canvas data-qr="ACC-AB123CD-TOUR" width="29" height="29"></canvas></div></div>
+              <p class="m-note">Muestra el QR en el lector y entra sin hacer fila</p>
+            </div>
           </div>
-          <p class="promise">Elige. Paga. Disfruta.</p>
-          <button class="play" type="button" data-toast="El video del tutorial no está incluido en el prototipo."><i data-lucide="play"></i>Reproducir tutorial</button>
         </div>
-        <div class="controls"><div class="progress"></div>
-          <div class="ctrl-row"><i data-lucide="play"></i><span class="time">0:00 / 1:20</span><i data-lucide="volume-2"></i><span>CC</span><i data-lucide="maximize"></i></div></div>
+        <div class="tour-steps" role="tablist" aria-label="Pasos del recorrido">
+          <button type="button" role="tab" class="on" aria-selected="true" data-tour="0"><b>1</b><span>Explora</span><i class="tbar"></i></button>
+          <button type="button" role="tab" aria-selected="false" data-tour="1"><b>2</b><span>Pide</span><i class="tbar"></i></button>
+          <button type="button" role="tab" aria-selected="false" data-tour="2"><b>3</b><span>Paga</span><i class="tbar"></i></button>
+          <button type="button" role="tab" aria-selected="false" data-tour="3"><b>4</b><span>Entra</span><i class="tbar"></i></button>
+        </div>
+        <button class="tour-pp" type="button" data-tour-pp aria-label="Pausar el recorrido"><i data-lucide="pause"></i></button>
       </div>
-      <p class="small">Tutorial de Nexo · Audio y subtítulos en español</p>
     </div>
   </main>
 </section>
@@ -96,10 +127,10 @@
         <label class="remember" for="l-rem"><input id="l-rem" type="checkbox" checked>Recordar en este dispositivo</label>
         <button class="link b" type="button" data-go="recuperar">¿Olvidaste tu contraseña?</button>
         <button class="btn" type="submit"><i data-lucide="arrow-right"></i>Iniciar sesión</button>
-        <p class="tiny">Cuenta de prueba: <b>ana.torres@correo.unimet.edu.ve</b> · contraseña <b style="white-space:nowrap">demo-nexo-01</b></p>
-        <p class="tiny">Gestión: administradora <b>maria.vera@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-admin-01</b> — moderadora <b>lucia.rojas@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-mod-01</b></p>
-        <p class="tiny">Creador: <b>diego.mendez@unimet.edu.ve</b> · <b style="white-space:nowrap">demo-creador-01</b></p>
-        <p class="tiny">Comercio: <b>pinchopan@comercio.nexo</b> · <b style="white-space:nowrap">demo-local-01</b> (cada local tiene la suya: lapausa@, migrill@, teeb@…)</p>
+        <details class="demo-accts"><summary><i data-lucide="flask-conical"></i>Cuentas de prueba<i data-lucide="chevron-down" class="da-chev"></i></summary>
+          <div class="demo-list"><button type="button" data-demo-fill="ana.torres@correo.unimet.edu.ve|demo-nexo-01"><span class="da-ic"><i data-lucide="graduation-cap"></i></span><span class="grow"><b>Estudiante · Ana Torres</b><span>ana.torres@correo.unimet.edu.ve</span></span><i data-lucide="arrow-up-left"></i></button><button type="button" data-demo-fill="maria.vera@unimet.edu.ve|demo-admin-01"><span class="da-ic"><i data-lucide="shield-check"></i></span><span class="grow"><b>Administradora · María Vera</b><span>maria.vera@unimet.edu.ve</span></span><i data-lucide="arrow-up-left"></i></button><button type="button" data-demo-fill="lucia.rojas@unimet.edu.ve|demo-mod-01"><span class="da-ic"><i data-lucide="messages-square"></i></span><span class="grow"><b>Moderadora · Lucía Rojas</b><span>lucia.rojas@unimet.edu.ve</span></span><i data-lucide="arrow-up-left"></i></button><button type="button" data-demo-fill="diego.mendez@unimet.edu.ve|demo-creador-01"><span class="da-ic"><i data-lucide="sparkles"></i></span><span class="grow"><b>Creador · Diego Méndez</b><span>diego.mendez@unimet.edu.ve</span></span><i data-lucide="arrow-up-left"></i></button><button type="button" data-demo-fill="pinchopan@comercio.nexo|demo-local-01"><span class="da-ic"><i data-lucide="store"></i></span><span class="grow"><b>Comercio · Pincho Pan</b><span>pinchopan@comercio.nexo</span></span><i data-lucide="arrow-up-left"></i></button></div>
+          <p class="tiny">Toca una para llenar el formulario. Cada local tiene la suya con la contraseña demo-local-01: lapausa@, migrill@, teeb@, tienditaa1@, tienditaa2@ y believe@comercio.nexo.</p>
+        </details>
       </form>
       <p class="center small">¿No tienes cuenta? <button class="link b" type="button" data-go="registro">Crear cuenta</button></p>
       <p class="center small">¿Te invitaron al equipo de Nexo? <button class="link b" type="button" data-go="invitacion">Activa tu cuenta</button></p>
