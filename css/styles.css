@@ -1245,3 +1245,15 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .food-art.xl{width:100%;max-width:none;aspect-ratio:16/9;border-radius:var(--r-md)}
 .food-art.xl svg{height:82%;width:auto}
 @media (max-width:699px){.food-art.xl{max-height:240px}}
+/* Canchas: pelotas y vista de la cancha */
+.sport .ball-art{width:34px;height:34px;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.sport:hover .ball-art{transform:rotate(-14deg) scale(1.08)}
+.sport.on .ball-art{transform:scale(1.12);filter:drop-shadow(0 4px 6px rgba(0,0,0,.25))}
+.court-ico.art-on{width:150px;height:auto;background:none;border-radius:0}
+.court-art{display:grid;place-items:center;width:100%;aspect-ratio:8/5;border-radius:18px;background:var(--fa)}
+.court-art svg{width:92%}
+.ico.art-on{background:var(--field)}
+.ico.art-on .ball-art{width:30px;height:30px}
+@media (max-width:699px){.court-card{flex-direction:column;align-items:stretch}.court-ico.art-on{width:100%}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .court-art{background:color-mix(in srgb,var(--fa) 22%,var(--surface))}}
+:root[data-theme="dark"] .court-art{background:color-mix(in srgb,var(--fa) 22%,var(--surface))}

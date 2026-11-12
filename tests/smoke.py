@@ -528,6 +528,12 @@ async def main() -> int:
         await pg.wait_for_timeout(300)
         check(await pg.locator("#localMenu .p-art").count() == await pg.locator("#localMenu [data-open-item]").count() > 0, "cada producto del menú muestra su ilustración")
 
+        # canchas: pelota de cada deporte y vista de la cancha
+        await pg.evaluate("go('reserva')")
+        await pg.wait_for_timeout(300)
+        await pg.click("[data-sport='futbol']")
+        check(await pg.locator("#sportPicker .ball-art").count() == 6 and await pg.locator(".court-card .court-art svg").count() == 1, "canchas muestra la pelota de cada deporte y el dibujo de la cancha")
+
         # sin campos de fecha/hora nativos: los pagos eligen entre los últimos 7 días
         check(await pg.locator('input[type="date"], input[type="time"]').count() == 0 and await pg.locator("#pm-date option").count() == 7 and (await pg.locator("#pm-date option").first.inner_text()).startswith("Hoy"), "las fechas de pago se eligen entre los últimos 7 días, sin el campo nativo")
 
