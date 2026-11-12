@@ -226,6 +226,7 @@ function show(id) {
   if (id === "inscripcion" && typeof openInscripcion === "function") openInscripcion();
   if (id === "invitacion" && typeof renderInvitacion === "function") renderInvitacion();
   if (id === "recuperar" && typeof renderRecuperar === "function") renderRecuperar();
+  if (id === "inicio" && typeof renderHome === "function") try { renderHome(); } catch (err) {}
   if (id === "comida" && typeof renderFoodList === "function") renderFoodList();
   if (id === "comida" && typeof renderFoodOrders === "function") try { renderFoodOrders(); } catch (err) {}
   if (id === "local" && typeof renderLocal === "function") renderLocal();
@@ -3855,6 +3856,68 @@ document.addEventListener("click", e => {
   if (e.target.closest("[data-rp-back]")) { rp = { step: 1, email: null, code: null, exp: 0, sent: 0, tries: 3, err: "", ident: "" }; renderRecuperar(); return; }
   if (e.target.closest('[data-go="recuperar"]')) { rp.err = ""; if (rp.step !== 1 && !rp.email) rp.step = 1; }
 });
+/* ---------- Inicio inteligente: "Para ti ahora" ----------
+   Junta lo urgente de la cuenta (pedido listo o en curso, facturas por pagar o vencidas, plan por vencer,
+   respuestas de soporte, pagos rechazados) y lo ordena por prioridad (pr: 0 = lo más urgente). */
+function homeItems() {
+  const out = [], t = day0(simDate);
+  try {
+    activeOrders().forEach(o => {
+      const s = orderStatus(o), l = localById(o.local), ln = l ? l.name : "el local";
+      out.push(s === "listo"
+        ? { pr: 0, tone: "ok", icon: "package-check", title: `Tu pedido de ${ln} está listo`, body: `Código de retiro ${o.code}. Muéstralo al retirar.`, cta: "Ver código", attrs: `data-home-order="${o.id}"` }
+        : { pr: 3, icon: s === "programado" ? "calendar-clock" : "chef-hat", title: s === "programado" ? `Pedido programado en ${ln}` : `Están preparando tu pedido de ${ln}`, body: s === "programado" ? `Retíralo ${whenTxt(o.scheduledFor)}.` : `Estará listo cerca de las ${hhmm(o.readyAt)}.`, cta: "Ver pedido", attrs: `data-home-order="${o.id}"` });
+    });
+  } catch (err) {}
+  try {
+    if (account && account.carnet) activeInvoices().forEach(iv => {
+      const s = statusOf(iv), p = pagos[iv.id], amt = money(amountOf(iv));
+      const rej = p && p.estado === "rechazada" && ["pronto", "pendiente", "vencida"].includes(s);
+      if (rej) out.push({ pr: 1, tone: "bad", icon: "circle-x", title: `Rechazamos tu transferencia de ${iv.mes}`, body: `${p.motivo}. Vuelve a pagarla por ${amt}.`, cta: "Pagar", go: "caja" });
+      else if (s === "vencida") out.push({ pr: 1, tone: "warn", icon: "receipt-text", title: `Tu factura de ${iv.mes} está vencida`, body: `Venció el ${fmtDW(iv.due)}. Págala por ${amt} para quedar al día.`, cta: "Pagar", go: "caja" });
+      else if (s === "pronto") { const d = Math.round((day0(iv.ppEnd) - t) / 864e5); out.push({ pr: d <= 1 ? 2 : 4, tone: d <= 1 ? "warn" : "", icon: "badge-percent", title: d === 0 ? "El pronto pago termina hoy" : d === 1 ? "El pronto pago termina mañana" : `Pronto pago de ${iv.mes} hasta el ${fmtDW(iv.ppEnd)}`, body: `Paga ${amt} y ahorra ${money((PRICE_REG - PRICE_PP) * MATERIAS.length)}.`, cta: "Pagar", go: "caja" }); }
+      else if (s === "pendiente") { const d = Math.round((day0(iv.due) - t) / 864e5); out.push({ pr: d <= 3 ? 2 : 4, tone: d <= 3 ? "warn" : "", icon: "receipt-text", title: d === 0 ? `Tu factura de ${iv.mes} vence hoy` : `Tu factura de ${iv.mes} vence ${d === 1 ? "mañana" : `en ${d} días`}`, body: `${amt} · vence el ${fmtDW(iv.due)}.`, cta: "Pagar", go: "caja" }); }
+    });
+  } catch (err) {}
+  try {
+    if (plan) {
+      const left = Math.round((day0(new Date(plan.end + "T12:00")) - t) / 864e5), pn = plan.name.toLowerCase();
+      if (left < 0) out.push({ pr: 2, tone: "warn", icon: "car-front", title: `Tu plan ${pn} venció`, body: "Renuévalo para seguir entrando al campus sin hacer fila.", cta: "Renovar", go: "planes" });
+      else if (left <= 7) out.push({ pr: left <= 2 ? 2 : 4, tone: left <= 2 ? "warn" : "", icon: "car-front", title: left === 0 ? `Tu plan ${pn} vence hoy` : `Tu plan ${pn} vence en ${left} ${left === 1 ? "día" : "días"}`, body: `Renuévalo con tu wallet Nexo (saldo ${money(WALLET)}).`, cta: "Renovar", go: "planes" });
+    }
+  } catch (err) {}
+  try {
+    pendRec.filter(r => r.estado === "rechazada" && !nRead[`rec-rej-${r.id}`]).forEach(r => out.push({ pr: 1, tone: "bad", icon: "wallet", title: `Rechazamos tu recarga de ${money(r.amount)}`, body: `${r.motivo}. Revisa los datos y regístrala de nuevo.`, cta: "Revisar", go: "recarga", seen: `rec-rej-${r.id}` }));
+  } catch (err) {}
+  try {
+    tickets.filter(tk => tk.student.email === sessionEmail && isOpen(tk)).forEach(tk => {
+      const last = [...tk.messages].reverse().find(m => m.from !== "note");
+      if (last && last.from === "mod") out.push({ pr: tk.status === "espera" ? 2 : 3, icon: "message-circle", title: `${firstName(last.name)} respondió tu solicitud ${tk.id}`, body: tk.status === "espera" ? "Esperan tu respuesta para continuar." : esc(last.text.length > 90 ? last.text.slice(0, 88) + "…" : last.text), cta: "Responder", attrs: `data-home-ticket="${tk.id}"` });
+    });
+  } catch (err) {}
+  return out.sort((a, b) => a.pr - b.pr);
+}
+let homeAll = false;
+function renderHome() {
+  const box = document.getElementById("homeNow"); if (!box) return;
+  const items = homeItems();
+  if (!items.length) { box.hidden = true; return; }
+  box.hidden = false;
+  const shown = homeAll ? items : items.slice(0, 3);
+  box.innerHTML = `<div class="row"><h2 class="sec">Para ti ahora</h2>${items.length > 3 ? `<button class="link b" type="button" data-home-all style="font-size:12px">${homeAll ? "Ver menos" : `Ver todo (${items.length})`}</button>` : ""}</div>
+    <div class="homenow-list">${shown.map(x => `<button type="button" class="hn-item${x.tone ? " " + x.tone : ""}" ${x.attrs || `data-go="${x.go}"`}${x.seen ? ` data-home-seen="${x.seen}"` : ""}>
+      <span class="ico"><i data-lucide="${x.icon}"></i></span><span class="info"><b>${x.title}</b><span>${x.body}</span></span><span class="hn-cta">${x.cta}<i data-lucide="chevron-right"></i></span></button>`).join("")}</div>`;
+  try { lucide.createIcons(); } catch (err) {}
+}
+document.addEventListener("click", e => {
+  if (e.target.closest("[data-home-all]")) { homeAll = !homeAll; renderHome(); return; }
+  const sn = e.target.closest("[data-home-seen]"); if (sn) { nRead[sn.dataset.homeSeen] = true; saveN(); }
+  const o = e.target.closest("[data-home-order]"); if (o) { trackId = o.dataset.homeOrder; go("pedido"); return; }
+  const tk = e.target.closest("[data-home-ticket]"); if (tk) { supOpen = tk.dataset.homeTicket; go("soporte"); }
+});
+setInterval(() => { if (current === "inicio") try { renderHome(); } catch (err) {} }, 15000);
+if (current === "inicio") try { renderHome(); } catch (err) {}
+
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();
   const carnet = f.querySelector("[data-digits]");

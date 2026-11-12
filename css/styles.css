@@ -759,3 +759,21 @@ button.tk-row.on{background:var(--mint-bg)}
 .cdlg-acts .btn{width:auto}
 .btn.danger{background:#c2410c;border-color:#c2410c;color:#fff}
 @media (max-width:480px){.cdlg-acts .btn{flex:1}}
+/* Inicio: Para ti ahora */
+.homenow{gap:10px}
+.homenow-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.hn-item{display:flex;align-items:center;gap:12px;text-align:left;background:var(--field);border:1px solid var(--line);border-radius:var(--r-md);padding:12px;cursor:pointer;font:inherit;color:inherit;min-width:0}
+.hn-item:hover{border-color:var(--brand)}
+.hn-item .info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hn-item .info b{font-size:13px;font-weight:600}
+.hn-item .info span{font-size:12px;color:var(--muted)}
+.hn-cta{display:inline-flex;align-items:center;gap:2px;font-size:12px;font-weight:600;color:var(--brand);white-space:nowrap}
+.hn-cta svg{width:14px;height:14px}
+.hn-item.ok{border-color:var(--brand);background:var(--mint-bg)}
+.hn-item.warn{border-color:#f0c58a;background:var(--warn-bg)}
+.hn-item.warn .ico{background:#fde7c4;color:var(--warn-fg)}
+.hn-item.bad{border-color:#f3b7a1;background:#fff1ec}
+.hn-item.bad .ico{background:#fde0d4;color:#c2410c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hn-item.bad{background:#2a1a15;border-color:#6b3322}}
+:root[data-theme="dark"] .hn-item.bad{background:#2a1a15;border-color:#6b3322}
+@media (max-width:480px){.hn-cta{display:none}}

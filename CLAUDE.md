@@ -74,6 +74,8 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 
 **Avisos, deshacer y confirmar.** `toast(msg, { action, onAction, persist })`: los avisos con acción duran 6 s; los persistentes (pedido listo) se apilan y se cierran con ×. Hay "Deshacer" al quitar un producto del carrito (`undoCartToast(snap)`), al vaciarlo por añadir de otro local y en "Marcar todas como leídas". `askConfirm({ icon, title, text, ok, cancel, danger, onOk })` es el diálogo de confirmación genérico; se usa antes de cerrar sesión con pedidos en curso (`doLogout`).
 
+**Inicio inteligente.** `#homeNow` ("Para ti ahora", arriba de `#inicio`): `homeItems()` junta pedidos en curso o listos, facturas (rechazada, vencida, pronto pago, por vencer), plan de estacionamiento por vencer o vencido, recargas rechazadas sin leer y tickets abiertos cuya última respuesta es del moderador; prioridad `pr` (0 = más urgente), muestra 3 y "Ver todo". Se pinta en `show("inicio")` y cada 15 s.
+
 ## Cómo trabajar con el usuario
 
 - Cuando haya que elegir entre opciones (qué mejorar, decisiones de diseño, etc.), preséntalas siempre como un formulario de un clic (herramienta de preguntas con opciones), no como una lista en texto. Marca la recomendada.
