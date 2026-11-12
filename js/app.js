@@ -49,6 +49,18 @@ const ROLE_HOME = { local: "local-pedidos", creator: "creador", admin: "gestion"
 
 document.querySelectorAll("[data-account]").forEach(el => el.append(document.getElementById("account-tpl").content.cloneNode(true)));
 
+/* Ilustración de las pantallas de acceso: los servicios del campus conectados al logo (la idea de "nexo") */
+(function heroNet() {
+  const N = [["car-front", 17, 20, "Estacionamiento"], ["utensils", 83, 17, "Comida"], ["graduation-cap", 86, 70, "Materias"], ["dribbble", 15, 74, "Canchas"]];
+  const lines = N.map(([, x, y], i) => `<path class="hn-path" style="animation-delay:${i * -0.6}s" d="M50 47 Q ${(50 + x) / 2 + (i % 2 ? 8 : -8)} ${(47 + y) / 2 + (i < 2 ? 6 : -6)} ${x} ${y}"/>`).join("");
+  const html = `<div class="hero-net" aria-hidden="true">
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none"><circle class="hn-ring" cx="50" cy="47" r="20"/><circle class="hn-ring r2" cx="50" cy="47" r="33"/>${lines}</svg>
+    <span class="hn-core"><svg viewBox="0 0 24 24" fill="none"><path d="M7 17.5V8.2a1 1 0 0 1 1.8-.6l6.4 8.8a1 1 0 0 0 1.8-.6V6.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="6.2" r="2" fill="#b6f0e2"/><circle cx="17" cy="17.8" r="2" fill="#b6f0e2"/></svg></span>
+    ${N.map(([ic, x, y, l], i) => `<span class="hn-node" style="left:${x}%;top:${y}%;animation-delay:${i * 0.4}s"><i data-lucide="${ic}"></i><em>${l}</em></span>`).join("")}
+    <span class="hn-spark" style="left:34%;top:16%"></span><span class="hn-spark" style="left:68%;top:84%"></span><span class="hn-spark" style="left:92%;top:42%"></span>
+  </div>`;
+  document.querySelectorAll("aside.campus").forEach(a => a.insertAdjacentHTML("afterbegin", html));
+})();
 document.querySelectorAll("section.app").forEach(sec => {
   const tab = sec.dataset.tab, back = sec.dataset.back, title = sec.dataset.title, staff = sec.dataset.staff;
   const nav = staff ? STAFF_NAV[staff] : NAV, home = staff ? ROLE_HOME[staff] : "inicio";
@@ -59,7 +71,7 @@ document.querySelectorAll("section.app").forEach(sec => {
   const side = document.createElement("aside");
   side.className = "side";
   side.innerHTML = `
-    <button class="brand" type="button" data-go="${home}" style="color:#fff"><span class="emblem"><i data-lucide="layers"></i></span>nexo</button>
+    <button class="brand" type="button" data-go="${home}" style="color:#fff"><span class="emblem"><svg class="nexo-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17.5V8.2a1 1 0 0 1 1.8-.6l6.4 8.8a1 1 0 0 0 1.8-.6V6.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="6.2" r="2" fill="#b6f0e2"/><circle cx="17" cy="17.8" r="2" fill="#b6f0e2"/></svg></span>nexo</button>
     <div class="inst"><b>U. Metropolitana</b><span>Campus Central · Caracas</span></div>
     <nav class="nav">${nav.map(n => `<button type="button" data-go="${n[3]}" class="${n[0]===tab?'on':''}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`).join("")}</nav>
     ${staff
@@ -71,7 +83,7 @@ document.querySelectorAll("section.app").forEach(sec => {
   main.className = "main";
   const left = back
     ? `<button class="title" type="button" data-go="${back}" data-back-btn><i data-lucide="arrow-left"></i>${title}</button>`
-    : `<button class="brand" type="button" data-go="${home}"><span class="emblem"><i data-lucide="layers"></i></span>nexo</button>`;
+    : `<button class="brand" type="button" data-go="${home}"><span class="emblem"><svg class="nexo-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17.5V8.2a1 1 0 0 1 1.8-.6l6.4 8.8a1 1 0 0 0 1.8-.6V6.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="6.2" r="2" fill="#b6f0e2"/><circle cx="17" cy="17.8" r="2" fill="#b6f0e2"/></svg></span>nexo</button>`;
   const macts = staff
     ? `<span class="pill ok">${ROLE_LABEL[staff]}</span><button class="avatarbtn" type="button" aria-label="Menú de usuario" aria-haspopup="menu" data-usermenu><span data-user="initials">AT</span></button>`
     : `<button class="bellbtn" type="button" aria-label="Notificaciones" data-go="notificaciones"><i data-lucide="bell"></i><span class="nbadge" data-notif-badge hidden></span></button><button class="avatarbtn" type="button" aria-label="Menú de usuario" aria-haspopup="menu" data-usermenu><span data-user="initials">AT</span></button>`;
@@ -293,9 +305,26 @@ let toastTimer;
 /* Avisos: toast(msg) sale y se va solo; con { action, onAction } muestra un botón (p. ej. "Deshacer", 6 s);
    con { persist: true } se queda hasta que la persona lo cierra (para lo importante: pedido listo, pago rechazado…).
    Los persistentes se apilan; los pasajeros reemplazan al pasajero anterior. */
-/* Estado vacío uniforme: ícono, título, explicación y (opcional) una acción */
+/* Ilustraciones propias (SVG en línea; los colores salen de los tokens, así que sirven en modo oscuro).
+   illu(tipo) → inbox, receipt, search, bell, people, done, bag. */
+const ILLU_BASE = `<ellipse class="il-bg" cx="80" cy="64" rx="62" ry="46"/><circle class="il-dot" cx="22" cy="30" r="3"/><circle class="il-dot" cx="142" cy="24" r="2.5"/><circle class="il-dot" cx="138" cy="98" r="3.5"/><path class="il-spark" d="M30 92v8M26 96h8M128 46v6M125 49h6"/>`;
+const ILLU = {
+  inbox: `<rect class="il-paper" x="52" y="26" width="56" height="40" rx="5"/><path class="il-soft" d="M60 38h40M60 47h28"/><path class="il-paper" d="M38 66l12-18h60l12 18v26a6 6 0 0 1-6 6H44a6 6 0 0 1-6-6z"/><path class="il-line" d="M38 66h26a16 16 0 0 0 32 0h26"/>`,
+  receipt: `<path class="il-paper" d="M56 20h48v74l-6-5-6 5-6-5-6 5-6-5-6 5-6-5-6 5z"/><path class="il-soft" d="M64 34h32M64 44h24M64 54h28"/><path class="il-line" d="M64 70h14M88 70h8"/>`,
+  search: `<rect class="il-paper" x="40" y="28" width="64" height="58" rx="6"/><path class="il-soft" d="M50 42h30M50 52h40M50 62h22"/><circle class="il-glass" cx="102" cy="72" r="16"/><path class="il-line" d="M113.5 83.5L126 96"/>`,
+  bell: `<path class="il-paper" d="M80 26a22 22 0 0 0-22 22v16l-8 12h60l-8-12V48a22 22 0 0 0-22-22z"/><path class="il-line" d="M72 84a8 8 0 0 0 16 0"/><path class="il-soft" d="M108 30h8l-8 9h8M120 18h5l-5 6h5"/>`,
+  people: `<circle class="il-paper" cx="64" cy="48" r="13"/><path class="il-paper" d="M40 92a24 24 0 0 1 48 0z"/><circle class="il-paper2" cx="98" cy="54" r="11"/><path class="il-paper2" d="M80 94a20 20 0 0 1 38 0z"/><path class="il-line" d="M112 30v12M106 36h12"/>`,
+  done: `<rect class="il-paper" x="50" y="24" width="60" height="74" rx="6"/><rect class="il-clip" x="66" y="18" width="28" height="12" rx="4"/><path class="il-soft" d="M60 46h40M60 56h30"/><circle class="il-okc" cx="80" cy="78" r="11"/><path class="il-ok" d="M75 78l4 4 7-8"/>`,
+  bag: `<path class="il-line" d="M66 44v-8a14 14 0 0 1 28 0v8"/><path class="il-paper" d="M50 42h60l-4 54H54z"/><path class="il-soft" d="M66 58a14 14 0 0 0 28 0"/>`,
+};
+const illu = k => ILLU[k] ? `<svg class="illu" viewBox="0 0 160 120" aria-hidden="true">${ILLU_BASE}${ILLU[k]}</svg>` : "";
+const ILLU_FOR = { inbox: "inbox", "receipt-text": "receipt", "search-x": "search", "filter-x": "search", "bell-off": "bell", users: "people", "check-check": "done", "badge-check": "done", "shopping-bag": "bag" };
+/* Marca de éxito animada (círculo que se dibuja + check + destellos) */
+const successMark = (cls = "") => `<span class="okmark ${cls}" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="ok-ring" cx="32" cy="32" r="26"/><path class="ok-tick" d="M21 33l7.5 7.5L44 25"/></svg><i></i><i></i><i></i><i></i><i></i><i></i></span>`;
+/* Estado vacío uniforme: ilustración (o ícono), título, explicación y (opcional) una acción */
 function emptyState(icon, title, text = "", act = "") {
-  return `<div class="empty"><span class="ico lg"><i data-lucide="${icon}"></i></span><b>${title}</b>${text ? `<p>${text}</p>` : ""}${act}</div>`;
+  const art = ILLU_FOR[icon] ? illu(ILLU_FOR[icon]) : `<span class="ico lg"><i data-lucide="${icon}"></i></span>`;
+  return `<div class="empty">${art}<b>${title}</b>${text ? `<p>${text}</p>` : ""}${act}</div>`;
 }
 function toast(msg, opts = {}) {
   let box = document.querySelector(".toasts");
@@ -3153,7 +3182,7 @@ function renderPedido() {
     <div class="stack s14">
       <div class="card">
         <div class="row" style="align-items:flex-start"><span class="small">Pedido ${o.num} · ${esc(l.name)}</span><span class="pill ${ORDER_STATE[st][1]}">${ORDER_STATE[st][0]}</span></div>
-        <div><h1 class="h1">${title}</h1><p class="lead">${lead}</p></div>
+        <div class="row start" style="gap:14px;align-items:center">${["preparando", "programado"].includes(st) && o.paidAt && now - o.paidAt < 90000 ? successMark("sm") : ""}<div><h1 class="h1">${title}</h1><p class="lead">${lead}</p></div></div>
         ${st === "preparando" ? `<div class="track" role="progressbar" aria-label="Progreso de la preparación" aria-valuenow="${Math.round(prog)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${prog}%"></i></div>` : ""}
         <ol class="steps-v"${st === "cancelado" ? " hidden" : ""}>
           ${o.paidAt ? step(true, false, "Pago confirmado", hhmm(o.paidAt)) : ""}
