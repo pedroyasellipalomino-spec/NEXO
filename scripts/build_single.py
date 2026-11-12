@@ -25,6 +25,7 @@ s = rd("index.html")
 s = s.replace('<link rel="stylesheet" href="css/styles.css">', "<style>\n" + rd("css/styles.css") + "\n</style>")
 if lucide:
     s = s.replace(LUCIDE_TAG, "<script>" + safe(lucide) + "</script>")
+s = s.replace('<script src="vendor/supabase.js"></script>', "<script>" + safe(rd("vendor/supabase.js")) + "</script>")
 s = s.replace('<script src="js/data.js"></script>', "<script>\n" + safe(rd("js/data.js")) + "\n</script>")
 s = s.replace('<script src="js/app.js"></script>', "<script>\n" + safe(rd("js/app.js")) + "\n</script>")
 # El archivo único no es instalable: se quitan manifiesto e íconos externos y el favicon va en línea

@@ -1,5 +1,5 @@
-"""Arma la app instalable y la publica en Netlify (sitio nexouni.netlify.app) junto con las funciones del servidor
-(netlify/functions → /.netlify/functions/track y /.netlify/functions/owner, que guardan los datos reales en Netlify Blobs).
+"""Arma la app instalable y la publica en Netlify (sitio nexouni.netlify.app). Si existe netlify/functions, también
+publica esas funciones (hoy no hay: las cuentas y los datos reales viven en Supabase).
 
 Uso:  python3 scripts/deploy_netlify.py            → publica en producción
       python3 scripts/deploy_netlify.py --borrador → solo una vista previa (no cambia el sitio real)
@@ -23,9 +23,11 @@ def call(method, path, data=None, ctype="application/json"):
         return json.loads(t) if t else {}
 
 subprocess.run([sys.executable, str(ROOT / "scripts" / "build_pwa.py")], check=True)
-if not (ROOT / "node_modules" / "@netlify" / "zip-it-and-ship-it").exists():
-    subprocess.run(["npm", "install", "--no-audit", "--no-fund"], cwd=ROOT, check=True)
-fns = json.loads(subprocess.run(["node", "scripts/zip_functions.mjs"], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip().splitlines()[-1])
+fns = []
+if (ROOT / "netlify" / "functions").exists() and (ROOT / "scripts" / "zip_functions.mjs").exists():
+    if not (ROOT / "node_modules" / "@netlify" / "zip-it-and-ship-it").exists():
+        subprocess.run(["npm", "install", "--no-audit", "--no-fund"], cwd=ROOT, check=True)
+    fns = json.loads(subprocess.run(["node", "scripts/zip_functions.mjs"], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip().splitlines()[-1])
 
 site_dir = ROOT / "dist" / "nexo-app"
 files = {"/" + p.relative_to(site_dir).as_posix(): p for p in site_dir.rglob("*") if p.is_file()}
@@ -50,6 +52,6 @@ for _ in range(60):
         break
     time.sleep(3)
 link = st.get("deploy_ssl_url") if draft else (st.get("ssl_url") or st.get("url"))
-print(f"{'Borrador' if draft else 'Publicado'}: {link} · estado {st['state']} · id {dep} · funciones {', '.join(st.get('available_functions') and [x['n'] for x in st['available_functions']] or [f['name'] for f in fns])}")
+print(f"{'Borrador' if draft else 'Publicado'}: {link} · estado {st['state']} · id {dep}" + (f" · funciones {', '.join(x['n'] for x in st.get('available_functions') or [])}" if fns else ""))
 if st["state"] != "ready":
     sys.exit(1)

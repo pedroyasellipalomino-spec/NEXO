@@ -3,7 +3,7 @@
    Fuentes de Google: primero la copia guardada. Al publicar cambios importantes, sube VERSION. */
 const VERSION = "nexo-v1";
 const SHELL = [
-  "./", "./index.html", "./css/styles.css", "./js/data.js", "./js/app.js", "./vendor/lucide.min.js",
+  "./", "./index.html", "./css/styles.css", "./js/data.js", "./js/app.js", "./vendor/lucide.min.js", "./vendor/supabase.js",
   "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/maskable-512.png", "./icons/apple-touch-icon.png", "./icons/icon-32.png", "./icons/icon.svg"
 ];
 self.addEventListener("install", e => {
@@ -22,7 +22,7 @@ self.addEventListener("fetch", e => {
     e.respondWith(caches.open(VERSION).then(c => c.match(req).then(hit => hit || fetch(req).then(res => { c.put(req, res.clone()); return res; }))));
     return;
   }
-  if (url.origin !== location.origin) return;
+  if (url.origin !== location.origin) return; // Supabase y otros servicios: siempre por la red, nunca de la copia
   // Navegación y archivos propios: red primero, copia guardada si no hay conexión
   e.respondWith(
     fetch(req).then(res => {

@@ -1,3 +1,2 @@
 [build]
   publish = "dist/nexo-app"
-  functions = "netlify/functions"

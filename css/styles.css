@@ -1263,3 +1263,9 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 @media (min-width:700px){.tk-row.dn-row{grid-template-columns:minmax(0,1.2fr) minmax(0,1.3fr) minmax(0,1fr);min-height:56px}}
 .dn-row b{font-weight:600}
 #dnActs .btn{white-space:nowrap}
+/* Cuentas reales */
+.btn.loading{opacity:.7;pointer-events:none}
+.dn-user{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.dn-user:first-child{border-top:0}
+.dn-user.off{opacity:.6}
+.dn-user .btn{width:auto}

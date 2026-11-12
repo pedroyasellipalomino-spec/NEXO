@@ -152,6 +152,7 @@
     <div class="form-col">
       <button class="link back" type="button" data-go="tutorial"><i data-lucide="arrow-left"></i>Volver al tutorial</button>
       <div><h1 class="h1">Crea tu cuenta</h1><p class="lead">Usa tu correo institucional. Validamos tu carnet con tu universidad.</p></div>
+      <div id="sbCheckMail" hidden></div>
       <form class="card" id="registerForm" novalidate>
         <div class="field"><label for="r-name">Nombre completo</label><div class="input"><input id="r-name" name="nombre" type="text" placeholder="Ej.: Ana Torres" autocomplete="name" required><i data-lucide="user"></i></div></div>
         <div class="field"><label for="r-inst">Institución</label><div class="input"><select id="r-inst"><option>U. Metropolitana</option></select><i data-lucide="chevron-down"></i></div></div>
@@ -1477,6 +1478,7 @@
 </template>
 
 <script src="vendor/lucide.min.js"></script>
+<script src="vendor/supabase.js"></script>
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
 </body>

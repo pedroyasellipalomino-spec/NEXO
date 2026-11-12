@@ -193,6 +193,10 @@ function setSession(email, remember) {
   try { localStorage.removeItem("nexo-session"); sessionStorage.removeItem("nexo-session"); (remember ? localStorage : sessionStorage).setItem("nexo-session", email); } catch (err) {}
 }
 function clearSession() { try { localStorage.removeItem("nexo-session"); sessionStorage.removeItem("nexo-session"); } catch (err) {} }
+/* Supabase (cuentas reales): solo cuando la app se sirve por http(s). Abierta como archivo suelto, todo es local. */
+const SB_URL = "https://iwgdisuzfznrmythylvg.supabase.co", SB_KEY = "sb_publishable_ax9inYwOpcufFjZoGSyL8g_Ft8c6AaR"; // clave pública por diseño (las reglas de seguridad viven en la base de datos)
+const SB_ON = /^https?:$/.test(location.protocol) && !!(window.supabase && window.supabase.createClient);
+const sb = SB_ON ? window.supabase.createClient(SB_URL, SB_KEY, { auth: { flowType: "pkce", detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, storageKey: "nexo-sb" } }) : null;
 const sessionEmail = getSession();
 const account = sessionEmail ? accounts.find(a => a.email === sessionEmail) : null;
 const isDemo = !account || account.email === DEMO_EMAIL;
@@ -990,7 +994,11 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
     (!ident ? idEl : passEl).focus(); return;
   }
   const byDigits = /^\d+$/.test(ident);
-  if (!byDigits && await isOwnerEmail(normEmail(ident))) return ownerLogin(normEmail(ident), pass, document.getElementById("l-rem").checked);
+  if (SB_ON && !byDigits && !isTestAccount(normEmail(ident))) return sbLogin(normEmail(ident), pass, document.getElementById("l-rem").checked);
+  if (SB_ON && byDigits && !accounts.some(a => a.carnet === ident && isTestAccount(a.email))) {
+    idEl.closest(".field").classList.add("bad");
+    return loginError("Entra con tu correo.", "Las cuentas reales de Nexo inician sesión con el correo con el que te registraste.", false);
+  }
   const acc = accounts.find(a => byDigits ? a.carnet === ident : a.email === normEmail(ident));
   if (!acc) {
     idEl.closest(".field").classList.add("bad");
@@ -1036,7 +1044,7 @@ document.getElementById("registerForm").addEventListener("submit", async e => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return signupError("Revisa tu correo.", "Escribe un correo válido, por ejemplo nombre@correo.unimet.edu.ve.", mailEl);
   if (passEl.value.length < 8 || !/\d/.test(passEl.value)) return signupError("Contraseña muy débil.", "Usa al menos 8 caracteres y un número.", passEl);
   if (!f.querySelector("#r-terms").checked) return signupError("Falta aceptar los términos.", "Marca la casilla de términos de uso para continuar.", null);
-  if (await isOwnerEmail(email)) return signupError("Ese correo es de la cuenta de dueño.", "Entra con él desde Iniciar sesión.", mailEl);
+  if (SB_ON && !isTestAccount(email)) return sbRegister({ full: cleanName(nameEl.value), carnet: carnetEl.value, email, pass: passEl.value, carnetEl, mailEl });
   if (accounts.some(a => a.email === email)) return signupError("Ese correo ya tiene una cuenta.", "Inicia sesión con él o usa otro correo.", mailEl);
   if (accounts.some(a => a.carnet === carnetEl.value)) return signupError("Ese carnet ya está registrado.", "Cada carnet solo puede tener una cuenta. Inicia sesión o revisa los dígitos.", carnetEl);
   const full = cleanName(nameEl.value);
@@ -1046,7 +1054,6 @@ document.getElementById("registerForm").addEventListener("submit", async e => {
   accounts.push({ full, carnet: carnetEl.value, email, pass: passKey(passEl.value), created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`, ...(inv ? { role: inv.role } : {}) });
   saveAccounts();
   if (inv) { invites = invites.filter(i => i !== inv); saveInvites(); }
-  trackEvent({ type: "signup" }, email);
   enterApp(email, true, inv ? `Cuenta creada. Ya eres parte del equipo de ${inv.role === "admin" ? "administración" : "moderación"}, ${full.split(" ")[0]}.` : `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
 });
 document.addEventListener("click", e => {
@@ -1068,6 +1075,7 @@ document.addEventListener("click", e => {
   doLogout();
 });
 function doLogout() {
+  if (sb && !doLogout.done) { doLogout.done = true; sb.auth.signOut({ scope: "local" }).catch(() => {}).finally(doLogout); return; }
   clearSession();
   try { sessionStorage.setItem("nexo-flash", "Cerraste sesión."); } catch (err) {}
   history.replaceState(null, "", "#login");
@@ -1557,6 +1565,7 @@ function saveAccount(changes) {
   if (i < 0) return null;
   accounts[i] = { ...accounts[i], ...changes };
   saveAccounts();
+  try { sbSaveProfile(changes); } catch (err) {} // cuenta real: también en Supabase
   return accounts[i];
 }
 document.getElementById("pfAccount").addEventListener("submit", e => {
@@ -1566,6 +1575,7 @@ document.getElementById("pfAccount").addEventListener("submit", e => {
   if (full.split(" ").filter(Boolean).length < 2) return pfErr(1, "Escribe tu nombre y al menos un apellido.", nameEl);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return pfErr(1, "Escribe un correo válido, por ejemplo nombre@correo.unimet.edu.ve.", mailEl);
   const mailChanged = email !== user.email;
+  if (mailChanged && account && account.sb) return pfErr(1, "Para cambiar el correo de tu cuenta escríbenos desde Soporte: lo verificamos para proteger tu cuenta.", mailEl);
   if (mailChanged) {
     if (accounts.some(a => a.email === email)) return pfErr(1, "Ese correo ya pertenece a otra cuenta.", mailEl);
     const acc = accounts.find(a => a.email === sessionEmail);
@@ -1638,6 +1648,11 @@ document.getElementById("pfPass").addEventListener("submit", e => {
   if (p1.value.length < 8 || !/\d/.test(p1.value)) return pfErr(3, "La contraseña nueva debe tener al menos 8 caracteres y un número.", p1);
   if (p1.value === p0.value) return pfErr(3, "La contraseña nueva debe ser distinta de la actual.", p1);
   if (p1.value !== p2.value) return pfErr(3, "Las contraseñas nuevas no coinciden.", p2);
+  if (sb && account && account.sb) {
+    const np = p1.value;
+    sb.auth.updateUser({ password: np }).then(({ error }) => { if (error) toast(`No pudimos cambiar tu contraseña: ${sbMsg(error)[0]}`); else { saveAccount({ pass: passKey(np) }); toast("Cambiaste tu contraseña. Úsala la próxima vez que inicies sesión."); } });
+    [p0, p1, p2].forEach(i => i.value = ""); pfStrength(); return;
+  }
   saveAccount({ pass: passKey(p1.value) });
   [p0, p1, p2].forEach(i => i.value = ""); pfStrength();
   toast("Cambiaste tu contraseña. Úsala la próxima vez que inicies sesión.");
@@ -3904,7 +3919,6 @@ document.addEventListener("submit", e => {
     accounts.push({ full, carnet: "", email: inv.email, pass: passKey(p1.value), role: inv.role, created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}` });
     saveAccounts();
     invites = invites.filter(i => i !== inv); saveInvites();
-    trackEvent({ type: "signup", staff: true }, inv.email);
     audit.push({ t: Date.now(), who: full, role: inv.role, type: "rol", text: `Activó su cuenta de ${ROLE_LABEL[inv.role].toLowerCase()} (invitación de ${inv.byName || "la administración"}).` });
     try { localStorage.setItem("nexo-audit", JSON.stringify(audit)); } catch (err) {}
     ivError = ""; ivToken = null; ivEmail = "";
@@ -4312,6 +4326,19 @@ function renderRecuperar() {
   const box = document.getElementById("rpBody"), err = rp.err ? `<div class="notice warn" role="alert"><i data-lucide="circle-alert"></i><p>${esc(rp.err)}</p></div>` : "";
   clearInterval(rpTimer);
   const steps = `<p class="small" style="font-weight:600"><span${rp.step === 1 ? ' style="color:var(--brand)"' : ""}>1. Tu cuenta</span> &nbsp;›&nbsp; <span${rp.step === 2 ? ' style="color:var(--brand)"' : ""}>2. Código</span> &nbsp;›&nbsp; <span${rp.step === 3 ? ' style="color:var(--brand)"' : ""}>3. Contraseña nueva</span></p>`;
+  if (rp.step === "sbsent") {
+    box.innerHTML = `<div><h1 class="h1">Revisa tu correo</h1><p class="lead">Si <b>${esc(maskMail(rp.email))}</b> tiene una cuenta en Nexo, te llegará un enlace para crear una contraseña nueva. Vence en 1 hora.</p></div>
+      <div class="card" style="align-items:flex-start;gap:12px">${illu("inbox")}<p class="small" style="font-size:14px">Ábrelo en este mismo dispositivo. Si no lo ves en unos minutos, revisa la carpeta de spam.</p><div class="row start" style="gap:10px;flex-wrap:wrap"><button class="btn ghost sm" type="button" data-rp-back>Usar otro correo</button><button class="btn ghost sm" type="button" data-go="login">Volver a iniciar sesión</button></div></div>`;
+    icons(); return;
+  }
+  if (rp.step === "sbnew") {
+    box.innerHTML = `<div><h1 class="h1">Crea tu contraseña nueva</h1><p class="lead">Para ${esc(maskMail(rp.email))}.</p></div>
+      <form class="card" id="rpFormSb" novalidate>
+        <div class="field"><label for="rp-p1">Contraseña nueva</label><div class="input"><input id="rp-p1" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres y un número"><button class="eye" type="button" data-eye="rp-p1" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div></div>
+        <div class="field"><label for="rp-p2">Repítela</label><div class="input"><input id="rp-p2" type="password" autocomplete="new-password"></div></div>
+        ${err}<button class="btn" type="submit"><i data-lucide="check"></i>Guardar y entrar</button></form>`;
+    icons(); const f0 = box.querySelector("input"); if (f0) f0.focus(); return;
+  }
   if (rp.step === 1) {
     if (!rp.ident) { const li = document.getElementById("l-mail"); if (li && li.value.trim()) rp.ident = li.value.trim(); }
     box.innerHTML = `<div><h1 class="h1">¿Olvidaste tu contraseña?</h1><p class="lead">Escribe tu correo institucional o tu carnet y te enviamos un código.</p></div>${steps}
@@ -4343,6 +4370,10 @@ document.addEventListener("submit", e => {
     const ident = document.getElementById("rp-id").value.trim(); rp.ident = ident;
     const byDigits = /^\d+$/.test(ident), acc = accounts.find(a => byDigits ? a.carnet === ident : a.email === normEmail(ident));
     if (!ident) rp.err = "Escribe tu correo institucional o tu carnet.";
+    else if (sb && !isTestAccount(normEmail(ident))) {
+      if (byDigits) rp.err = "Escribe el correo con el que te registraste.";
+      else { const email = normEmail(ident); sbSendReset(email).then(err => { if (err) rp.err = sbMsg(err).join(" "); else { rp.email = email; rp.step = "sbsent"; rp.sent = Date.now(); } renderRecuperar(); }); return; }
+    }
     else if (!acc) rp.err = byDigits ? `No hay ninguna cuenta con el carnet ${ident}.` : `No hay ninguna cuenta con el correo ${normEmail(ident)}. ¿Quieres crear una?`;
     else { rp.email = acc.email; rpSend(); rp.step = 2; }
   } else if (f.id === "rpForm2") {
@@ -4368,6 +4399,19 @@ document.addEventListener("click", e => {
   if (e.target.closest("[data-rp-resend]")) { rpSend(); rp.err = ""; toast(`Te enviamos un código nuevo a ${maskMail(rp.email)}.`); renderRecuperar(); return; }
   if (e.target.closest("[data-rp-back]")) { rp = { step: 1, email: null, code: null, exp: 0, sent: 0, tries: 3, err: "", ident: "" }; renderRecuperar(); return; }
   if (e.target.closest('[data-go="recuperar"]')) { rp.err = ""; if (rp.step !== 1 && !rp.email) rp.step = 1; }
+});
+document.addEventListener("submit", async e => {
+  if (e.target.id !== "rpFormSb") return;
+  e.preventDefault();
+  const p1 = document.getElementById("rp-p1").value, p2 = document.getElementById("rp-p2").value;
+  rp.err = p1.length < 8 || !/\d/.test(p1) ? "Usa al menos 8 caracteres y un número." : p1 !== p2 ? "Las contraseñas no coinciden." : "";
+  if (rp.err) return renderRecuperar();
+  sbBusy("rpFormSb", true);
+  const { data, error } = await sb.auth.updateUser({ password: p1 }).catch(er => ({ error: er }));
+  sbBusy("rpFormSb", false);
+  if (error) { rp.err = /different|same/i.test(error.message) ? "Esa es tu contraseña actual. Elige una distinta." : sbMsg(error).join(" "); return renderRecuperar(); }
+  rp = { step: 1, email: null, code: null, exp: 0, sent: 0, tries: 3, err: "", ident: "" };
+  sbAdopt(data.user, p1, true, "Listo: cambiamos tu contraseña.");
 });
 /* ---------- Inicio inteligente: "Para ti ahora" ----------
    Junta lo urgente de la cuenta (pedido listo o en curso, facturas por pagar o vencidas, plan por vencer,
@@ -4781,32 +4825,131 @@ document.addEventListener("click", e => {
   toast("Listo: toca Iniciar sesión.");
 });
 
-/* ---------- Cuenta de dueño y datos reales ----------
-   Nexo no tiene servidor propio: cada registro y pago real hecho en nexouni.netlify.app se anota en un contador
-   central (funciones de Netlify /api/track y /api/owner, guardado en Netlify Blobs) sin nombres ni correos:
-   solo una huella del usuario, el servicio, el monto, el estado y el método. Las cuentas de prueba no cuentan.
-   El dueño se identifica por la huella de su correo (el correo no está en el código) y una clave que se crea
-   una sola vez en el servidor; desde ahí solo esa clave abre una sesión de 12 h. Ver netlify/functions/. */
-const OWNER_HASH = "0f39373b257a2943c5a75723fbf9acedf700e2c245db92d672002b6b533b4e83";
-const API_OK = /^https?:$/.test(location.protocol) && (/\.netlify\.app$/.test(location.hostname) || location.hostname === "localhost");
-async function sha256hex(t) {
-  try { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join(""); } catch (err) { return ""; }
-}
-async function isOwnerEmail(email) { return (await sha256hex(normEmail(email))) === OWNER_HASH; }
+/* ---------- Cuentas reales (Supabase), dueño y datos reales ----------
+   Con la app servida por http(s) (SB_ON), las cuentas que no son de prueba viven en Supabase: registro con
+   confirmación por correo (enlace PKCE de vuelta a index.html?confirmado=1), inicio de sesión, recuperar contraseña
+   con enlace (?recuperar=1) y cierre de sesión. El perfil (nombre, carnet, rol, local) está en public.profiles y
+   se copia a la cuenta local (`sb: id`) para que el resto de la app siga igual. Los pagos se anotan en public.payments.
+   El rol "owner" lo asigna la base de datos solo al correo del dueño; su pantalla #dueno lee owner_stats() en vivo.
+   Las cuentas de prueba (Ana, STAFF0, @comercio.nexo) siguen siendo locales. Migraciones: supabase/migrations/. */
 const isTestAccount = email => !email || email === DEMO_EMAIL || /@comercio\.nexo$/.test(email) || STAFF0.some(a => a.email === email);
-async function trackEvent(data, email = sessionEmail) {
-  if (!API_OK || isTestAccount(email)) return;
-  const uh = (await sha256hex("nexo:" + normEmail(email))).slice(0, 32);
-  try { fetch("/.netlify/functions/track", { method: "POST", keepalive: true, headers: { "content-type": "application/json" }, body: JSON.stringify({ ...data, uh }) }).catch(() => {}); } catch (err) {}
+const sbBusy = (formId, on) => { const b = document.querySelector(`#${formId} button[type="submit"]`); if (b) { b.disabled = on; b.classList.toggle("loading", on); } };
+const sbMsg = e => {
+  const m = String((e && (e.message || e.error_description)) || "");
+  if (/invalid login credentials/i.test(m)) return ["Correo o contraseña incorrectos.", "Revísalos e inténtalo de nuevo, o usa \"¿Olvidaste tu contraseña?\"."];
+  if (/email not confirmed/i.test(m)) return ["Confirma tu correo primero.", "Te enviamos un enlace al registrarte. Ábrelo y vuelve a entrar."];
+  if (/email address .* is invalid|invalid email|unable to validate email/i.test(m)) return ["Revisa tu correo.", "Ese correo no existe o no puede recibir mensajes. Usa tu correo de la Unimet o uno personal que revises."];
+  if (/already registered|already exists/i.test(m)) return ["Ese correo ya tiene una cuenta.", "Inicia sesión con él o usa \"¿Olvidaste tu contraseña?\"."];
+  if (/rate limit|too many/i.test(m)) return ["Demasiados intentos seguidos.", "Espera unos minutos e inténtalo de nuevo."];
+  if (/sending|smtp|email/i.test(m) && /error/i.test(m)) return ["No pudimos enviar el correo.", "El servicio de correos de Nexo no está listo todavía. Inténtalo más tarde."];
+  if (/password/i.test(m) && /(short|weak|least)/i.test(m)) return ["Contraseña muy débil.", "Usa al menos 8 caracteres y un número."];
+  if (/fetch|network|failed/i.test(m)) return ["No pudimos conectarnos.", "Revisa tu conexión a internet e inténtalo otra vez."];
+  return ["Algo salió mal.", m || "Inténtalo de nuevo en unos minutos."];
+};
+async function sbProfile(uid) { const { data, error } = await sb.from("profiles").select("*").eq("id", uid).single(); return error ? null : data; }
+function sbToLocal(p, pass) {
+  let acc = accounts.find(a => a.email === p.email);
+  if (!acc) { acc = { email: p.email }; accounts.push(acc); }
+  Object.assign(acc, { full: p.full_name || p.email.split("@")[0], carnet: p.carnet || "", created: String(p.created_at).slice(0, 10), sb: p.id, disabled: !!p.disabled });
+  if (p.role === "estudiante") delete acc.role; else acc.role = p.role;
+  if (p.local_id) acc.local = p.local_id; else delete acc.local;
+  ["career", "ci", "phone", "birth", "addr"].forEach(k => { if (p[k]) acc[k] = p[k]; });
+  if (pass) acc.pass = passKey(pass);
+  saveAccounts();
+  return acc;
 }
+async function sbAdopt(user, pass, remember, flash) {
+  const p = await sbProfile(user.id);
+  if (!p) { await sb.auth.signOut({ scope: "local" }).catch(() => {}); return loginError("No encontramos tu perfil.", "Inténtalo de nuevo en unos minutos o escríbenos a soporte.", false); }
+  const acc = sbToLocal(p, pass);
+  if (acc.role === "owner") try { localStorage.setItem("nexo-mode:" + acc.email, "gestion"); } catch (err) {}
+  enterApp(acc.email, remember, flash || `Hola de nuevo, ${acc.full.split(" ")[0]}.`);
+}
+async function sbLogin(email, pass, remember) {
+  sbBusy("loginForm", true);
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass }).catch(e => ({ error: e }));
+  sbBusy("loginForm", false);
+  if (error) {
+    const [t, x] = sbMsg(error);
+    const old = accounts.find(a => a.email === email && !a.sb && !isTestAccount(a.email));
+    loginError(t, old && /incorrectos/.test(t) ? "Nexo ahora usa cuentas reales: si te registraste antes de hoy, crea tu cuenta de nuevo con este correo." : x, false);
+    document.getElementById("l-pass").closest(".field").classList.add("bad");
+    if (/Confirma/.test(t)) sbOfferResend(email, "loginError");
+    return;
+  }
+  await sbAdopt(data.user, pass, remember);
+}
+function sbOfferResend(email, boxId) {
+  const box = document.getElementById(boxId); if (!box) return;
+  const b = document.createElement("button"); b.type = "button"; b.className = "link b"; b.textContent = "Reenviar el enlace";
+  b.addEventListener("click", async () => {
+    const { error } = await sb.auth.resend({ type: "signup", email, options: { emailRedirectTo: location.origin + location.pathname + "?confirmado=1" } }).catch(e => ({ error: e }));
+    toast(error ? sbMsg(error).join(" ") : `Te reenviamos el enlace a ${maskMail(email)}.`);
+  });
+  (box.querySelector("div") || box).append(" ", b);
+}
+async function sbRegister({ full, carnet, email, pass, carnetEl, mailEl }) {
+  sbBusy("registerForm", true);
+  const ok = await sb.rpc("carnet_available", { c: carnet }).then(r => r.error ? true : r.data).catch(() => true);
+  if (!ok) { sbBusy("registerForm", false); return signupError("Ese carnet ya está registrado.", "Cada carnet solo puede tener una cuenta. Inicia sesión o revisa los dígitos.", carnetEl); }
+  const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { full_name: full, carnet }, emailRedirectTo: location.origin + location.pathname + "?confirmado=1" } }).catch(e => ({ error: e }));
+  sbBusy("registerForm", false);
+  if (error) { const [t, x] = sbMsg(error); return signupError(t, x, /correo/i.test(t) ? null : mailEl); }
+  if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) return signupError("Ese correo ya tiene una cuenta.", "Inicia sesión con él o usa \"¿Olvidaste tu contraseña?\".", mailEl);
+  if (data.session) return sbAdopt(data.user, pass, true, `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
+  const box = document.getElementById("sbCheckMail"), form = document.getElementById("registerForm");
+  form.hidden = true; box.hidden = false;
+  box.innerHTML = `<div class="card" style="align-items:flex-start;gap:12px">${illu("inbox")}<h2 class="h2">Revisa tu correo</h2><p class="small" style="font-size:14px">Te enviamos un enlace a <strong>${esc(maskMail(email))}</strong>. Ábrelo para activar tu cuenta y entrar a Nexo. Si no lo ves, revisa la carpeta de spam.</p>
+    <div class="row start" style="gap:10px;flex-wrap:wrap"><button class="btn ghost sm" type="button" data-sb-resend="${esc(email)}"><i data-lucide="send"></i>Reenviar el enlace</button><button class="btn ghost sm" type="button" data-go="login"><i data-lucide="log-in"></i>Ir a iniciar sesión</button></div></div>`;
+  icons();
+}
+document.addEventListener("click", async e => {
+  const r = e.target.closest("[data-sb-resend]"); if (!r || !sb) return;
+  const email = r.dataset.sbResend;
+  const { error } = await sb.auth.resend({ type: "signup", email, options: { emailRedirectTo: location.origin + location.pathname + "?confirmado=1" } }).catch(er => ({ error: er }));
+  toast(error ? sbMsg(error).join(" ") : `Te reenviamos el enlace a ${maskMail(email)}.`);
+});
+// Recuperar contraseña de una cuenta real: enlace por correo y luego "crea tu contraseña nueva"
+async function sbSendReset(email) {
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname + "?recuperar=1" }).catch(e => ({ error: e }));
+  return error;
+}
+// Al volver de un enlace del correo (confirmar cuenta o recuperar contraseña)
+if (sb) (async () => {
+  const q = new URLSearchParams(location.search), confirm = q.has("confirmado"), reset = q.has("recuperar");
+  const clean = () => history.replaceState(null, "", location.pathname + location.hash);
+  if (!confirm && !reset && !q.has("code")) {
+    // sesión de una cuenta real: si venció, se cierra; si el dueño cambió el rol, se actualiza
+    if (account && account.sb) {
+      const { data } = await sb.auth.getSession().catch(() => ({ data: {} }));
+      if (!data || !data.session) { clearSession(); try { sessionStorage.setItem("nexo-flash", "Tu sesión venció. Inicia sesión de nuevo."); } catch (err) {} history.replaceState(null, "", "#login"); location.reload(); return; }
+      const p = await sbProfile(account.sb);
+      if (p && ((p.role === "estudiante" ? undefined : p.role) !== account.role || !!p.disabled !== !!account.disabled || (p.local_id || undefined) !== account.local)) {
+        sbToLocal(p); toast("Tu acceso cambió. Actualizamos la app…"); setTimeout(() => location.reload(), 1200);
+      }
+    }
+    return;
+  }
+  const { data } = await sb.auth.getSession().catch(() => ({ data: {} }));
+  const session = data && data.session;
+  clean();
+  if (reset) {
+    if (!session) { go("recuperar"); rp = { step: 1, email: null, code: null, exp: 0, sent: 0, tries: 3, err: "Ese enlace venció o ya se usó. Pide uno nuevo.", ident: "" }; renderRecuperar(); return; }
+    rp = { step: "sbnew", email: session.user.email, err: "", ident: "" }; go("recuperar"); renderRecuperar(); return;
+  }
+  if (session && (!sessionEmail || sessionEmail !== normEmail(session.user.email))) return sbAdopt(session.user, null, true, "¡Correo confirmado! Te damos la bienvenida a Nexo.");
+  if (!session && confirm) { go("login"); toast("Tu correo quedó confirmado. Inicia sesión con tu contraseña.", { persist: true }); }
+})();
+// Pagos reales → public.payments (sin datos de tarjeta)
 function trackMove(title, detail, amount, pill, extra) {
+  if (!sb || !account || !account.sb) return;
   const a = String(amount || ""), d = String(detail || ""), v = parseFloat(a.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
   if (!v || a.startsWith("+") && title !== "Recarga de wallet") return; // reembolsos y otros abonos no son pagos
   const service = title === "Recarga de wallet" ? "recarga" : d.startsWith("Universidad") ? "materias" : extra.icon === "car-front" ? "estacionamiento" : extra.icon === "dribbble" ? "canchas" : extra.order || extra.icon === "utensils" ? "comida" : null;
   if (!service || !["Pagado", "En revisión", "Acreditada", "Aprobado"].includes(pill)) return;
   const o = extra.order ? (orders || []).find(x => x.id === extra.order) : null;
   const method = /Pago Móvil/.test(d) ? "pago-movil" : /Wallet/.test(d) ? "wallet" : /Transferencia/.test(d) || (o && o.method === "transfer") ? "transferencia" : (o && o.method === "card") || /Visa|Mastercard|····/.test(d) || service === "canchas" ? "tarjeta" : "otro";
-  trackEvent({ type: "pay", service, amount: v, status: pill, method });
+  sb.from("payments").insert({ service, amount: v, status: pill, method, detail: String(title).slice(0, 120) }).then(({ error }) => { if (error) console.warn("Nexo: no se anotó el pago", error.message); });
 }
 // Pago de canchas: antes no quedaba en Actividad ni en los gastos del mes
 document.addEventListener("click", e => {
@@ -4814,89 +4957,78 @@ document.addEventListener("click", e => {
   const sp = SPORTS[res.sport], fee = Math.round(sp.price * 5) / 100, end = pad2(parseInt(res.slot) + 1) + ":00";
   addMovement(sp.court, `Canchas · ${res.dname} ${res.day} nov · ${res.slot}–${end}`, "−" + money(sp.price + fee), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
 });
-// Inicio de sesión del dueño (el primer ingreso crea la clave en el servidor)
-const OWNER_TK = "nexo-owner-token";
-const ownerToken = () => { try { const t = JSON.parse(sessionStorage.getItem(OWNER_TK) || "null"); return t && t.exp > Date.now() ? t.token : null; } catch (err) { return null; } };
-async function ownerApi(body) {
-  const r = await fetch("/.netlify/functions/owner", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  let d = {}; try { d = await r.json(); } catch (err) {}
-  return { ok: r.ok, status: r.status, ...d };
+// Mi cuenta: los cambios de una cuenta real se guardan también en Supabase
+function sbSaveProfile(changes) {
+  if (!sb || !account || !account.sb) return;
+  const map = { full: "full_name", career: "career", ci: "ci", phone: "phone", birth: "birth", addr: "addr" }, row = {};
+  Object.entries(changes).forEach(([k, v]) => { if (map[k]) row[map[k]] = v === "" ? null : v; });
+  if (Object.keys(row).length) sb.from("profiles").update(row).eq("id", account.sb).then(({ error }) => { if (error) toast("No pudimos guardar el cambio en tu cuenta. Inténtalo de nuevo."); });
 }
-function ownerErr(d) {
-  return d.error === "weak" ? ["Clave muy débil.", "Usa al menos 10 caracteres, con letras y números."]
-    : d.error === "bad" ? ["La clave de dueño no es correcta.", d.left ? `Te quedan ${d.left} intentos antes de un bloqueo de 15 minutos.` : "Por seguridad, la cuenta quedó bloqueada 15 minutos."]
-    : d.error === "locked" ? ["Demasiados intentos.", "Espera 15 minutos e inténtalo de nuevo."]
-    : ["No pudimos conectarnos.", "Revisa tu conexión e inténtalo otra vez."];
-}
-async function ownerUnlock(email, pass) {
-  const d = await ownerApi({ action: "login", emailHash: await sha256hex(normEmail(email)), password: pass }).catch(() => ({ ok: false }));
-  if (d.ok && d.token) { try { sessionStorage.setItem(OWNER_TK, JSON.stringify({ token: d.token, exp: d.exp })); } catch (err) {} }
-  return d;
-}
-async function ownerLogin(email, pass, remember) {
-  if (!API_OK) return loginError("La cuenta de dueño solo funciona en la app publicada.", "Entra desde https://nexouni.netlify.app: este archivo no se conecta al servidor.", false);
-  const st = await ownerApi({ action: "status" }).catch(() => ({ ok: false }));
-  if (!st.ok) return loginError(...ownerErr({}), false);
-  const go2 = async () => {
-    const d = await ownerUnlock(email, pass);
-    if (!d.ok) { const [t, x] = ownerErr(d); loginError(t, x, false); document.getElementById("l-pass").closest(".field").classList.add("bad"); return; }
-    let acc = accounts.find(a => a.email === email);
-    const now = new Date(), created = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-    if (!acc) { acc = { full: "Dueño de Nexo", carnet: "", email, created }; accounts.push(acc); }
-    Object.assign(acc, { role: "owner", pass: passKey(pass), disabled: false }); saveAccounts();
-    try { localStorage.setItem("nexo-mode:" + email, "gestion"); } catch (err) {}
-    enterApp(email, remember, d.firstClaim ? "Listo: creaste tu clave de dueño. Solo con ella se abren los datos reales." : "Hola de nuevo. Estos son los datos reales de Nexo.");
-  };
-  if (!st.claimed) askConfirm({ icon: "shield-check", title: "Crea tu clave de dueño", text: "Es la primera vez que entras como dueño de Nexo. La contraseña que escribiste quedará como tu clave de dueño (al menos 10 caracteres, con letras y números). Después nadie más podrá reclamar esta cuenta.", ok: "Crear y entrar", cancel: "Volver", onOk: go2 });
-  else go2();
-}
-// Pantalla "Datos reales"
+// Pantalla "Datos reales" del dueño
 const SV_LBL = { comida: ["Comida", "utensils"], estacionamiento: ["Estacionamiento", "car-front"], materias: ["Materias", "graduation-cap"], canchas: ["Canchas", "dribbble"], recarga: ["Recargas de wallet", "wallet"] };
 const MT_LBL = { tarjeta: "Tarjeta", transferencia: "Transferencia", "pago-movil": "Pago Móvil", wallet: "Wallet Nexo", otro: "Otro" };
+const ROLE_OPTS = [["estudiante", "Estudiante"], ["local", "Comercio"], ["mod", "Moderador"], ["admin", "Administrador"], ["creator", "Creador"]];
 const fullDT = t => { const d = new Date(t); return `${d.getDate()} ${MES_CORTO[d.getMonth()]} ${d.getFullYear()}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
-let dnBusy = false;
+let dnBusy = false, dnUsers = [], dnFilter = "";
 async function renderDueno() {
   const body = document.getElementById("dnBody"), acts = document.getElementById("dnActs"); if (!body) return;
-  if (!API_OK) { acts.innerHTML = ""; body.innerHTML = `<div class="notice warn"><i data-lucide="globe"></i><p>Los datos reales solo se ven en la app publicada: abre <strong>https://nexouni.netlify.app</strong> y entra con tu cuenta de dueño. Este archivo no se conecta al servidor.</p></div>`; icons(); return; }
-  const tk = ownerToken();
-  if (!tk) {
-    acts.innerHTML = "";
-    body.innerHTML = `<form class="card" id="dnUnlock" style="max-width:460px" novalidate><div class="row start" style="gap:12px"><span class="ico lg"><i data-lucide="lock-keyhole"></i></span><div><h2 class="h2">Abre los datos reales</h2><p class="small" style="font-size:13px">Escribe tu clave de dueño. La sesión dura 12 horas en esta pestaña.</p></div></div>
-      <div class="field"><label for="dn-pass">Clave de dueño</label><div class="input"><input id="dn-pass" type="password" autocomplete="current-password"><button class="eye" type="button" data-eye="dn-pass" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div></div>
-      <p class="tiny pm-err" id="dnErr" hidden></p><button class="btn" type="submit"><i data-lucide="shield-check"></i>Abrir datos</button></form>`;
-    icons(); return;
-  }
+  if (!sb || !account || !account.sb) { acts.innerHTML = ""; body.innerHTML = `<div class="notice warn"><i data-lucide="globe"></i><p>Los datos reales solo se ven en la app publicada: abre <strong>https://nexouni.netlify.app</strong> y entra con tu cuenta de dueño.</p></div>`; icons(); return; }
   if (dnBusy) return; dnBusy = true;
-  acts.innerHTML = `<button class="btn ghost sm" type="button" data-dn-refresh><i data-lucide="refresh-cw"></i>Actualizar</button><button class="btn ghost sm" type="button" data-dn-lock><i data-lucide="lock"></i>Cerrar datos</button>`;
+  acts.innerHTML = `<button class="btn ghost sm" type="button" data-dn-refresh><i data-lucide="refresh-cw"></i>Actualizar</button>`;
   if (!body.querySelector(".dn-kpis")) body.innerHTML = `<p class="small">Cargando datos reales…</p>`;
   icons();
-  const d = await ownerApi({ action: "stats", token: tk }).catch(() => ({ ok: false }));
+  const [st, us] = await Promise.all([sb.rpc("owner_stats"), sb.from("profiles").select("id,full_name,email,carnet,role,local_id,disabled,created_at").order("created_at", { ascending: false })]).catch(e => [{ error: e }, {}]);
   dnBusy = false;
-  if (!d.ok) { if (d.status === 401) { try { sessionStorage.removeItem(OWNER_TK); } catch (err) {} return renderDueno(); } body.innerHTML = `<div class="notice warn"><i data-lucide="wifi-off"></i><p>No pudimos cargar los datos. Revisa tu conexión y toca Actualizar.</p></div>`; icons(); return; }
-  document.getElementById("dnLead").textContent = d.since ? `Cuenta todo lo que pasó en nexouni.netlify.app desde el ${fullDT(d.since)}. No incluye cuentas de prueba ni datos de ejemplo. Lo anterior a esa fecha no quedó registrado en ningún lugar.` : "Todavía no hay registros ni pagos reales. Desde ahora, cada registro y pago hecho en nexouni.netlify.app aparecerá aquí.";
+  if (st.error || !st.data) { body.innerHTML = `<div class="notice warn"><i data-lucide="wifi-off"></i><p>No pudimos cargar los datos (${esc(sbMsg(st.error)[0])}). Toca Actualizar.</p></div>`; icons(); return; }
+  const d = st.data; dnUsers = (us && us.data) || [];
+  const lg = d.legacy;
+  document.getElementById("dnLead").textContent = `Datos en vivo de la base de datos de Nexo. No incluye las cuentas de prueba ni los datos de ejemplo.${lg ? ` Antes de las cuentas reales, el contador temporal anotó ${lg.signups} ${lg.signups === 1 ? "registro" : "registros"} y ${lg.payments} ${lg.payments === 1 ? "pago" : "pagos"}.` : ""}`;
   const k = (lbl, val, sub, ic) => `<div class="card kpi static"><div class="row"><span class="small">${lbl}</span><i data-lucide="${ic}" style="color:var(--muted)"></i></div><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
   const svRows = Object.keys(SV_LBL).map(key => { const x = d.byService[key] || { n: 0, usd: 0, rev: 0, revUsd: 0 };
-    return `<div class="tk-row dn-row"><span class="row start" style="gap:10px"><span class="ico"><i data-lucide="${SV_LBL[key][1]}"></i></span><b style="font-size:13px">${SV_LBL[key][0]}</b></span><span><span class="tk-lbl">Confirmados</span>${x.n} · <b>${money(x.usd)}</b></span><span><span class="tk-lbl">En revisión</span>${x.rev ? `${x.rev} · ${money(x.revUsd)}` : "—"}</span></div>`; }).join("");
-  const recent = d.recent.length ? d.recent.map(e => `<div class="tk-row dn-row"><span class="tiny">${fullDT(e.t)}</span><span class="row start" style="gap:8px"><i data-lucide="${SV_LBL[e.service][1]}" style="color:var(--brand);width:16px"></i>${SV_LBL[e.service][0]} · ${MT_LBL[e.method] || "Otro"}</span><span class="row start" style="gap:8px;justify-content:space-between"><span class="pill ${e.status === "En revisión" ? "warn" : "ok"}">${e.status}</span><b>${money(e.amount)}</b></span></div>`).join("")
-    : emptyState("receipt-text", "Aún no hay pagos reales", "Cuando alguien pague en nexouni.netlify.app, aparecerá aquí al instante (sin nombres ni datos de pago).");
-  body.innerHTML = `<div class="kpis dn-kpis">${k("Usuarios registrados", d.users.total, `${d.users.today} hoy · ${d.users.last7} en los últimos 7 días`, "users")}${k("Pagos confirmados", d.payments.count, `${money(d.payments.usd)} en total · ${d.payments.payers} ${d.payments.payers === 1 ? "persona pagó" : "personas pagaron"}`, "badge-check")}${k("Pagos en revisión", d.payments.review, d.payments.review ? `${money(d.payments.reviewUsd)} esperando validación` : "Nada pendiente", "hourglass")}</div>
+    return `<div class="tk-row dn-row"><span class="row start" style="gap:10px"><span class="ico"><i data-lucide="${SV_LBL[key][1]}"></i></span><b style="font-size:13px">${SV_LBL[key][0]}</b></span><span><span class="tk-lbl">Confirmados</span>${x.n} · <b>${money(+x.usd)}</b></span><span><span class="tk-lbl">En revisión</span>${x.rev ? `${x.rev} · ${money(+x.revUsd)}` : "—"}</span></div>`; }).join("");
+  const recent = d.recent.length ? d.recent.map(e => `<div class="tk-row dn-row"><span class="tiny">${fullDT(e.t)}<br>${esc(e.who || "")}</span><span class="row start" style="gap:8px"><i data-lucide="${SV_LBL[e.service][1]}" style="color:var(--brand);width:16px"></i>${SV_LBL[e.service][0]} · ${MT_LBL[e.method] || "Otro"}</span><span class="row start" style="gap:8px;justify-content:space-between"><span class="pill ${e.status === "En revisión" ? "warn" : "ok"}">${e.status}</span><b>${money(+e.amount)}</b></span></div>`).join("")
+    : emptyState("receipt-text", "Aún no hay pagos reales", "Cuando alguien pague en nexouni.netlify.app con su cuenta, aparecerá aquí al instante.");
+  const conf = d.users.confirmed;
+  body.innerHTML = `<div class="kpis dn-kpis">${k("Usuarios registrados", d.users.total, `${conf} con correo confirmado · ${d.users.today} hoy · ${d.users.last7} en 7 días`, "users")}${k("Pagos confirmados", d.payments.count, `${money(+d.payments.usd)} en total · ${d.payments.payers} ${d.payments.payers === 1 ? "persona pagó" : "personas pagaron"}`, "badge-check")}${k("Pagos en revisión", d.payments.review, d.payments.review ? `${money(+d.payments.reviewUsd)} esperando validación` : "Nada pendiente", "hourglass")}</div>
     <div class="card" style="padding:0;gap:0"><div class="tk-row tk-head dn-row"><span>Servicio</span><span>Confirmados</span><span>En revisión</span></div>${svRows}</div>
-    <div class="card" style="padding:0;gap:0"><div class="row" style="padding:16px 18px 8px"><h2 class="sec">Últimos movimientos reales</h2><span class="tiny">Actualizado ${fullDT(d.now)}</span></div><div class="tk-row tk-head dn-row"><span>Fecha</span><span>Servicio y método</span><span>Estado y monto</span></div>${recent}</div>
-    <div class="notice"><i data-lucide="shield-check"></i><p>Para cuidar la privacidad, el contador no guarda nombres, correos, cédulas ni datos de tarjeta: solo una huella anónima por persona, el servicio, el monto en USD, el estado y el método. Los pagos "en revisión" son los que el estudiante reportó y Caja aún no valida.</p></div>`;
+    <div class="card" style="padding:0;gap:0"><div class="row" style="padding:16px 18px 8px"><h2 class="sec">Últimos pagos reales</h2><span class="tiny">Actualizado ${fullDT(d.now)}</span></div><div class="tk-row tk-head dn-row"><span>Fecha y persona</span><span>Servicio y método</span><span>Estado y monto</span></div>${recent}</div>
+    <div class="card" style="gap:12px"><div class="row" style="flex-wrap:wrap;gap:10px"><div><h2 class="sec">Usuarios</h2><p class="small">Cambia el rol de cada cuenta o desactívala. Los cambios se aplican la próxima vez que esa persona abra la app.</p></div>
+      <div class="input" style="max-width:280px"><i data-lucide="search"></i><input id="dnSearch" type="search" placeholder="Buscar por nombre, correo o carnet" value="${esc(dnFilter)}" aria-label="Buscar usuarios"></div></div>
+      <div id="dnUsers"></div></div>
+    <div class="notice"><i data-lucide="shield-check"></i><p>Solo tu cuenta puede ver esta pantalla: la base de datos lo verifica en cada consulta. Los pagos "en revisión" son los que el estudiante reportó y Caja aún no valida.</p></div>`;
+  renderDnUsers();
   icons();
 }
-document.addEventListener("submit", async e => {
-  if (e.target.id !== "dnUnlock") return;
-  e.preventDefault();
-  const p = document.getElementById("dn-pass"), err = document.getElementById("dnErr");
-  if (!p.value) { p.closest(".field").classList.add("bad"); p.focus(); return; }
-  const d = await ownerUnlock(sessionEmail, p.value);
-  if (!d.ok) { const [t, x] = ownerErr(d); err.hidden = false; err.textContent = `${t} ${x}`; p.closest(".field").classList.add("bad"); p.select(); return; }
-  renderDueno();
+function renderDnUsers() {
+  const box = document.getElementById("dnUsers"); if (!box) return;
+  const f = normTxt(dnFilter), list = dnUsers.filter(u => !f || normTxt(`${u.full_name} ${u.email} ${u.carnet || ""}`).includes(f));
+  box.innerHTML = list.length ? list.map(u => `<div class="dn-user${u.disabled ? " off" : ""}"><span class="avatar sm">${esc(initialsOf(u.full_name || u.email))}</span>
+      <div class="grow" style="min-width:0"><b style="font-size:13px">${esc(u.full_name || "Sin nombre")}${u.role === "owner" ? ' <span class="pill ok">Dueño</span>' : ""}</b><span class="tiny" style="display:block;overflow:hidden;text-overflow:ellipsis">${esc(u.email)}${u.carnet ? ` · ${esc(u.carnet)}` : ""} · desde ${fmtD(new Date(u.created_at))}</span></div>
+      ${u.role === "owner" ? "" : `<div class="row start" style="gap:6px;flex-wrap:wrap"><div class="input sel sm"><select data-dn-role="${u.id}" aria-label="Rol de ${esc(u.full_name)}">${ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? " selected" : ""}>${l}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div>
+        ${u.role === "local" ? `<div class="input sel sm"><select data-dn-local="${u.id}" aria-label="Local de ${esc(u.full_name)}">${LOCALES.map(l => `<option value="${l.id}"${u.local_id === l.id ? " selected" : ""}>${esc(l.name)}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div>` : ""}
+        <button class="btn ghost sm" type="button" data-dn-toggle="${u.id}">${u.disabled ? "Reactivar" : "Desactivar"}</button></div>`}</div>`).join("")
+    : emptyState("users", dnUsers.length ? "Nadie coincide con la búsqueda" : "Aún no hay usuarios", dnUsers.length ? "Prueba con otro nombre, correo o carnet." : "Cuando alguien cree su cuenta en nexouni.netlify.app aparecerá aquí.");
+  icons();
+}
+async function dnSetRole(id, role, local, disabled) {
+  const u = dnUsers.find(x => x.id === id); if (!u) return;
+  if (role === "local" && !local) local = u.local_id || LOCALES[0].id;
+  const { error } = await sb.rpc("set_user_role", { target: id, new_role: role, new_local: role === "local" ? local : null, new_disabled: !!disabled });
+  if (error) { toast(`No se pudo cambiar: ${error.message}`); return renderDnUsers(); }
+  Object.assign(u, { role, local_id: role === "local" ? local : null, disabled: !!disabled });
+  toast(disabled ? `Desactivaste la cuenta de ${u.full_name}.` : `${u.full_name} ahora es ${ROLE_OPTS.find(r => r[0] === role)[1].toLowerCase()}${role === "local" ? ` de ${localById(local).name}` : ""}.`);
+  renderDnUsers();
+}
+document.addEventListener("change", e => {
+  const r = e.target.closest("[data-dn-role]"); if (r) { const u = dnUsers.find(x => x.id === r.dataset.dnRole); dnSetRole(u.id, r.value, u.local_id, u.disabled); return; }
+  const l = e.target.closest("[data-dn-local]"); if (l) { const u = dnUsers.find(x => x.id === l.dataset.dnLocal); dnSetRole(u.id, "local", l.value, u.disabled); }
 });
-document.addEventListener("click", async e => {
+document.addEventListener("input", e => { if (e.target.id === "dnSearch") { dnFilter = e.target.value; renderDnUsers(); } });
+document.addEventListener("click", e => {
   if (e.target.closest("[data-dn-refresh]")) { renderDueno(); return; }
-  if (e.target.closest("[data-dn-lock]")) { const tk = ownerToken(); try { sessionStorage.removeItem(OWNER_TK); } catch (err) {} if (tk) ownerApi({ action: "logout", token: tk }).catch(() => {}); renderDueno(); toast("Cerraste los datos reales en esta pestaña."); }
+  const t = e.target.closest("[data-dn-toggle]"); if (t) { const u = dnUsers.find(x => x.id === t.dataset.dnToggle); if (!u) return;
+    if (u.disabled) return dnSetRole(u.id, u.role, u.local_id, false);
+    askConfirm({ icon: "user-x", title: `¿Desactivar a ${u.full_name}?`, text: "Podrá seguir entrando, pero como estudiante y sin acceso de gestión, hasta que lo reactives.", ok: "Desactivar", danger: true, onOk: () => dnSetRole(u.id, u.role, u.local_id, true) }); }
 });
 if (current === "dueno") try { renderDueno(); } catch (err) {}
 
