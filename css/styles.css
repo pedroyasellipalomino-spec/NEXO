@@ -502,8 +502,8 @@ svg.lucide{width:1em;height:1em;flex-shrink:0;stroke-width:1.75}
   .kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
   .filters{grid-template-columns:minmax(0,1fr) auto auto}
   .tk-head{display:grid}
-  .tk-row{grid-template-columns:78px minmax(0,1fr) 100px 130px 56px;min-height:72px}
-  .tk-row.eq{grid-template-columns:minmax(0,1fr) 70px 80px 150px 130px}
+  .tk-row{grid-template-columns:100px minmax(0,1fr) 100px 130px 56px;min-height:72px}
+  .tk-row.eq{grid-template-columns:minmax(0,1fr) 64px 84px 140px 96px}
   .tk-row.rs{grid-template-columns:78px minmax(0,1fr) 170px 110px 70px}
   .tk-lbl{display:none}
   .mod-grid{grid-template-columns:234px minmax(0,1fr)}
@@ -822,3 +822,21 @@ h1[tabindex="-1"]:focus,h2[tabindex="-1"]:focus{outline:none}
 :root[data-theme="dark"] .hn-item.warn .ico{background:#4a3517;color:var(--warn-fg)}
 :root[data-theme="dark"] .hn-item.bad .ico{background:#4a2418;color:#f39b78}
 :root[data-theme="dark"] .btn.danger{background:#d9541c;border-color:#d9541c}
+/* Acciones en lote */
+.bulkbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);position:sticky;top:8px;z-index:4}
+.bulkbar .btn{width:auto}
+.vl-check{width:18px;height:18px;margin-top:3px;accent-color:var(--brand);flex-shrink:0}
+/* Calificación de la atención */
+.rate{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:var(--r-sm);background:var(--mint-bg)}
+.stars-in{display:flex;gap:2px}
+.stars-in button{background:none;border:0;padding:2px 4px;font-size:24px;line-height:1;color:var(--line);cursor:pointer}
+.stars-in:hover button{color:#e0a106}
+.stars-in button:hover ~ button{color:var(--line)}
+.stars-in button:focus-visible{color:#e0a106}
+.stars,.star1{color:#e0a106;letter-spacing:1px}
+.stars .off{color:var(--line)}
+.tk-row.eq > div:first-child > div{min-width:0}
+.tk-row.eq > div:first-child p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stars-in button,.stars-in button:hover ~ button{color:color-mix(in srgb,var(--muted) 45%,transparent)}
+.stars-in:hover button{color:#e0a106}
+.stars .off{color:color-mix(in srgb,var(--muted) 45%,transparent)}

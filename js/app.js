@@ -2468,13 +2468,14 @@ function renderGestion() {
   const list = filteredTickets();
   document.getElementById("gsTable").innerHTML = `<div class="tk-row tk-head"><span>Ticket</span><span>Estudiante / Motivo</span><span>Estado</span><span>Moderador</span><span>Prioridad</span></div>`
     + (list.map(t => `<div class="tk-row">
-      <div><button class="link b" type="button" data-case="${t.id}">${t.id}</button><p class="tiny">${ago(t.created)}</p></div>
+      <div class="row start" style="gap:8px;align-items:flex-start">${isOpen(t) ? `<input type="checkbox" class="vl-check" data-gs-sel="${t.id}" aria-label="Seleccionar ${t.id}" ${gsSel.has(t.id) ? "checked" : ""}>` : ""}<div><button class="link b" type="button" data-case="${t.id}">${t.id}</button><p class="tiny">${ago(t.created)}</p></div></div>
       <div class="tk-main"><button class="tk-subj" type="button" data-case="${t.id}">${esc(t.subject)}</button><p class="tiny">${esc(t.student.name)} · ${t.service}</p></div>
       <div>${stPill(t.status)}</div>
       <div>${isOpen(t) ? assignSelect(t) : `<span class="small">${esc(t.mod ? nameOf(t.mod) : "—")}</span>`}</div>
       <div><span class="prio ${t.prio}">${TK_PRIO[t.prio]}</span></div>
     </div>`).join("") || emptyState("inbox", "No hay tickets con esos filtros", "Prueba con otro estado o servicio."))
     + `<div class="tk-foot"><span class="small">${list.length} de ${tickets.length} tickets</span></div>`;
+  renderGsBulk(list);
   document.getElementById("gsSide").innerHTML = inviteCard() + teamCard() + ADMIN_NOTE;
   icons();
 }
@@ -2486,8 +2487,8 @@ function renderEquipo() {
     const act = r.kind === "inv" ? `<div class="stack" style="gap:6px"><button class="link b" type="button" data-inv-copy="${r.email}">Copiar enlace</button><button class="link" type="button" data-inv-cancel="${r.email}">Cancelar invitación</button></div>`
       : r.kind === "off" ? `<button class="link b" type="button" data-mod-on="${r.email}">Reactivar</button>`
       : `<button class="link" type="button" style="color:var(--danger)" data-mod-off="${r.email}">Desactivar</button>`;
-    return `<div class="tk-row eq"><div class="row start"><span class="avatar sm">${r.kind === "inv" ? `<i data-lucide="mail"></i>` : initialsOf(r.name)}</span><div style="min-width:0"><b style="font-size:13px">${esc(r.name)}</b><p class="tiny">${r.kind === "inv" ? `Invitado como moderador · ${invNote(invByEmail(r.email))}` : esc(r.email)}</p></div></div>
-      <div><span class="tk-lbl">Abiertos</span>${r.kind === "inv" ? "—" : open}</div><div><span class="tk-lbl">Resueltos</span>${r.kind === "inv" ? "—" : done}</div><div>${st}</div><div>${act}</div></div>`;
+    return `<div class="tk-row eq"><div class="row start"><span class="avatar sm">${r.kind === "inv" ? `<i data-lucide="mail"></i>` : initialsOf(r.name)}</span><div style="min-width:0"><b style="font-size:13px">${esc(r.name)}</b><p class="tiny" title="${esc(r.email)}">${r.kind === "inv" ? `Invitado como moderador · ${invNote(invByEmail(r.email))}` : esc(r.email)}</p></div></div>
+      <div><span class="tk-lbl">Abiertos</span>${r.kind === "inv" ? "—" : open}</div><div><span class="tk-lbl">Resueltos</span>${r.kind === "inv" ? "—" : done}${r.kind === "inv" ? "" : rateSummary(r.email)}</div><div>${st}</div><div>${act}</div></div>`;
   }).join("") || emptyState("users", "Aún no hay moderadores", "Invita al primero para que responda los tickets de los estudiantes."));
   document.getElementById("eqSide").innerHTML = inviteCard() + `<div class="notice"><i data-lucide="info"></i><p>Al desactivar a un moderador pierde el acceso a la moderación, pero puede seguir usando Nexo como usuario. Sus tickets abiertos quedan sin asignar para que los repartas.</p></div>`;
   icons();
@@ -2514,12 +2515,25 @@ function renderCaso() {
     </div>`;
   icons();
 }
-function assignTicket(id, email) {
+/* Asignar en lote: casillas en los tickets abiertos + barra con el moderador */
+const gsSel = new Set();
+function renderGsBulk(list) {
+  let bar = document.getElementById("gsBulk");
+  if (!bar) { document.getElementById("gsTable").insertAdjacentHTML("beforebegin", `<div class="bulkbar" id="gsBulk" hidden></div>`); bar = document.getElementById("gsBulk"); }
+  const open = list.filter(isOpen), ids = open.map(t => t.id);
+  [...gsSel].forEach(id => { if (!ids.includes(id)) gsSel.delete(id); });
+  bar.hidden = open.length < 2;
+  const n = gsSel.size;
+  bar.innerHTML = `<label class="remember" style="margin:0"><input type="checkbox" data-gs-all ${n && n === open.length ? "checked" : ""}>${n ? `${n} ticket${n === 1 ? "" : "s"} seleccionado${n === 1 ? "" : "s"}` : "Seleccionar todos"}</label>
+    ${n ? `<div class="row start" style="gap:8px;flex-wrap:wrap"><div class="input sel sm"><select id="gsBulkMod" aria-label="Moderador para los tickets seleccionados">${mods().filter(m => !m.disabled).map(m => `<option value="${m.email}">${esc(m.full)}</option>`).join("")}<option value="">Sin asignar</option></select><i data-lucide="chevron-down"></i></div><button class="btn sm" type="button" data-gs-bulk>Asignar ${n}</button></div>` : `<span class="tiny">Marca varios tickets para asignarlos juntos.</span>`}`;
+}
+function assignTicket(id, email, quiet = false) {
   const t = tkById(id); if (!t) return;
   t.mod = email || null;
   if (email && t.status === "abierto" && t.messages.some(m => m.from === "mod")) t.status = "revision";
   saveTickets();
   logAudit("soporte", email ? `Asignó ${id} a ${nameOf(email)}.` : `Dejó ${id} sin asignar.`);
+  if (quiet) return;
   toast(email ? `${id} asignado a ${nameOf(email)}.` : `${id} quedó sin asignar.`);
   if (current === "gestion") renderGestion(); else if (current === "caso") renderCaso(); else if (current === "creador-equipo") renderCreadorEquipo();
 }
@@ -2676,6 +2690,7 @@ function renderSoporte() {
         <div><b>${esc(t.subject)}</b><p class="tiny">${t.service}${t.purchase ? " · Compra " + esc(t.purchase.num) : ""}</p></div>
         <p style="font-size:12px">${last ? `<b>${esc(firstName(last.name))}:</b> ${esc(last.text)}` : t.mod ? `${esc(firstName(nameOf(t.mod)))} está revisando tu solicitud.` : "Recibimos tu solicitud. Te responderemos pronto."}</p>
         ${(t.actions || []).map(a => `<span class="pill ok">${actionLabel(a)}</span>`).join("")}
+        ${rateHTML(t)}
         <button class="link b" type="button" style="font-size:12px" data-sup-open="${t.id}">${expanded ? "Ocultar conversación" : "Ver conversación →"}</button>
         ${expanded ? `<div class="sep"></div>${convHTML(t, "student")}${isOpen(t) ? `<form class="stack s14" data-sup-reply="${t.id}"><div class="input" style="padding:12px"><textarea rows="2" maxlength="600" placeholder="Escribe tu respuesta…" aria-label="Tu respuesta"></textarea></div><button class="btn" type="submit"><i data-lucide="send"></i>Enviar</button></form>` : `<p class="tiny">Esta solicitud está resuelta. Si el problema sigue, crea una nueva.</p>`}` : ""}
       </div>`;
@@ -2728,8 +2743,17 @@ document.addEventListener("click", e => {
     try { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "tickets-nexo.csv"; a.click(); toast("Descargamos el listado en CSV."); } catch (err) { toast("No se pudo descargar el listado."); }
   }
 });
+document.addEventListener("click", e => {
+  if (!e.target.closest("[data-gs-bulk]")) return;
+  const email = document.getElementById("gsBulkMod").value, ids = [...gsSel];
+  ids.forEach(id => assignTicket(id, email, true)); gsSel.clear();
+  toast(email ? `Asignamos ${ids.length} tickets a ${nameOf(email)}.` : `${ids.length} tickets quedaron sin asignar.`);
+  renderGestion();
+});
 document.addEventListener("change", e => {
   const a = e.target.closest("[data-assign]"); if (a) { assignTicket(a.dataset.assign, a.value); return; }
+  const gs = e.target.closest("[data-gs-sel]"); if (gs) { gs.checked ? gsSel.add(gs.dataset.gsSel) : gsSel.delete(gs.dataset.gsSel); renderGsBulk(filteredTickets()); icons(); return; }
+  const ga = e.target.closest("[data-gs-all]"); if (ga) { filteredTickets().filter(isOpen).forEach(t => ga.checked ? gsSel.add(t.id) : gsSel.delete(t.id)); renderGestion(); return; }
   if (e.target.id === "gsState" || e.target.id === "gsService") renderGestion();
 });
 document.getElementById("gsSearch").addEventListener("input", renderGestion);
@@ -3730,6 +3754,7 @@ function renderValidar() {
   const tabs = [["pend", `Por validar · ${pend.length}`], ["factura", "Facturas"], ["recarga", "Recargas"], ["done", "Revisados"]];
   document.getElementById("vlTabs").innerHTML = tabs.map(([t, l]) => `<button class="pill ${t === vlTab ? "ok" : "neutral"}" type="button" data-vl-tab="${t}">${l}</button>`).join("");
   const list = all.filter(x => vlTab === "pend" ? !x.done : vlTab === "done" ? x.done : !x.done && x.kind === vlTab);
+  renderVlBulk(list);
   document.getElementById("vlList").innerHTML = list.map(x => {
     const p = x.p, key = `${x.key}|${x.id}`, bs = p.currency === "bs";
     const state = !x.done ? `<span class="pill warn">En revisión</span>` : p.estado === "rechazada" ? `<span class="pill bad">Rechazado</span>` : `<span class="pill ok">Aprobado</span>`;
@@ -3742,7 +3767,7 @@ function renderValidar() {
            <div class="row"><button class="btn ghost" type="button" data-vl-no>Volver</button><button class="btn" type="submit" style="background:var(--danger);border-color:var(--danger)">Rechazar pago</button></div></form>`
         : `<div class="row"><button class="btn ghost" type="button" data-vl-rej="${key}"><i data-lucide="circle-x"></i>Rechazar</button><button class="btn" type="button" data-vl-ok="${key}"><i data-lucide="badge-check"></i>Aprobar ${money(x.usd)}</button></div>`;
     return `<div class="card vl-item">
-      <div class="row" style="align-items:flex-start"><div><b class="h3">${esc(x.who)}</b><p class="small">${esc(x.title)}${p.pp ? " · con pronto pago" : ""}</p></div>${state}</div>
+      <div class="row" style="align-items:flex-start"><div class="row start" style="align-items:flex-start;gap:10px">${x.done ? "" : `<input type="checkbox" class="vl-check" data-vl-sel="${key}" aria-label="Seleccionar el pago de ${esc(x.who)}" ${vlSel.has(key) ? "checked" : ""}>`}<div><b class="h3">${esc(x.who)}</b><p class="small">${esc(x.title)}${p.pp ? " · con pronto pago" : ""}</p></div></div>${state}</div>
       <div class="vl-grid">
         <div><span class="tiny">Monto</span><b>${money(x.usd)}</b>${bs ? `<span class="tiny">${bsAmt(p.paidAmount)}${p.bcvRate ? ` · tasa ${bsAmt(p.bcvRate)}` : ""}</span>` : ""}</div>
         <div><span class="tiny">Método</span><b>${x.kind === "recarga" ? "Pago Móvil" : bs ? "Transferencia en Bs." : "Transferencia en USD"}</b><span class="tiny">${esc(p.bank || "—")}</span></div>
@@ -3769,7 +3794,7 @@ function relabelForCreator() {
 function vlUpdateMove(email, match, pill, cls) {
   try { const k = "nexo-moves:" + email, mv = JSON.parse(localStorage.getItem(k) || "[]") || []; const m = mv.slice().reverse().find(x => x.pill === "En revisión" && match(x)); if (m) { m.pill = pill; m.pillCls = cls; localStorage.setItem(k, JSON.stringify(mv)); } } catch (err) {}
 }
-function vlDecide(key, ok, motivo) {
+function vlDecide(key, ok, motivo, quiet = false) {
   const i = key.lastIndexOf("|"), sk = key.slice(0, i), id = key.slice(i + 1), now = Date.now(), me = user.full;
   const item = cajaItems().find(x => x.key === sk && x.id === id); if (!item) return;
   const ref6 = (item.p.ref || "").slice(-6);
@@ -3791,13 +3816,35 @@ function vlDecide(key, ok, motivo) {
     vlUpdateMove(item.email, m => m.title === "Recarga de wallet" && (m.detail || "").includes(ref6), ok ? "Acreditada" : "Rechazada", ok ? "ok" : "warn");
   }
   logAudit("caja", ok ? `Aprobó ${item.title.toLowerCase()} de ${item.who} (${money(item.usd)}, ref. ${item.p.ref}).` : `Rechazó ${item.title.toLowerCase()} de ${item.who}: ${motivo}.`);
-  vlReject = null;
+  vlReject = null; vlSel.delete(key);
+  if (quiet) return item;
   toast(ok ? `Aprobaste el pago de ${item.who} por ${money(item.usd)}.` : `Rechazaste el pago de ${item.who}. Le avisaremos el motivo.`);
   renderValidar();
+}
+/* Aprobar en lote: casillas en cada pago por validar + barra con el total */
+const vlSel = new Set();
+function renderVlBulk(list) {
+  let bar = document.getElementById("vlBulk");
+  if (!bar) { document.getElementById("vlList").insertAdjacentHTML("beforebegin", `<div class="bulkbar" id="vlBulk" hidden></div>`); bar = document.getElementById("vlBulk"); }
+  const pend = list.filter(x => !x.done), keys = pend.map(x => `${x.key}|${x.id}`);
+  [...vlSel].forEach(k => { if (!keys.includes(k)) vlSel.delete(k); });
+  bar.hidden = pend.length < 2;
+  const sel = pend.filter(x => vlSel.has(`${x.key}|${x.id}`)), all = sel.length === pend.length;
+  bar.innerHTML = `<label class="remember" style="margin:0"><input type="checkbox" data-vl-all ${all && sel.length ? "checked" : ""}>${sel.length ? `${sel.length} seleccionado${sel.length === 1 ? "" : "s"} · ${money(sel.reduce((a, x) => a + x.usd, 0))}` : "Seleccionar todos"}</label>
+    ${sel.length ? `<button class="btn sm" type="button" data-vl-bulk><i data-lucide="badge-check"></i>Aprobar ${sel.length}</button>` : `<span class="tiny">Marca varios pagos para aprobarlos juntos.</span>`}`;
 }
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-vl-tab]"); if (t) { vlTab = t.dataset.vlTab; vlReject = null; renderValidar(); return; }
   const ok = e.target.closest("[data-vl-ok]"); if (ok) { vlDecide(ok.dataset.vlOk, true); return; }
+  const cs = e.target.closest("[data-vl-sel]"); if (cs) { cs.checked ? vlSel.add(cs.dataset.vlSel) : vlSel.delete(cs.dataset.vlSel); renderVlBulk(cajaItems().filter(x => vlTab === "pend" ? !x.done : !x.done && x.kind === vlTab)); icons(); return; }
+  const ca = e.target.closest("[data-vl-all]");
+  if (ca) { const l = cajaItems().filter(x => !x.done && (vlTab === "pend" || x.kind === vlTab)); l.forEach(x => ca.checked ? vlSel.add(`${x.key}|${x.id}`) : vlSel.delete(`${x.key}|${x.id}`)); renderValidar(); return; }
+  if (e.target.closest("[data-vl-bulk]")) {
+    const sel = cajaItems().filter(x => !x.done && vlSel.has(`${x.key}|${x.id}`)), tot = sel.reduce((a, x) => a + x.usd, 0);
+    askConfirm({ icon: "badge-check", title: `¿Aprobar ${sel.length} pagos?`, text: `Suman ${money(tot)}. Revisaste que cada referencia y monto coincidan con el banco. Avisaremos a cada estudiante.`, ok: `Aprobar ${sel.length}`, cancel: "Volver",
+      onOk: () => { const n = sel.filter(x => vlDecide(`${x.key}|${x.id}`, true, null, true)).length; vlSel.clear(); toast(`Aprobaste ${n} pagos por ${money(tot)}.`); renderValidar(); } });
+    return;
+  }
   const rj = e.target.closest("[data-vl-rej]"); if (rj) { vlReject = rj.dataset.vlRej; renderValidar(); document.getElementById("vl-motivo")?.focus(); return; }
   if (e.target.closest("[data-vl-no]")) { vlReject = null; renderValidar(); }
 });
@@ -4076,6 +4123,85 @@ document.addEventListener("click", e => {
   applyTheme(b.dataset.themeSet);
   if (b.closest(".usermenu")) b.closest(".usermenu").querySelector("[data-theme-seg]").innerHTML = themeSeg();
   toast(b.dataset.themeSet === "dark" ? "Modo oscuro activado." : b.dataset.themeSet === "light" ? "Modo claro activado." : "Apariencia automática: sigue a tu dispositivo.");
+});
+
+/* ---------- Avisos en vivo para el personal ----------
+   Sin backend, los cambios llegan de otras pestañas por el evento storage; lo que cambia en esta pestaña no se avisa.
+   liveKeys() resume lo que le importa a cada rol; lo nuevo se avisa con toast + sonido corto,
+   y el título de la pestaña muestra cuántos hay sin ver mientras la pestaña está en segundo plano. */
+const LIVE_ROLE = roleOf(account);
+function liveKeys() {
+  const out = new Map(), me = sessionEmail;
+  const add = (k, v) => out.set(k, v);
+  try {
+    if (["mod", "admin", "creator"].includes(LIVE_ROLE)) {
+      tickets.filter(isOpen).forEach(t => {
+        if (LIVE_ROLE !== "mod" || !t.mod) add("tk:" + t.id, { text: `Nuevo ticket ${t.id}: ${t.subject}`, go: LIVE_ROLE === "mod" ? "moderacion" : ROLE_HOME[LIVE_ROLE] === "creador" ? "creador-equipo" : "gestion", tk: t.id });
+        const last = [...t.messages].reverse().find(m => m.from !== "note");
+        if (LIVE_ROLE === "mod" && t.mod === me && last && last.from === "student") add(`tkr:${t.id}:${last.t}`, { text: `${firstName(t.student.name)} respondió en ${t.id}`, go: "moderacion", tk: t.id });
+      });
+    }
+    if (["admin", "creator"].includes(LIVE_ROLE)) cajaItems().filter(x => !x.done).forEach(x => add(`cj:${x.kind}:${x.key}:${x.id}`, { text: `Pago por validar: ${x.title} de ${x.who} · ${money(x.usd)}`, go: "validar" }));
+    if (LIVE_ROLE === "local" && account.local) allOrders().filter(({ o }) => o.local === account.local && o.paidAt && !o.cancelledAt && !o.pickedAt).forEach(({ o }) => add("lo:" + o.id, { text: `Pedido nuevo ${o.num} · ${money(o.total)}`, go: "local-pedidos" }));
+  } catch (err) {}
+  return out;
+}
+let liveSeen = liveKeys(), liveUnseen = 0;
+const baseTitle = document.title;
+function liveBeep() {
+  try {
+    const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+    const ctx = liveBeep.ctx || (liveBeep.ctx = new C()), o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "sine"; o.frequency.value = 880; g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+    o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.36);
+  } catch (err) {}
+}
+function liveCheck() {
+  if (LIVE_ROLE === "estudiante") return;
+  const now = liveKeys(), fresh = [...now.keys()].filter(k => !liveSeen.has(k));
+  liveSeen = now;
+  if (!fresh.length) return;
+  const first = now.get(fresh[0]);
+  const open = () => { if (first.tk) { try { mdSel = first.tk; } catch (err) {} } go(first.go); };
+  toast(fresh.length === 1 ? first.text : `${first.text} y ${fresh.length - 1} más`, { persist: true, action: "Ver", onAction: open });
+  liveBeep();
+  if (document.hidden) { liveUnseen += fresh.length; document.title = `(${liveUnseen}) ${baseTitle}`; }
+  const r = { moderacion: () => renderModeracion(), gestion: () => renderGestion(), validar: () => renderValidar(), "local-pedidos": () => renderLocalPedidos(), "creador-equipo": () => renderCreadorEquipo() }[current];
+  if (r) try { r(); } catch (err) {}
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { liveUnseen = 0; document.title = baseTitle; } });
+window.addEventListener("storage", e => { if (e.key && e.key.startsWith("nexo-")) setTimeout(liveCheck, 50); });
+if (LIVE_ROLE !== "estudiante") setInterval(() => { liveSeen = liveKeys(); }, 10000); // lo que cambia en esta pestaña lo hizo la propia persona: no se avisa
+
+/* ---------- Satisfacción: el estudiante califica la atención al resolverse su ticket ----------
+   t.rating = { score 1–5, t, by }; la administración ve el promedio por moderador en el equipo. */
+function rateHTML(t) {
+  if (isOpen(t) || !t.mod) return "";
+  if (t.rating) return `<p class="small rate-done">Calificaste la atención: <span class="stars" aria-label="${t.rating.score} de 5">${"★".repeat(t.rating.score)}<span class="off">${"★".repeat(5 - t.rating.score)}</span></span></p>`;
+  return `<div class="rate"><p class="small" style="font-weight:600">¿Cómo te atendió ${esc(firstName(nameOf(t.mod)))}?</p><div class="stars-in" role="group" aria-label="Califica de 1 a 5">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-rate="${t.id}:${n}" aria-label="${n} de 5${n === 1 ? ": muy mal" : n === 5 ? ": excelente" : ""}">★</button>`).join("")}</div></div>`;
+}
+function rateSummary(email) {
+  const r = tickets.filter(t => t.mod === email && t.rating).map(t => t.rating.score);
+  if (!r.length) return `<span class="tiny" style="display:block">Sin calificaciones</span>`;
+  const avg = r.reduce((a, b) => a + b, 0) / r.length;
+  return `<span class="tiny" style="display:block" title="Promedio de ${r.length} calificaciones"><span class="star1">★</span> ${avg.toFixed(1).replace(".", ",")} · ${r.length}</span>`;
+}
+// Calificaciones de ejemplo en los tickets resueltos sembrados (una sola vez)
+try {
+  if (!localStorage.getItem("nexo-rateseed")) {
+    const sc = [5, 4, 5, 3, 4, 5, 4];
+    tickets.filter(t => !isOpen(t) && t.mod && !t.rating && t.student.email !== sessionEmail).forEach((t, i) => { t.rating = { score: sc[i % sc.length], t: lastActivity(t) + 3600000, by: t.student.email }; });
+    saveTickets(); localStorage.setItem("nexo-rateseed", "1");
+  }
+} catch (err) {}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-rate]"); if (!b) return;
+  const [id, n] = b.dataset.rate.split(":"), t = tkById(id); if (!t || t.rating) return;
+  t.rating = { score: +n, t: Date.now(), by: sessionEmail }; saveTickets();
+  logAudit("soporte", `${firstName(t.student.name)} calificó con ${n}/5 la atención de ${nameOf(t.mod)} en ${id}.`);
+  toast(+n >= 4 ? "¡Gracias! Le haremos llegar tu comentario al equipo." : "Gracias por contarnos. Lo usaremos para mejorar la atención.");
+  renderSoporte();
 });
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
