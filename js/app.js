@@ -229,6 +229,7 @@ function show(id) {
   if (id === "inicio" && typeof renderHome === "function") try { renderHome(); } catch (err) {}
   if (id === "comida" && typeof renderFoodList === "function") renderFoodList();
   if (id === "comida" && typeof renderFoodOrders === "function") try { renderFoodOrders(); } catch (err) {}
+  if (id === "comida" && typeof renderFoodAgain === "function") try { renderFoodAgain(); } catch (err) {}
   if (id === "local" && typeof renderLocal === "function") renderLocal();
   if (id === "detalle" && typeof renderDetalle === "function") renderDetalle(document.getElementById("d-note") ? document.getElementById("d-note").value : "");
   if (id === "carrito" && typeof renderCarrito === "function") renderCarrito();
@@ -1868,11 +1869,11 @@ function renderLocal() {
   if (!cats.includes(curCat)) curCat = "Todos";
   document.getElementById("localChips").innerHTML = cats.map(c => `<button class="pill ${c === curCat ? "ok" : "neutral"}" type="button" data-food-cat="${esc(c)}">${esc(c)}</button>`).join("");
   document.getElementById("localMenu").innerHTML = l.cats.filter(c => curCat === "Todos" || c.name === curCat).map(c => `<h2 class="h2">${esc(c.name)}</h2>` + c.items.map(it =>
-    `<button class="card row${isSoldOut(l.id, it.id) ? " soldout" : ""}" type="button" data-open-item="${it.id}" style="text-align:left;flex-direction:row"${isSoldOut(l.id, it.id) ? ` aria-disabled="true"` : ""}>
+    `<div class="favwrap">${favBtn(l.id, it)}<button class="card row${isSoldOut(l.id, it.id) ? " soldout" : ""}" type="button" data-open-item="${it.id}" style="text-align:left;flex-direction:row"${isSoldOut(l.id, it.id) ? ` aria-disabled="true"` : ""}>
       <span class="ico lg"><i data-lucide="${it.icon}"></i></span>
       <div style="flex:1;min-width:0"><b class="h3">${esc(it.name)}</b><p class="small">${esc(it.desc)}</p><div class="row start" style="gap:8px;margin-top:4px"><b style="font-size:17px;font-weight:600">${money(it.price)}</b><span class="bsv inline">${bsOf(it.price)}</span>${isSoldOut(l.id, it.id) ? `<span class="pill neutral">Agotado</span>` : it.tag ? `<span class="pill ok">${it.tag}</span>` : ""}${it.opts ? `<span class="tiny">Con opciones</span>` : ""}</div></div>
       <span class="ico"><i data-lucide="chevron-right"></i></span>
-    </button>`).join("")).join("");
+    </button></div>`).join("")).join("");
   const cl = cartLocal(), mine = cl && cl.id === l.id && cart.lines.length;
   document.getElementById("localSide").innerHTML = `
     <div class="card"><i data-lucide="map-pin" style="color:var(--brand);font-size:22px"></i><h3 class="sec" style="font-weight:600">Pide y retira</h3>
@@ -2052,7 +2053,7 @@ function newOrder(method) {
   const l = cartLocal(), now = new Date(), d = day0(simDate);
   const num = `${l.pref}-${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(orders.length + 1).padStart(4, "0")}`;
   return { id: "o" + now.getTime(), num, local: l.id, method, date: fmtD(d), time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
-    lines: cart.lines.map(x => { const li = lineInfo(l, x); return { name: li.it.name, icon: li.it.icon, opts: li.opts, note: x.note, qty: x.qty, total: li.total }; }).filter(Boolean),
+    lines: cart.lines.map(x => { const li = lineInfo(l, x); return { item: x.item, sel: x.sel.slice(), name: li.it.name, icon: li.it.icon, opts: li.opts, note: x.note, qty: x.qty, total: li.total }; }).filter(Boolean),
     total: cartTotal(), card: method === "card" ? (cards.length ? cardLabel(cards[0]) : "Tarjeta") : null };
 }
 let draftOrder = null;
@@ -3105,7 +3106,7 @@ function renderPedido() {
       <div class="card">
         <div class="row"><h2 class="h2">Tu pedido</h2><span class="small">${n} ${n === 1 ? "producto" : "productos"} · ${money(o.total)} · ${bsOf(o.total)}</span></div>
         ${o.lines.map(x => `<div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="${x.icon}"></i></div><div><b style="font-size:13px">${x.qty} × ${esc(x.name)}</b>${x.opts.map(t => `<p class="small">${esc(t)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}</div></div>`).join("")}
-        <button class="btn ghost" type="button" data-go="factura" data-order="${o.id}"><i data-lucide="receipt-text"></i>Ver factura</button>
+        <div class="row" style="gap:8px;flex-wrap:wrap">${["retirado", "cancelado", "listo"].includes(st) ? `<button class="btn" type="button" data-reorder="${o.id}" style="flex:1"><i data-lucide="rotate-cw"></i>Pedir de nuevo</button>` : ""}<button class="btn ghost" type="button" data-go="factura" data-order="${o.id}" style="flex:1"><i data-lucide="receipt-text"></i>Ver factura</button></div>
       </div>
     </div>
     <div class="stack">
@@ -3917,6 +3918,69 @@ document.addEventListener("click", e => {
 });
 setInterval(() => { if (current === "inicio") try { renderHome(); } catch (err) {} }, 15000);
 if (current === "inicio") try { renderHome(); } catch (err) {}
+
+/* ---------- Pedir de nuevo y favoritos ----------
+   Los pedidos guardan item y sel en cada línea; los anteriores a este cambio se reconstruyen por nombre.
+   Favoritos por cuenta en nexo-favs como "local:item". */
+let favs = [];
+try { favs = JSON.parse(localStorage.getItem(K("nexo-favs")) || "[]"); if (!Array.isArray(favs)) favs = []; } catch (err) { favs = []; }
+const saveFavs = () => { try { localStorage.setItem(K("nexo-favs"), JSON.stringify(favs)); } catch (err) {} };
+const isFav = (lid, iid) => favs.includes(lid + ":" + iid);
+function favBtn(lid, it) {
+  let on = false; try { on = isFav(lid, it.id); } catch (err) {} // renderLocal puede correr al arrancar, antes de este módulo
+  return `<button type="button" class="favbtn${on ? " on" : ""}" data-fav="${lid}:${it.id}" aria-pressed="${on}" aria-label="${on ? "Quitar de favoritos" : "Añadir a favoritos"}: ${esc(it.name)}"><i data-lucide="heart"></i></button>`;
+}
+function reorder(o) {
+  const l = localById(o.local);
+  if (!l) return;
+  if (isPaused(l.id)) { toast(`${l.name} no está recibiendo pedidos en este momento.`); return; }
+  const items = itemsOf(l), skipped = [];
+  const lines = o.lines.map(x => {
+    const it = (x.item && items.find(i => i.id === x.item)) || items.find(i => i.name === x.name);
+    if (!it || isSoldOut(l.id, it.id)) { skipped.push(x.name); return null; }
+    let sel = x.sel && x.sel.length === (it.opts || []).length ? x.sel.slice() : (it.opts || []).map(g => { const k = g.choices.findIndex(c => (x.opts || []).includes(`${g.name}: ${c.l}`)); return k < 0 ? 0 : k; });
+    sel = sel.map((v, gi) => it.opts[gi].choices[v] ? v : 0);
+    return { item: it.id, sel, qty: Math.min(20, x.qty), note: x.note || "" };
+  }).filter(Boolean);
+  if (!lines.length) { toast(`Ninguno de esos productos está disponible hoy en ${l.name}.`); return; }
+  const prev = cart.lines.length ? JSON.parse(JSON.stringify(cart)) : null;
+  cart = { local: l.id, lines }; curLocal = l.id; saveFoodNav(); saveCart();
+  const msg = skipped.length ? `Armamos tu pedido de ${l.name}. Sin ${skipped.join(", ")}: no está disponible hoy.` : `Armamos tu pedido de ${l.name}. Revisa y paga.`;
+  toast(msg, prev ? { action: "Deshacer", onAction: () => { cart = prev; saveCart(); if (current === "carrito") renderCarrito(); toast("Recuperamos tu carrito anterior."); } } : {});
+  go("carrito");
+}
+function renderFoodAgain() {
+  let box = document.getElementById("foodAgain");
+  if (!box) { const fo = document.getElementById("foodOrders"); if (!fo) return; fo.insertAdjacentHTML("afterend", `<div class="stack s14" id="foodAgain" hidden></div>`); box = document.getElementById("foodAgain"); }
+  const past = orders.filter(o => o.paidAt && ["retirado", "listo", "cancelado"].includes(orderStatus(o))).sort((a, b) => b.paidAt - a.paidAt);
+  const seen = new Set(), recent = past.filter(o => { const k = o.local + o.lines.map(x => x.name + x.qty).join(); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 3);
+  const fv = favs.map(f => { const [lid, iid] = f.split(":"), l = localById(lid), it = l && itemById(l, iid); return it ? { l, it } : null; }).filter(Boolean);
+  box.hidden = !recent.length && !fv.length;
+  const ago2 = o => relDay(day0(new Date(o.paidAt))).toLowerCase();
+  box.innerHTML = (recent.length ? `<div class="card"><h3 class="h3">Pide de nuevo</h3>
+    ${recent.map(o => { const l = localById(o.local), n = o.lines.reduce((a, x) => a + x.qty, 0);
+      return `<div class="again-row"><div style="min-width:0"><b style="font-size:13px">${esc(l.name)} · ${money(o.total)}</b><p class="tiny">${esc(o.lines.map(x => (x.qty > 1 ? x.qty + " × " : "") + x.name).join(", "))}</p><p class="tiny">${ago2(o).startsWith("hace") || ["hoy", "ayer"].includes(ago2(o)) ? ago2(o)[0].toUpperCase() + ago2(o).slice(1) : "El " + ago2(o)} · ${plural(n, "producto", "productos")}</p></div><button class="btn ghost sm" type="button" data-reorder="${o.id}"><i data-lucide="rotate-cw"></i>Pedir</button></div>`; }).join("")}</div>` : "")
+    + (fv.length ? `<div class="card"><h3 class="h3">Tus favoritos</h3>
+    ${fv.map(({ l, it }) => `<div class="again-row"><button type="button" class="fav-open" data-fav-open="${l.id}:${it.id}"><span class="ico"><i data-lucide="${it.icon}"></i></span><span style="min-width:0"><b style="font-size:13px">${esc(it.name)}</b><span class="tiny" style="display:block">${esc(l.name)} · ${money(it.price)}${isSoldOut(l.id, it.id) ? " · Agotado" : ""}</span></span></button>${favBtn(l.id, it)}</div>`).join("")}</div>` : "");
+  icons();
+}
+document.addEventListener("click", e => {
+  const f = e.target.closest("[data-fav]");
+  if (f) {
+    const k = f.dataset.fav, [lid, iid] = k.split(":"), l = localById(lid), it = l && itemById(l, iid), was = favs.includes(k);
+    favs = was ? favs.filter(x => x !== k) : [...favs, k]; saveFavs();
+    const undo = () => { favs = was ? [...favs, k] : favs.filter(x => x !== k); saveFavs(); if (current === "local") renderLocal(); if (current === "comida") renderFoodAgain(); };
+    toast(was ? `Quitamos ${it ? it.name : "el producto"} de tus favoritos.` : `Guardamos ${it ? it.name : "el producto"} en tus favoritos. Lo verás en Comida y kioscos.`, was ? { action: "Deshacer", onAction: undo } : {});
+    if (current === "local") renderLocal(); if (current === "comida") renderFoodAgain();
+    return;
+  }
+  const fo = e.target.closest("[data-fav-open]");
+  if (fo) { const [lid, iid] = fo.dataset.favOpen.split(":"); curLocal = lid; if (isSoldOut(lid, iid)) { toast("Este producto se agotó por hoy."); curCat = "Todos"; saveFoodNav(); go("local"); return; } openItem(iid); go("detalle"); return; }
+  const r = e.target.closest("[data-reorder]");
+  if (r) { const o = orders.find(x => x.id === r.dataset.reorder); if (o) reorder(o); }
+});
+if (current === "local") try { renderLocal(); } catch (err) {}
+if (current === "comida") try { renderFoodAgain(); } catch (err) {}
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();

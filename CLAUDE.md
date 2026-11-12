@@ -76,6 +76,8 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 
 **Inicio inteligente.** `#homeNow` ("Para ti ahora", arriba de `#inicio`): `homeItems()` junta pedidos en curso o listos, facturas (rechazada, vencida, pronto pago, por vencer), plan de estacionamiento por vencer o vencido, recargas rechazadas sin leer y tickets abiertos cuya última respuesta es del moderador; prioridad `pr` (0 = más urgente), muestra 3 y "Ver todo". Se pinta en `show("inicio")` y cada 15 s.
 
+**Pedir de nuevo y favoritos.** Las líneas de cada pedido guardan `item` y `sel` (los pedidos viejos se reconstruyen por nombre y por el texto de las opciones). `reorder(o)` arma el carrito (salta agotados, respeta la pausa, "Deshacer" si había otro carrito); botón `[data-reorder]` en `#pedido` (listo, retirado o cancelado) y en `#foodAgain` de `#comida` (`renderFoodAgain`: últimos 3 pedidos distintos + favoritos). Favoritos por cuenta en `nexo-favs` (`"local:item"`); el corazón `favBtn()` es un botón hermano de la tarjeta del producto (`.favwrap`), nunca anidado.
+
 ## Cómo trabajar con el usuario
 
 - Cuando haya que elegir entre opciones (qué mejorar, decisiones de diseño, etc.), preséntalas siempre como un formulario de un clic (herramienta de preguntas con opciones), no como una lista en texto. Marca la recomendada.
