@@ -509,6 +509,15 @@ async def main() -> int:
         await pg.wait_for_timeout(100)
         check(dlg == 1 and await pg.evaluate("location.hash") == "#inicio", "pide confirmar el cierre de sesión con un pedido en curso")
 
+        # fecha de nacimiento con día, mes y año (el campo nativo ponía el mes primero en es-VE)
+        await pg.evaluate("go('perfil')")
+        await pg.wait_for_timeout(300)
+        await pg.select_option("#pf-bd-y", "2004")
+        await pg.select_option("#pf-bd-m", "2")
+        await pg.select_option("#pf-bd-d", "29")
+        await pg.select_option("#pf-bd-y", "2005")
+        check(await pg.input_value("#pf-birth") == "2005-02-28" and await pg.locator("#pf-bd-d option").count() == 29, "la fecha de nacimiento se elige por día, mes y año y ajusta los días del mes")
+
         # tutorial y acceso con la identidad de Nexo: recorrido por pasos y cuentas de prueba que llenan el formulario
         await pg.evaluate("localStorage.removeItem('nexo-session'); sessionStorage.removeItem('nexo-session')")
         await pg.goto(URL + "#tutorial")

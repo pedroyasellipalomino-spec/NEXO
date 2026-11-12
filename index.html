@@ -1418,7 +1418,9 @@
         <div class="grid2">
           <div class="field"><label for="pf-ci">Cédula</label><div class="input"><select id="pf-cit" style="flex:0 0 auto;width:auto" aria-label="Tipo de documento"><option>V</option><option>E</option></select><input id="pf-ci" inputmode="numeric" maxlength="9" placeholder="12345678" autocomplete="off"></div></div>
           <div class="field"><label for="pf-phone">Teléfono</label><div class="input"><input id="pf-phone" inputmode="numeric" maxlength="12" placeholder="0414-1234567" autocomplete="tel"><i data-lucide="phone"></i></div></div>
-          <div class="field"><label for="pf-birth">Fecha de nacimiento</label><div class="input"><input id="pf-birth" type="date" max="2026-11-05"></div></div>
+          <div class="field" role="group" aria-labelledby="pf-birth-lbl"><label id="pf-birth-lbl" for="pf-bd-d">Fecha de nacimiento</label>
+            <div class="dob"><div class="input sel"><select id="pf-bd-d" aria-label="Día"><option value="">Día</option></select><i data-lucide="chevron-down"></i></div><div class="input sel"><select id="pf-bd-m" aria-label="Mes"><option value="">Mes</option></select><i data-lucide="chevron-down"></i></div><div class="input sel"><select id="pf-bd-y" aria-label="Año"><option value="">Año</option></select><i data-lucide="chevron-down"></i></div></div>
+            <input id="pf-birth" type="hidden"></div>
           <div class="field"><label for="pf-career">Carrera</label><div class="input"><select id="pf-career"><option value="">Elige tu carrera</option></select><i data-lucide="chevron-down"></i></div></div>
         </div>
         <div class="field"><label for="pf-addr">Dirección <span class="small" style="font-weight:400">· Opcional</span></label><div class="input"><input id="pf-addr" autocomplete="street-address" placeholder="Ej.: Los Palos Grandes, Caracas" maxlength="80"><i data-lucide="map-pin"></i></div></div>

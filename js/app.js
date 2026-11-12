@@ -1471,7 +1471,7 @@ function openPerfil() {
   document.getElementById("pf-cit").value = ci[0] === "E" ? "E" : "V";
   document.getElementById("pf-ci").value = ci.replace(/^[VE]-?/, "");
   document.getElementById("pf-phone").value = acc.phone || "";
-  document.getElementById("pf-birth").value = acc.birth || "";
+  document.getElementById("pf-birth").value = acc.birth || ""; try { dobFill(acc.birth || ""); } catch (err) {}
   careerOptions(document.getElementById("pf-career"), myCareer());
   document.getElementById("pf-addr").value = acc.addr || "";
   ["pf-p0", "pf-p1", "pf-p2"].forEach(id => document.getElementById(id).value = "");
@@ -1530,12 +1530,43 @@ document.getElementById("pfAccount").addEventListener("submit", e => {
   user.full = full; applyUser(); openPerfil();
   toast("Guardamos tu nombre.");
 });
+/* Fecha de nacimiento con tres listas (día, mes, año): el campo de fecha nativo cambia el orden según el idioma
+   (en es-VE pone el mes primero) y no dejaba cambiar el día. Los días se ajustan al mes y a los años bisiestos;
+   el valor queda en #pf-birth como AAAA-MM-DD. */
+const MES_NOM = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+function dobDays() {
+  const dS = document.getElementById("pf-bd-d"), m = +document.getElementById("pf-bd-m").value, y = +document.getElementById("pf-bd-y").value || 2000;
+  const max = m ? new Date(y, m, 0).getDate() : 31, keep = +dS.value;
+  dS.innerHTML = `<option value="">Día</option>` + Array.from({ length: max }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("");
+  if (keep) dS.value = String(Math.min(keep, max));
+}
+function dobSync() {
+  const d = document.getElementById("pf-bd-d").value, m = document.getElementById("pf-bd-m").value, y = document.getElementById("pf-bd-y").value;
+  document.getElementById("pf-birth").value = d && m && y ? `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}` : "";
+}
+function dobFill(iso) {
+  const yS = document.getElementById("pf-bd-y"), mS = document.getElementById("pf-bd-m"); if (!yS) return;
+  const now = new Date().getFullYear();
+  if (yS.options.length < 2) {
+    yS.innerHTML = `<option value="">Año</option>` + Array.from({ length: 86 }, (_, i) => now - 14 - i).map(y => `<option value="${y}">${y}</option>`).join("");
+    mS.innerHTML = `<option value="">Mes</option>` + MES_NOM.map((n, i) => `<option value="${i + 1}">${n}</option>`).join("");
+  }
+  const [y, m, d] = (iso || "").split("-").map(Number);
+  if (y && !yS.querySelector(`option[value="${y}"]`)) yS.insertAdjacentHTML("beforeend", `<option value="${y}">${y}</option>`);
+  yS.value = y ? String(y) : ""; mS.value = m ? String(m) : "";
+  dobDays(); document.getElementById("pf-bd-d").value = d ? String(d) : "";
+  dobSync();
+}
+["pf-bd-d", "pf-bd-m", "pf-bd-y"].forEach(id => document.getElementById(id).addEventListener("change", e => { if (e.target.id !== "pf-bd-d") dobDays(); dobSync(); }));
+try { dobFill((account || {}).birth || ""); } catch (err) {}
 document.getElementById("pfPersonal").addEventListener("submit", e => {
   e.preventDefault();
   const ci = document.getElementById("pf-ci"), ph = document.getElementById("pf-phone"), bd = document.getElementById("pf-birth");
   if (ci.value && !/^\d{6,9}$/.test(ci.value)) return pfErr(2, "La cédula debe tener entre 6 y 9 números.", ci);
   if (ph.value && !/^04(12|14|16|24|26|22)-\d{7}$/.test(ph.value)) return pfErr(2, "Escribe el teléfono con el formato 0414-1234567.", ph);
-  if (bd.value && new Date(bd.value + "T12:00") >= new Date()) return pfErr(2, "La fecha de nacimiento debe ser anterior a hoy.", bd);
+  const dobParts = ["pf-bd-d", "pf-bd-m", "pf-bd-y"].map(id => document.getElementById(id));
+  if (!bd.value && dobParts.some(x => x.value)) return pfErr(2, "Completa el día, el mes y el año de tu fecha de nacimiento.", dobParts.find(x => !x.value));
+  if (bd.value && new Date(bd.value + "T12:00") >= new Date()) return pfErr(2, "La fecha de nacimiento debe ser anterior a hoy.", dobParts[0]);
   saveAccount({ ci: ci.value ? `${document.getElementById("pf-cit").value}-${ci.value}` : "", phone: ph.value, birth: bd.value, career: document.getElementById("pf-career").value, addr: document.getElementById("pf-addr").value.trim() });
   Object.assign(account || {}, accounts.find(a => a.email === sessionEmail));
   toast("Guardamos tus datos personales.");

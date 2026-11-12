@@ -1212,3 +1212,11 @@ html.standalone .mbar{padding-top:max(10px,env(safe-area-inset-top,0px))}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tf,:root:not([data-theme="light"]) .t-badge{box-shadow:none}}
 @media (max-width:699px){.campus .hn-node em{display:none}}
 .phone .grow{flex:1;min-width:0}
+/* Fecha de nacimiento: día · mes · año */
+.dob{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.5fr) minmax(0,1fr);gap:8px}
+.dob .input{min-width:0}
+.dob select{min-width:0;width:100%}
+.field:has(> .dob){grid-column:1/-1}
+.dob .input{padding-inline:12px 10px;gap:4px}
+.dob select{font-size:15px}
+.field:has(#pf-career){grid-column:1/-1}
