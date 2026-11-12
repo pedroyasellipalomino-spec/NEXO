@@ -3133,7 +3133,7 @@ function renderLocalMenu() {
     </div>
     <div class="stack">
       <div class="card"><h2 class="h2">Recepción de pedidos</h2>
-        <p class="small" style="font-size:13px">${isPaused(l.id) ? "Los pedidos están en pausa: los estudiantes ven tu menú, pero no pueden pagar." : `Estás recibiendo pedidos. Horario de hoy: ${todayHours(l)}${hoursOn(l, new Date()) ? "" : " (hoy no abres)"}.`}</p>
+        <p class="small" style="font-size:13px">${isPaused(l.id) ? "Los pedidos están en pausa: los estudiantes ven tu menú, pero no pueden pagar." : (hoursOn(l, new Date()) ? `Estás recibiendo pedidos. Horario de hoy: ${todayHours(l)}.` : "Hoy no abres. Los estudiantes pueden programar retiros para tu próximo día abierto.")}</p>
         <span class="pill ${openState(l).cls}">${isPaused(l.id) ? "En pausa" : openState(l).label}</span>
         ${isPaused(l.id) ? `<button class="btn" type="button" data-lp-pause="0"><i data-lucide="circle-play"></i>Reanudar pedidos</button>` : `<button class="btn ghost" type="button" data-lp-pause="1"><i data-lucide="circle-pause"></i>Pausar pedidos</button>`}
         <p class="tiny">Úsalo si se acumulan pedidos o cierras antes de tiempo. Los pedidos ya pagados siguen en tu tablero.</p></div>

@@ -716,7 +716,7 @@ button.tk-row.on{background:var(--mint-bg)}
 .weektable .row{padding:5px 0;border-top:1px solid var(--line)}
 .weektable .row:first-child{border-top:0}
 .weektable .today{font-weight:600;color:var(--brand)}
-.lh-row{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px 12px;padding:10px 0;border-top:1px solid var(--line)}
+.lh-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px 12px;padding:10px 0;border-top:1px solid var(--line)}
 .lh-row > .small{justify-self:end}
 .lh-row .lh-times{grid-column:1 / -1}
 .lh-row b{font-size:13px}
