@@ -86,6 +86,8 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 
 **Identidad visual.** Logo propio: una "N" cuyos extremos son dos nodos conectados (`.emblem` con degradado + `svg.nexo-mark`); también es el favicon (SVG en `data:` en `<head>`). En las pantallas de acceso (`aside.campus`), `heroNet()` dibuja el logo al centro conectado a Estacionamiento, Comida, Materias y Canchas (líneas que fluyen, nodos que flotan; se detiene con `prefers-reduced-motion`). Ilustraciones propias en SVG (`illu(tipo)`: inbox, receipt, search, bell, people, done, bag; colores de los tokens, sirven en oscuro): `emptyState()` las usa según el ícono (`ILLU_FOR`). `successMark()` / `.okmark`: check animado con destellos en "¡Pago confirmado!", el comprobante de canchas, el aviso de pago y el seguimiento recién pagado. La credencial de `#acceso` es una tarjeta tipo wallet (`.pass`: titular, placa, vehículo, vigencia, corte troquelado y QR).
 
+**Base visual.** Un solo botón verde (`.btn`) principal por pantalla; los demás van `ghost` (p. ej. "Pagar esta factura" dentro de la factura, "Elegir o renovar plan"). Títulos de sección `.sec` en 600. Las tarjetas de `#comida` son botones completos (`button.card.tap` con `data-open-local`): producto destacado con su precio en `.svc-feat` y "Ver menú →" abajo. "Para ti ahora" ya no es una tarjeta dentro de otra. La pastilla del dólar BCV es gris si la tasa no es de hoy (antes naranja, parecía alerta). En canchas, los horarios ocupados van rayados y tachados.
+
 ## Cómo trabajar con el usuario
 
 - Cuando haya que elegir entre opciones (qué mejorar, decisiones de diseño, etc.), preséntalas siempre como un formulario de un clic (herramienta de preguntas con opciones), no como una lista en texto. Marca la recomendada.

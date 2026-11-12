@@ -609,7 +609,7 @@ function renderDebt() {
       <div class="sep"></div>
       <div class="kv total"><span>Total de la factura</span><b>${pp ? `<span class="strike">${money(PRICE_REG * MATERIAS.length)}</span>` : ""}${money(u * MATERIAS.length)}</b></div>
       <div class="kv"><span>En bolívares · tasa BCV ${bcvDateTxt()}</span><b>${bsOf(u * MATERIAS.length)}</b></div>
-      <button class="btn" type="button" data-go="caja">Pagar ${money(u * MATERIAS.length)}</button>`;
+      <button class="btn ghost" type="button" data-go="caja"><i data-lucide="credit-card"></i>Pagar esta factura</button>`;
   } else {
     ci.hidden = !nextFuture && !review;
     ci.innerHTML = nextFuture ? `<div class="row start"><span class="ico lg"><i data-lucide="calendar-check"></i></span><div><h2 class="h2">Estás al día</h2><p class="small" style="font-size:13px">${vals.idle}</p></div></div>` : review ? `<div class="row start"><span class="ico lg"><i data-lucide="clock"></i></span><div><h2 class="h2">Pago en revisión</h2><p class="small" style="font-size:13px">La universidad está validando tu transferencia.</p></div></div>` : "";
@@ -1878,12 +1878,12 @@ function renderFoodList() {
     const hit = q && items.find(i => normTxt(i.name + " " + i.desc).includes(q));
     const cheapest = items.slice().sort((a, b) => a.price - b.price)[0];
     const star = hit || (filtering ? cheapest : (itemsOf(l).find(i => i.tag && items.includes(i)) || items[0]));
-    return `<div class="card svc" data-kind="${l.kind}">
-      <div class="head"><div class="row start"><span class="ico lg"><i data-lucide="${l.icon}"></i></span><div><h3 class="h3">${esc(l.name)}</h3><p class="small">${l.place} · Retiro en ${l.eta}</p></div></div><span class="pill ${st.cls}">${st.label}</span></div>
-      <div><b style="font-weight:600;font-size:14px">${hit ? "Coincide: " : filtering && items.length > 1 ? `${items.length} opciones · ` : ""}${esc(star.name)}</b><p class="small" style="font-size:13px">${esc(l.tagline)}</p></div>
-      <div class="row"><span class="price">${filtering && !hit && items.length > 1 ? "Desde " : ""}${money(star.price)}</span><span class="small">Hoy · ${todayHours(l)}</span></div>
-      <button class="btn${l.kind === "local" ? "" : " ghost"}" type="button" data-open-local="${l.id}"><i data-lucide="arrow-right"></i>${l.kind === "local" ? "Ver menú de " + esc(l.name) : "Ver kiosco"}</button>
-    </div>`;
+    return `<button class="card svc tap" type="button" data-kind="${l.kind}" data-open-local="${l.id}" aria-label="${l.kind === "local" ? "Ver menú de" : "Ver kiosco"} ${esc(l.name)}">
+      <span class="head"><span class="row start"><span class="ico lg"><i data-lucide="${l.icon}"></i></span><span><b class="h3" style="display:block">${esc(l.name)}</b><span class="small" style="display:block">${l.place} · Retiro en ${l.eta}</span></span></span><span class="pill ${st.cls}">${st.label}</span></span>
+      <span class="svc-feat"><span class="grow"><span class="tiny" style="display:block">${hit ? "Coincide con tu búsqueda" : filtering && items.length > 1 ? `${items.length} opciones · desde` : "Destacado"}</span><b>${esc(star.name)}</b></span><b class="svc-price">${money(star.price)}</b></span>
+      <span class="small" style="font-size:13px">${esc(l.tagline)}</span>
+      <span class="svc-foot"><span class="small">Hoy · ${todayHours(l)}</span><span class="svc-go">${l.kind === "local" ? "Ver menú" : "Ver kiosco"}<i data-lucide="arrow-right"></i></span></span>
+    </button>`;
   };
   const res = LOCALES.map(l => ({ l, items: foodMatches(l, q) })).filter(x => x.items);
   const minP = x => Math.min(...x.items.map(i => i.price));
@@ -3629,7 +3629,7 @@ if (account && !account.carnet) {
 
 /* Tasa BCV en pantallas estáticas: Inicio y lista de planes */
 function refreshBcvUI() {
-  document.querySelectorAll("[data-bcv-pill]").forEach(p => { p.textContent = `Dólar BCV · ${bsAmt(BCV.rate)} · ${bcvDateTxt()}`; p.classList.toggle("warn", bcvStale()); p.classList.toggle("ok", !bcvStale()); });
+  document.querySelectorAll("[data-bcv-pill]").forEach(p => { p.textContent = `Dólar BCV · ${bsAmt(BCV.rate)} · ${bcvDateTxt()}`; p.classList.toggle("neutral", bcvStale()); p.classList.toggle("ok", !bcvStale()); p.classList.remove("warn"); });
   document.querySelectorAll("#planList .opt.plan").forEach(b => { const pr = b.querySelector(".plan-price"); if (!pr) return; pr.querySelector(".bsv")?.remove(); pr.insertAdjacentHTML("beforeend", bsTag(parseFloat(b.dataset.price.replace(",", ".")))); });
   try { renderRecarga(); } catch (err) {}
 }

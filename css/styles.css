@@ -909,3 +909,23 @@ h1[tabindex="-1"]:focus,h2[tabindex="-1"]:focus{outline:none}
 @keyframes hnFloat{0%,100%{transform:translate(-50%,-50%)}50%{transform:translate(-50%,calc(-50% - 6px))}}
 .hn-spark{position:absolute;width:6px;height:6px;border-radius:50%;background:#b6f0e2;opacity:.5;box-shadow:0 0 12px #b6f0e2}
 @media (prefers-reduced-motion:reduce){.hn-path,.hn-node{animation:none}}
+/* Base visual: jerarquía, tarjetas tocables y menos cajas anidadas */
+.sec{font-size:17px;font-weight:600;letter-spacing:-.2px}
+.h2{letter-spacing:-.2px}
+button.card.tap{font:inherit;color:inherit;text-align:left;width:100%;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
+button.card.tap:hover{border-color:var(--brand);box-shadow:0 8px 22px rgba(10,48,46,.08)}
+button.card.tap:active{transform:scale(.99)}
+.svc-feat{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r-sm);background:var(--field)}
+.svc-feat b{font-size:14px;font-weight:600}
+.svc-price{font-size:16px;white-space:nowrap}
+.svc-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid var(--line)}
+.svc-go{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--brand)}
+.svc-go svg{width:16px;height:16px;transition:transform .15s}
+button.card.tap:hover .svc-go svg{transform:translateX(3px)}
+.homenow{background:none;border:0;padding:0}
+.svc-feat .grow{flex:1;min-width:0}
+/* Canchas: ocupado se distingue de disponible (rayado y tachado), disponible invita a tocar */
+.slot:not(.busy):not(.on){border-color:color-mix(in srgb,var(--brand) 35%,var(--line))}
+.slot:not(.busy):not(.on):hover{border-color:var(--brand);background:var(--mint-bg)}
+.slot.busy{background:repeating-linear-gradient(135deg,var(--chip) 0 6px,transparent 6px 12px),var(--bg);border-style:dashed;color:var(--muted);text-decoration:line-through;text-decoration-thickness:1.5px}
+.slot.busy small{text-decoration:none;display:inline-block}
