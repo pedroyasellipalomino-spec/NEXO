@@ -150,7 +150,8 @@ const STAFF0 = [
 [["pinchopan", "Pincho Pan"], ["lapausa", "La Pausa"], ["migrill", "Mi Punto Grill"], ["teeb", "TEEB"], ["tienditaa1", "La Tiendita Unimetana A1"], ["tienditaa2", "La Tiendita Unimetana A2"], ["believe", "Kiosco Believe"]]
   .forEach(([id, full]) => STAFF0.push({ full, carnet: "", email: `${id}@comercio.nexo`, role: "local", local: id, pw: "demo-local-01" }));
 STAFF0.forEach(({ pw, ...a }) => { if (!accounts.some(x => x.email === a.email)) accounts.push({ ...a, pass: passKey(pw) }); });
-const roleOf = a => (a && a.role) || "estudiante";
+// Una cuenta del equipo desactivada conserva su rol guardado (para reactivarla), pero entra como usuario
+const roleOf = a => (a && !a.disabled && a.role) || "estudiante";
 /* Invitaciones de moderación: quien se registra con un correo invitado entra como moderador */
 let invites = [];
 try { invites = JSON.parse(localStorage.getItem("nexo-invites") || "[]") || []; } catch (err) {}
@@ -836,17 +837,14 @@ document.getElementById("loginForm").addEventListener("submit", e => {
     loginError("No encontramos esa cuenta.", byDigits ? `No hay ninguna cuenta con el carnet ${ident}. Revisa los 11 dígitos o crea una cuenta.` : !ident.includes("@") ? `"${ident}" no es un correo registrado. Escribe tu correo institucional completo o tu carnet.` : `No hay ninguna cuenta con el correo ${normEmail(ident)}.`, !byDigits && ident.includes("@"));
     idEl.focus(); return;
   }
-  if (acc.disabled) {
-    idEl.closest(".field").classList.add("bad");
-    loginError("Tu acceso está desactivado.", "Un administrador desactivó tu cuenta de moderación. Escríbele si crees que es un error.", false);
-    return;
-  }
   if (acc.pass !== passKey(pass)) {
     passEl.closest(".field").classList.add("bad");
     loginError("La contraseña no es correcta.", "Revísala e inténtalo de nuevo, o usa \"¿Olvidaste tu contraseña?\".", false);
     passEl.select(); return;
   }
-  enterApp(acc.email, document.getElementById("l-rem").checked, (acc.role === "local" ? `Hola, equipo de ${acc.full}.` : `Hola de nuevo, ${acc.full.split(" ")[0]}.`));
+  enterApp(acc.email, document.getElementById("l-rem").checked, acc.disabled
+    ? `Hola de nuevo, ${acc.full.split(" ")[0]}. Tu acceso de ${ROLE_LABEL[acc.role].toLowerCase()} está desactivado: entras como usuario.`
+    : (acc.role === "local" ? `Hola, equipo de ${acc.full}.` : `Hola de nuevo, ${acc.full.split(" ")[0]}.`));
 });
 document.getElementById("loginForm").addEventListener("input", () => { document.getElementById("loginError").hidden = true; document.querySelectorAll("#loginForm .field.bad").forEach(f => f.classList.remove("bad")); });
 document.getElementById("loginToSignup").addEventListener("click", () => {
@@ -2387,7 +2385,7 @@ function renderEquipo() {
     return `<div class="tk-row eq"><div class="row start"><span class="avatar sm">${r.kind === "inv" ? `<i data-lucide="mail"></i>` : initialsOf(r.name)}</span><div style="min-width:0"><b style="font-size:13px">${esc(r.name)}</b><p class="tiny">${r.kind === "inv" ? `Invitado como moderador · ${invNote(invByEmail(r.email))}` : esc(r.email)}</p></div></div>
       <div><span class="tk-lbl">Abiertos</span>${r.kind === "inv" ? "—" : open}</div><div><span class="tk-lbl">Resueltos</span>${r.kind === "inv" ? "—" : done}</div><div>${st}</div><div>${act}</div></div>`;
   }).join("") || `<p class="nempty" style="padding:18px">Aún no hay moderadores. Invita al primero.</p>`);
-  document.getElementById("eqSide").innerHTML = inviteCard() + `<div class="notice"><i data-lucide="info"></i><p>Al desactivar a un moderador, sus tickets abiertos quedan sin asignar para que los repartas.</p></div>`;
+  document.getElementById("eqSide").innerHTML = inviteCard() + `<div class="notice"><i data-lucide="info"></i><p>Al desactivar a un moderador pierde el acceso a la moderación, pero puede seguir usando Nexo como usuario. Sus tickets abiertos quedan sin asignar para que los repartas.</p></div>`;
   icons();
 }
 let caseId = null;
@@ -2600,9 +2598,9 @@ document.addEventListener("click", e => {
     const a = accByEmail(off.dataset.modOff); a.disabled = true; saveAccounts();
     const freed = tickets.filter(t => t.mod === a.email && isOpen(t)); freed.forEach(t => { t.mod = null; }); saveTickets();
     logAudit("rol", `Desactivó a ${a.full}.`);
-    toast(`${a.full} quedó desactivado${freed.length ? ` y ${freed.length} ${freed.length === 1 ? "ticket quedó" : "tickets quedaron"} sin asignar` : ""}.`); current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); return;
+    toast(`${a.full} ya no tiene acceso de gestión; puede seguir usando Nexo como usuario${freed.length ? `. ${freed.length} ${freed.length === 1 ? "ticket quedó" : "tickets quedaron"} sin asignar` : ""}.`); current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); return;
   }
-  const on = e.target.closest("[data-mod-on]"); if (on) { const a = accByEmail(on.dataset.modOn); delete a.disabled; saveAccounts(); logAudit("rol", `Reactivó a ${a.full}.`); toast(`${a.full} está activo otra vez.`); current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); return; }
+  const on = e.target.closest("[data-mod-on]"); if (on) { const a = accByEmail(on.dataset.modOn); delete a.disabled; saveAccounts(); logAudit("rol", `Reactivó a ${a.full}.`); toast(`${a.full} recuperó su acceso de ${ROLE_LABEL[a.role].toLowerCase()}.`); current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); return; }
   const ic = e.target.closest("[data-inv-cancel]"); if (ic) { invites = invites.filter(i => i.email !== ic.dataset.invCancel); saveInvites(); logAudit("rol", `Canceló la invitación de ${ic.dataset.invCancel}.`); toast("Invitación cancelada."); current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); return; }
   const md = e.target.closest("[data-md]"); if (md) { mdSel = md.dataset.md; mdConfirm = null; mdMode = "reply"; renderModeracion(); if (innerWidth < 1100) document.querySelector("#mdBody > .stack:nth-child(2)")?.scrollIntoView({ block: "start" }); else window.scrollTo(0, 0); return; }
   const mt = e.target.closest("[data-md-tab]"); if (mt) { mdTab = mt.dataset.mdTab; mdSel = null; renderModeracion(); return; }

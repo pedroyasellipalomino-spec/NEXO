@@ -397,6 +397,18 @@ async def main() -> int:
         await pg.wait_for_timeout(200)
         check("Nota interna" in await pg.inner_text("#mdBody") and "Nota solo para el equipo" not in await pg.evaluate("convHTML(tkById('TK-1043'), 'student')"), "las notas internas no las ve el estudiante")
 
+        # quitar el acceso de gestión: la persona entra como usuario, no queda bloqueada
+        await login("maria.vera@unimet.edu.ve", "demo-admin-01")
+        await pg.goto(URL + "#equipo")
+        await pg.wait_for_timeout(300)
+        await pg.click("[data-mod-off='carlos.gil@unimet.edu.ve']")
+        await pg.wait_for_timeout(200)
+        await login("carlos.gil@unimet.edu.ve", "demo-mod-02")
+        en_inicio = await pg.evaluate("location.hash") == "#inicio"
+        await pg.goto(URL + "#moderacion")
+        await pg.wait_for_timeout(200)
+        check(en_inicio and await pg.evaluate("location.hash") == "#inicio", "un moderador desactivado entra como usuario y sin acceso a moderación")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 
