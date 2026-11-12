@@ -518,6 +518,9 @@ async def main() -> int:
         await pg.select_option("#pf-bd-y", "2005")
         check(await pg.input_value("#pf-birth") == "2005-02-28" and await pg.locator("#pf-bd-d option").count() == 29, "la fecha de nacimiento se elige por día, mes y año y ajusta los días del mes")
 
+        # sin campos de fecha/hora nativos: los pagos eligen entre los últimos 7 días
+        check(await pg.locator('input[type="date"], input[type="time"]').count() == 0 and await pg.locator("#pm-date option").count() == 7 and (await pg.locator("#pm-date option").first.inner_text()).startswith("Hoy"), "las fechas de pago se eligen entre los últimos 7 días, sin el campo nativo")
+
         # tutorial y acceso con la identidad de Nexo: recorrido por pasos y cuentas de prueba que llenan el formulario
         await pg.evaluate("localStorage.removeItem('nexo-session'); sessionStorage.removeItem('nexo-session')")
         await pg.goto(URL + "#tutorial")

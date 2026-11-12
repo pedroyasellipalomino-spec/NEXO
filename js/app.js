@@ -280,6 +280,7 @@ function show(id) {
   if (current && current !== id) previous = current;
   current = id; trailPush(id);
   screens.forEach(s => { document.getElementById(s).hidden = s !== id; });
+  try { fillRecentDays(document.getElementById(id)); } catch (err) {}
   if (id === "recarga" && typeof renderRecarga === "function") renderRecarga();
   if (id === "afiliar" && typeof renderAf === "function") renderAf();
   if (id === "vehiculo" && typeof openVehicleForm === "function") openVehicleForm();
@@ -521,6 +522,32 @@ const DIA_LARGO = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","S
 const fmtD = d => `${String(d.getDate()).padStart(2, "0")} ${MES_CORTO[d.getMonth()]} ${d.getFullYear()}`;
 const fmtDW = d => `${DIA_CORTO[d.getDay()]} ${d.getDate()} ${MES_CORTO[d.getMonth()]}`;
 const day0 = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+/* Selectores de fecha y hora propios (sin <input type="date|time">: en es-VE el navegador pone el mes primero
+   y la hora en a. m./p. m., y confunde). Fechas de pago: los últimos N días; horas: bloques de 15 min en 24 h. */
+function recentDayOpts(n, selected) {
+  const t = day0(new Date()), out = [];
+  for (let i = 0; i < n; i++) {
+    const d = new Date(t.getFullYear(), t.getMonth(), t.getDate() - i), dm = `${d.getDate()} ${MES_CORTO[d.getMonth()]}`, dw = DIA_CORTO[d.getDay()];
+    out.push(`<option value="${isoOf(d)}"${isoOf(d) === selected ? " selected" : ""}>${i === 0 ? "Hoy, " + dm : i === 1 ? "Ayer, " + dm : dw.charAt(0).toUpperCase() + dw.slice(1) + " " + dm}</option>`);
+  }
+  if (selected && !out.some(o => o.includes(`"${selected}"`))) { const d = new Date(selected + "T12:00"); out.push(`<option value="${selected}" selected>${fmtDW(d)}</option>`); }
+  return out.join("");
+}
+function fillRecentDays(root = document) {
+  root.querySelectorAll("select[data-recent-days]").forEach(sel => { const keep = sel.value; sel.innerHTML = recentDayOpts(+sel.dataset.recentDays); sel.value = keep && sel.querySelector(`option[value="${keep}"]`) ? keep : sel.options[0].value; });
+}
+// Fecha de simulación (modo demostración): todos los días del trimestre, agrupados por mes
+(function fillSimDays() {
+  const sel = document.getElementById("simDate"); if (!sel) return;
+  sel.innerHTML = [[8, "Septiembre"], [9, "Octubre"], [10, "Noviembre"]].map(([m, name]) => `<optgroup label="${name} 2026">${Array.from({ length: new Date(2026, m + 1, 0).getDate() }, (_, i) => { const d = new Date(2026, m, i + 1); return `<option value="${isoOf(d)}">${DIA_CORTO[d.getDay()]} ${i + 1} ${MES_CORTO[m]}</option>`; }).join("")}</optgroup>`).join("");
+})();
+fillRecentDays();
+function timeOpts(selected, from = 5, to = 23) {
+  let out = "";
+  for (let h = from; h <= to; h++) for (const m of [0, 15, 30, 45]) { const v = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`; out += `<option value="${v}"${v === selected ? " selected" : ""}>${v}</option>`; }
+  if (selected && !out.includes(`"${selected}"`)) out = `<option value="${selected}" selected>${selected}</option>` + out;
+  return out;
+}
 function secondMonday(y, m) { const first = new Date(y, m, 1); const off = (8 - first.getDay()) % 7; return new Date(y, m, 1 + off + 7); }
 function inv(mo) {
   const issue = secondMonday(2026, mo.m);
@@ -3088,7 +3115,7 @@ function renderConfig() {
     <p class="small" style="font-size:13px">Tasa oficial con la que Nexo muestra los precios en bolívares y valida los Pago Móvil. Cópiala de <b>bcv.org.ve</b> (o de alcambio.app, que la toma del BCV).</p>
     <div class="grid2">
       <div class="field"><label for="bcv-rate">Bs. por US$</label><div class="input"><input id="bcv-rate" inputmode="decimal" autocomplete="off" value="${money(BCV.rate).slice(1)}"></div></div>
-      <div class="field"><label for="bcv-date">Fecha valor</label><div class="input"><input id="bcv-date" type="date" value="${BCV.date}"></div></div>
+      <div class="field"><label for="bcv-date">Fecha valor</label><div class="input sel"><select id="bcv-date">${recentDayOpts(14, BCV.date)}</select><i data-lucide="chevron-down"></i></div></div>
     </div>
     <p class="tiny">Vigente: ${bsAmt(BCV.rate)} del ${bcvDateTxt()} · ${esc(BCV.source)}${BCV.by ? ` · actualizada por ${esc(BCV.by)}` : ""}.</p>
     <button class="btn" type="submit"><i data-lucide="refresh-cw"></i>Actualizar tasa</button></form>
@@ -3410,7 +3437,7 @@ function renderLocalMenu() {
         ${[1, 2, 3, 4, 5, 6, 0].map(d => { const w = lhDraft[d]; return `<div class="lh-row${w.open ? "" : " off"}">
           <button class="switch" type="button" role="switch" aria-checked="${w.open}" aria-label="Abrir el ${DIAS[d].toLowerCase()}" data-lh-day="${d}"></button>
           <b>${DIAS[d]}</b>
-          ${w.open ? `<div class="lh-times"><div class="input sm"><input type="time" step="900" value="${w.from}" data-lh-from="${d}" aria-label="${DIAS[d]}: abre a las"></div><span class="tiny">a</span><div class="input sm"><input type="time" step="900" value="${w.to}" data-lh-to="${d}" aria-label="${DIAS[d]}: cierra a las"></div></div>` : `<span class="small">Cerrado</span>`}
+          ${w.open ? `<div class="lh-times"><div class="input sm sel"><select data-lh-from="${d}" aria-label="${DIAS[d]}: abre a las">${timeOpts(w.from)}</select><i data-lucide="chevron-down"></i></div><span class="tiny">a</span><div class="input sm sel"><select data-lh-to="${d}" aria-label="${DIAS[d]}: cierra a las">${timeOpts(w.to)}</select><i data-lucide="chevron-down"></i></div></div>` : `<span class="small">Cerrado</span>`}
         </div>`; }).join("")}
         <p class="tiny" id="lhErr" hidden></p>
         <button class="btn" type="submit"><i data-lucide="check"></i>Guardar horario</button>
@@ -3941,10 +3968,10 @@ document.addEventListener("click", e => {
   if (d) { const i = +d.dataset.lhDay; lhDraft[i].open = !lhDraft[i].open; renderLocalMenu(); document.querySelector(`[data-lh-day="${i}"]`)?.focus(); return; }
   if (e.target.closest("[data-lh-default]")) { lhDraft = defaultWeek(myLocal()).map(x => ({ ...x })); renderLocalMenu(); toast("Volviste al horario por defecto. Guarda para aplicarlo."); }
 });
-document.addEventListener("input", e => {
-  const f = e.target.closest("[data-lh-from], [data-lh-to]"); if (!f) return;
+["input", "change"].forEach(ev => document.addEventListener(ev, e => {
+  const f = e.target.closest && e.target.closest("[data-lh-from], [data-lh-to]"); if (!f) return;
   const i = +(f.dataset.lhFrom ?? f.dataset.lhTo); lhDraft[i][f.dataset.lhFrom !== undefined ? "from" : "to"] = f.value;
-});
+}));
 document.addEventListener("submit", e => {
   if (e.target.id !== "lhForm") return;
   e.preventDefault();

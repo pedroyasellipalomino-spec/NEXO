@@ -111,7 +111,7 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 - Envolver todo acceso a localStorage en `try/catch`. Al inicio de `app.js` hay un respaldo: si el navegador bloquea localStorage/sessionStorage (vistas previas, iframes aislados), se usa `window.name`, que sobrevive a las recargas de la pestaña. No quitarlo: el registro y el login recargan la página.
 - Código nuevo de pantallas: insertarlo en `app.js` antes del bloque `document.querySelectorAll("form[data-submit]")`.
 - Al tocar algo que se inicializa al arrancar, cuidado con el orden de `let`/`const` (ya hubo errores de TDZ con `plan` y `vehicle`).
-- Fechas que escribe la persona (como la de nacimiento): no usar `<input type="date">`; en es-VE Chromium pone el mes primero y confunde. En Mi cuenta son tres listas Día/Mes/Año (`dobFill`, `dobDays`, `dobSync`) que llenan `#pf-birth` (oculto, AAAA-MM-DD).
+- Nunca `<input type="date">` ni `type="time"`: en es-VE Chromium pone el mes primero y la hora en a. m./p. m., y confunde (no dejaba cambiar el día). En su lugar: fecha de nacimiento con tres listas Día/Mes/Año (`dobFill`, `dobDays`, `dobSync` → `#pf-birth` oculto, AAAA-MM-DD); fechas de pago (`#pm-date`, `#cp-f`, `#ut-f`) con `select[data-recent-days="7"]` ("Hoy, 12 nov", "Ayer, 11 nov"…; `recentDayOpts`/`fillRecentDays`, se refrescan en cada `show()`); fecha valor de la tasa BCV con los últimos 14 días; fecha de simulación con los días de sep–nov agrupados por mes; horario del comercio con `timeOpts()` (24 h, cada 15 min). Todos guardan el mismo formato que antes (AAAA-MM-DD y HH:MM).
 - No pedir ni mostrar datos reales de tarjetas; los datos de Pago Móvil de destino son ilustrativos.
 
 ## Pendiente / ideas

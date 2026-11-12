@@ -440,7 +440,7 @@
       <form class="card" id="cpForm" novalidate>
         <div><h2 class="h2">2. Datos de tu transferencia</h2><p class="small" style="font-size:13px">Escríbelos tal como aparecen en el comprobante de tu banco.</p></div>
         <div class="grid2">
-          <div class="field"><label for="cp-f">Fecha de la transferencia</label><div class="input"><input id="cp-f" type="date"></div></div>
+          <div class="field"><label for="cp-f">Fecha de la transferencia</label><div class="input sel"><select id="cp-f" data-recent-days="7"></select><i data-lucide="chevron-down"></i></div></div>
           <div class="field"><label for="cp-b">Banco de origen</label><div class="input sel"><select id="cp-b"><option value="">Elige tu banco</option></select><i data-lucide="chevron-down"></i></div></div>
           <div class="field"><label for="cp-r">Número de referencia</label><div class="input"><input id="cp-r" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="Ej.: 0031847265"></div></div>
           <div class="field"><label for="cp-m" data-cp="mlabel">Monto transferido · USD</label><div class="input"><span style="color:var(--muted)" data-cp="mprefix">$</span><input id="cp-m" inputmode="decimal" autocomplete="off" placeholder="0,00"></div><p class="tiny" data-cp="mhint"></p></div>
@@ -844,7 +844,7 @@
         <div class="field"><label for="pm-phone">Teléfono de origen</label><div class="input"><input id="pm-phone" inputmode="numeric" autocomplete="off" placeholder="0414-1234567" maxlength="12"></div></div>
         <div class="field"><label for="pm-ci">Cédula del titular</label><div class="input"><select id="pm-cit" style="flex:0 0 auto;width:auto" aria-label="Tipo de documento"><option>V</option><option>E</option><option>J</option></select><input id="pm-ci" inputmode="numeric" autocomplete="off" placeholder="12345678" maxlength="9"></div></div>
         <div class="field"><label for="pm-ref">Número de referencia</label><div class="input"><input id="pm-ref" inputmode="numeric" autocomplete="off" placeholder="Últimos 6 dígitos o más" maxlength="12"></div></div>
-        <div class="field"><label for="pm-date">Fecha del pago</label><div class="input"><input id="pm-date" type="date"></div></div>
+        <div class="field"><label for="pm-date">Fecha del pago</label><div class="input sel"><select id="pm-date" data-recent-days="7"></select><i data-lucide="chevron-down"></i></div></div>
       </div>
       <div class="field"><label for="pm-bs">Monto pagado en bolívares</label><div class="input"><span style="color:var(--muted)">Bs.</span><input id="pm-bs" inputmode="decimal" autocomplete="off" placeholder="0,00"></div><p class="tiny" data-pm="bshint">Debe equivaler a $10,00 a la tasa BCV del día del pago.</p></div>
       <div class="notice warn" id="pmError" role="alert" hidden><i data-lucide="circle-alert"></i><p data-pm="err"></p></div>
@@ -947,7 +947,7 @@
   <div class="card simbar demo-only">
     <div class="row start" style="gap:10px"><i data-lucide="calendar-clock" style="color:var(--brand);font-size:20px"></i><div><b style="font-size:13px">Fecha de simulación</b><p class="tiny">Solo para probar el prototipo: cambia el día para ver cómo se emiten las facturas.</p></div></div>
     <div class="row start" style="flex-wrap:wrap;gap:8px">
-      <div class="input" style="min-height:40px;max-width:190px"><input id="simDate" type="date" min="2026-09-01" max="2026-11-30" aria-label="Fecha de simulación"></div>
+      <div class="input sel" style="min-height:40px;max-width:210px"><select id="simDate" aria-label="Fecha de simulación"></select><i data-lucide="chevron-down"></i></div>
       <div class="chips" id="simChips">
         <button class="pill neutral" type="button" data-sim="today">Hoy</button>
         <button class="pill neutral" type="button" data-sim="2026-11-10">Pronto pago nov</button>
@@ -1024,7 +1024,7 @@
           <button class="btn ghost" type="button" data-ut-open data-pay-gate><i data-lucide="upload"></i>Registrar mi transferencia</button>
           <form class="stack s14" id="utForm" novalidate hidden>
             <div class="grid2">
-              <div class="field"><label for="ut-f">Fecha de la transferencia</label><div class="input"><input id="ut-f" type="date"></div></div>
+              <div class="field"><label for="ut-f">Fecha de la transferencia</label><div class="input sel"><select id="ut-f" data-recent-days="7"></select><i data-lucide="chevron-down"></i></div></div>
               <div class="field"><label for="ut-b">Banco de origen</label><div class="input sel"><select id="ut-b"><option value="">Elige tu banco</option></select><i data-lucide="chevron-down"></i></div></div>
               <div class="field"><label for="ut-r">Número de referencia</label><div class="input"><input id="ut-r" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="Ej.: 0031847265"></div></div>
               <div class="field"><label for="ut-m" data-ut="mlabel">Monto transferido · USD</label><div class="input"><span style="color:var(--muted)" data-ut="mprefix">$</span><input id="ut-m" inputmode="decimal" autocomplete="off" placeholder="0,00"></div><p class="tiny" data-ut="mhint"></p></div>
