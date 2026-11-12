@@ -3503,6 +3503,7 @@ function userMenuHTML() {
       ${role === "estudiante" || (DUAL && !staffNow) ? item(`data-um-go="notificaciones"`, "bell", "Notificaciones") + item(`data-um-go="actividad"`, "receipt-text", "Mi actividad") : ""}
       ${role === "estudiante" || (DUAL && !staffNow) ? item(`data-um-go="soporte"`, "message-circle", "Ayuda y soporte") : ""}
     </div>
+    <div class="um-theme"><span class="tiny">Apariencia</span><div data-theme-seg>${themeSeg()}</div></div>
     <div class="um-list">${item(`data-logout`, "log-out", "Cerrar sesión")}</div>`;
 }
 let umOpen = null;
@@ -4057,6 +4058,26 @@ document.addEventListener("click", e => {
   toast(demoMode ? "Modo demostración activo: verás las herramientas de prueba." : "Modo demostración apagado. Todo usa la fecha de hoy.");
 });
 
+/* ---------- Apariencia: automático / claro / oscuro ----------
+   Global (nexo-theme). Un script en <head> lo aplica antes de pintar para que no parpadee. */
+const THEMES = [["auto", "Automático", "monitor-smartphone"], ["light", "Claro", "sun"], ["dark", "Oscuro", "moon"]];
+const themeNow = () => { try { const t = localStorage.getItem("nexo-theme"); return t === "light" || t === "dark" ? t : "auto"; } catch (err) { return "auto"; } };
+const themeSeg = () => `<div class="seg" role="radiogroup" aria-label="Apariencia">${THEMES.map(([k, l, ic]) => `<button type="button" role="radio" aria-checked="${themeNow() === k}" class="${themeNow() === k ? "on" : ""}" data-theme-set="${k}"><i data-lucide="${ic}"></i>${l}</button>`).join("")}</div>`;
+function applyTheme(t) {
+  if (t === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", t);
+  try { if (t === "auto") localStorage.removeItem("nexo-theme"); else localStorage.setItem("nexo-theme", t); } catch (err) {}
+  document.querySelectorAll("[data-theme-seg]").forEach(b => { b.innerHTML = themeSeg(); });
+  try { lucide.createIcons(); } catch (err) {}
+}
+document.querySelectorAll("[data-theme-seg]").forEach(b => { b.innerHTML = themeSeg(); });
+if (themeNow() !== "auto") document.documentElement.setAttribute("data-theme", themeNow());
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-theme-set]"); if (!b) return;
+  applyTheme(b.dataset.themeSet);
+  if (b.closest(".usermenu")) b.closest(".usermenu").querySelector("[data-theme-seg]").innerHTML = themeSeg();
+  toast(b.dataset.themeSet === "dark" ? "Modo oscuro activado." : b.dataset.themeSet === "light" ? "Modo claro activado." : "Apariencia automática: sigue a tu dispositivo.");
+});
+
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();
   const carnet = f.querySelector("[data-digits]");
@@ -4076,7 +4097,20 @@ document.getElementById("ayudaForm").addEventListener("submit", e => {
   e.target.reset();
   toast("Ticket enviado. Te responderemos al correo que indicaste.");
 });
-window.addEventListener("hashchange", () => show(location.hash.slice(1)));
+window.addEventListener("hashchange", () => { show(location.hash.slice(1)); focusScreen(); });
+/* Al cambiar de pantalla, el foco va a su título (lectores de pantalla y teclado) y se anuncia */
+function focusScreen() {
+  const sec = document.getElementById(current); if (!sec) return;
+  const h = sec.querySelector("main h1, h1") || sec.querySelector("h2");
+  let live = document.getElementById("srLive");
+  if (!live) { live = document.createElement("div"); live.id = "srLive"; live.className = "sr-only"; live.setAttribute("aria-live", "polite"); document.body.append(live); }
+  live.textContent = "";
+  setTimeout(() => {
+    const ae = document.activeElement, keep = ae && sec.contains(ae) && ae.matches("input, textarea, select"); // la pantalla ya enfocó un campo
+    if (!keep && h && h.offsetParent !== null) { if (!h.hasAttribute("tabindex")) h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); }
+    live.textContent = (sec.dataset.title || (h ? h.textContent.trim() : "")) ;
+  }, 60);
+}
 applyUser();
 show(location.hash.slice(1));
 try { const fl = sessionStorage.getItem("nexo-flash"); if (fl) { sessionStorage.removeItem("nexo-flash"); setTimeout(() => toast(fl), 50); } } catch (err) {}
