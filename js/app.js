@@ -4374,7 +4374,7 @@ function rpSend() { rp.code = String(Math.floor(100000 + Math.random() * 900000)
 function renderRecuperar() {
   const box = document.getElementById("rpBody"), err = rp.err ? `<div class="notice warn" role="alert"><i data-lucide="circle-alert"></i><p>${esc(rp.err)}</p></div>` : "";
   clearInterval(rpTimer);
-  const steps = `<p class="small" style="font-weight:600"><span${rp.step === 1 ? ' style="color:var(--brand)"' : ""}>1. Tu cuenta</span> &nbsp;›&nbsp; <span${rp.step === 2 ? ' style="color:var(--brand)"' : ""}>2. Código</span> &nbsp;›&nbsp; <span${rp.step === 3 ? ' style="color:var(--brand)"' : ""}>3. Contraseña nueva</span></p>`;
+  const steps = `<p class="small" style="font-weight:600;margin:6px 0 8px"><span${rp.step === 1 ? ' style="color:var(--brand)"' : ""}>1. Tu cuenta</span> &nbsp;›&nbsp; <span${rp.step === 2 ? ' style="color:var(--brand)"' : ""}>2. Código</span> &nbsp;›&nbsp; <span${rp.step === 3 ? ' style="color:var(--brand)"' : ""}>3. Contraseña nueva</span></p>`;
   if (rp.step === "sbsent") {
     box.innerHTML = `<div><h1 class="h1">Revisa tu correo</h1><p class="lead">Si <b>${esc(maskMail(rp.email))}</b> tiene una cuenta en Nexo, te llegará un enlace para crear una contraseña nueva. Vence en 1 hora.</p></div>
       <div class="card" style="align-items:flex-start;gap:12px">${illu("inbox")}<p class="small" style="font-size:14px">Ábrelo en este mismo dispositivo. Si no lo ves en unos minutos, revisa la carpeta de spam.</p><div class="row start" style="gap:10px;flex-wrap:wrap"><button class="btn ghost sm" type="button" data-rp-back>Usar otro correo</button><button class="btn ghost sm" type="button" data-go="login">Volver a iniciar sesión</button></div></div>`;

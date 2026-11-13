@@ -106,6 +106,8 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 
 **Panel del dueño visual.** `dnChart(byService)`: barras horizontales por servicio (ordenadas por monto) con dos tramos, confirmado (`--c-ok` #0e8c7b, oscuro #1f9c88) y en revisión (`--c-rev` #e0a106, oscuro #b98010; ambos pares validados con la guía de visualización), leyenda, valor al final y detalle al pasar o enfocar (`.dn-tip`); "Ver tabla" (`[data-dn-view]`, `dnTable`) muestra la tabla de antes. Últimos pagos como línea de tiempo (`.dn-tl`, ícono con el tono del servicio: `SV_TONE`). Usuarios con avatar y etiqueta de color por rol (`.role-<rol>`). Indicadores en 4 columnas en pantallas grandes y 2 en móvil (`.dn-kpis`).
 
+**Acceso compacto en móvil.** Bajo 700 px el panel `aside.campus` es una franja baja (red de servicios de 104 px, sin etiqueta ni lugar, título de 17 px) y `.auth-wrap` usa `align-content:start` para que no se estire: en login el botón "Iniciar sesión" se ve sin desplazarse.
+
 **Soporte como chat.** `convHTML` envuelve la conversación en `.chat` y cada mensaje en `.msg-row` (lo propio a la derecha con degradado verde, lo del otro a la izquierda; iniciales `.avatar.xs` con el color del rol); las notas internas siguen a todo el ancho. En `#soporte` cada solicitud (`.sup-card`) lleva franja y `svcChip` del servicio y una barra de pasos `.sup-steps` (Recibida → En revisión/Esperando tu respuesta → Resuelta). Ojo: `.steps3` ya existe para otra cosa.
 
 ## Cómo trabajar con el usuario

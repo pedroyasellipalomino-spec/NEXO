@@ -3,6 +3,7 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 13 nov 2026
+- Inicio de sesión compacto en el celular.
 - Soporte y moderación como chat con burbujas.
 - Solicitudes con color del servicio y pasos.
 - Dueño: gráfico de dinero por servicio.

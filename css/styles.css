@@ -1392,3 +1392,18 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .sup-steps li.done .st-dot{background:var(--tone,#0e8c7b);border-color:var(--tone,#0e8c7b)}
 .sup-steps li.now .st-dot{border-color:var(--tone,#0e8c7b);box-shadow:0 0 0 4px color-mix(in srgb,var(--tone,#0e8c7b) 18%,transparent)}
 .sup-steps li.now{color:var(--ink);font-weight:600}
+
+/* ===================== Acceso compacto en móvil ===================== */
+/* El panel de marca queda como una franja baja para que el formulario se vea sin desplazarse */
+@media (max-width:699px){
+  .campus{padding:14px 18px 16px!important;gap:2px!important;border-radius:22px!important}
+  .campus .hero-net{min-height:104px!important;margin:0!important}
+  .campus .hn-core{width:46px!important;height:46px!important;margin:-23px 0 0 -23px!important;border-radius:14px!important}
+  .campus .hn-core svg{width:24px;height:24px}
+  .campus .hn-node .svt-ic{width:30px!important;height:30px!important;border-radius:10px!important;margin-bottom:0}
+  .campus .hn-node .svt-ic svg{width:15px!important;height:15px!important}
+  .campus .tag{display:none}
+  .campus h2{font-size:17px!important;line-height:1.25;text-align:center}
+  .campus .place{display:none}
+}
+@media (max-width:699px){.auth-wrap{align-content:start;gap:20px}}
