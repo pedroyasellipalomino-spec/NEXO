@@ -96,6 +96,16 @@ document.querySelectorAll("section.app").forEach(sec => {
     <header class="mbar gutter">${left}<div class="mbar-acts">${macts}</div></header>
     <header class="deskbar"><div class="crumbs">${back ? `<button class="deskback" type="button" data-go="${back}" data-back-btn aria-label="Volver"><i data-lucide="arrow-left"></i>Volver</button>` : ""}<span>${crumbBase}${sec.dataset.crumb.replace(/  \/  /g,"&nbsp;&nbsp;/&nbsp;&nbsp;")}</span></div>
       <div class="acts">${dacts}</div></header>`;
+  if (staff) {
+    // cabecera de gestión con el degradado de Nexo (tono según el rol, ver staffGreet)
+    const h = body.firstElementChild;
+    if (h && h.querySelector(".h1")) {
+      const hero = document.createElement("div");
+      hero.className = "staff-hero"; hero.dataset.tone = staff;
+      hero.innerHTML = `<span class="hh-orb o1"></span><span class="hh-orb o2"></span><span class="hh-orb o3"></span><p class="sh-kick" data-staff-greet></p>`;
+      body.insertBefore(hero, h); hero.append(h);
+    }
+  }
   main.append(body);
   const bar = document.createElement("nav");
   bar.className = "tabbar";
@@ -266,6 +276,23 @@ window.addEventListener("click", e => {
   go(to);
 }, true);
 const PUBLIC = ["tutorial", "login", "registro", "ayuda", "invitacion", "recuperar"];
+/* Identidad de gestión: color e ícono por servicio, ícono de los indicadores y cabecera con saludo */
+const SVC_TONE = { Comida: ["t-food", "utensils"], Estacionamiento: ["t-car", "car-front"], Materias: ["t-uni", "graduation-cap"], Canchas: ["t-court", "dribbble"] };
+const svcTone = s => (SVC_TONE[s] || ["t-brand"])[0];
+const svcChip = s => `<span class="svc-chip ${svcTone(s)}" aria-hidden="true"><i data-lucide="${(SVC_TONE[s] || [0, "life-buoy"])[1]}"></i></span>`;
+const skIc = ic => ic ? `<span class="sk-ic" aria-hidden="true"><i data-lucide="${ic}"></i></span>` : "";
+function staffGreet() {
+  try {
+    if (!account) return;
+    const d = new Date(), h = d.getHours(), saludo = h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
+    const txt = `${DIA_LARGO_G[d.getDay()]} ${d.getDate()} de ${MES_LARGO_G[d.getMonth()]} · ${saludo}, ${(account.full || "").split(" ")[0]}`;
+    document.querySelectorAll("[data-staff-greet]").forEach(el => { el.textContent = txt; });
+    document.querySelectorAll(".staff-hero").forEach(el => { el.dataset.tone = roleOf(account) === "estudiante" ? el.dataset.tone : roleOf(account); });
+  } catch (err) {}
+}
+const DIA_LARGO_G = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const MES_LARGO_G = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+staffGreet();
 const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"] };
 function show(id) {
   if (/^invitacion-[A-Z0-9]+$/.test(id)) { ivToken = id.slice(11); id = "invitacion"; }
@@ -2907,18 +2934,18 @@ function renderGestion() {
   const avg = firsts.length ? Math.round(firsts.reduce((a, b) => a + b, 0) / firsts.length / MIN) : null;
   const now = new Date();
   document.getElementById("gsUpdated").textContent = `Actualizado · ${now.getDate()} ${MES_CORTO[now.getMonth()]}, ${hhmm(now)}`;
-  const kpi = (label, val, pill, cls, sub, go) => `<button class="card kpi" type="button" ${go}><div class="row"><span class="small">${label}</span><i data-lucide="arrow-up-right"></i></div><b class="kv-big">${val}</b><div class="row start" style="gap:8px"><span class="pill ${cls}">${pill}</span><span class="tiny">${sub}</span></div></button>`;
+  const kpi = (label, val, pill, cls, sub, go, ic) => `<button class="card kpi sk" type="button" ${go}><div class="row"><span class="row start" style="gap:10px">${skIc(ic)}<span class="small">${label}</span></span><i data-lucide="arrow-up-right"></i></div><b class="kv-big">${val}</b><div class="row start" style="gap:8px"><span class="pill ${cls}">${pill}</span><span class="tiny">${sub}</span></div></button>`;
   document.getElementById("gsKpis").innerHTML =
-    kpi("Tickets abiertos", open.length, `${prio} ${prio === 1 ? "prioritario" : "prioritarios"}`, prio ? "bad" : "ok", unassigned ? `${unassigned} sin asignar` : "todos asignados", `data-gs-state="open"`) +
-    kpi("Moderadores activos", active, active ? "Equipo disponible" : "Sin equipo", active ? "ok" : "warn", `de ${team} ${team === 1 ? "integrante" : "integrantes"}`, `data-go="equipo"`) +
-    kpi("Tiempo de primera respuesta", avg === null ? "—" : avg < 60 ? `${avg} min` : `${(avg / 60).toFixed(1).replace(".", ",")} h`, "Promedio", "ok", `de ${firsts.length} tickets respondidos`, `data-gs-state="all"`);
+    kpi("Tickets abiertos", open.length, `${prio} ${prio === 1 ? "prioritario" : "prioritarios"}`, prio ? "bad" : "ok", unassigned ? `${unassigned} sin asignar` : "todos asignados", `data-gs-state="open"`, "inbox") +
+    kpi("Moderadores activos", active, active ? "Equipo disponible" : "Sin equipo", active ? "ok" : "warn", `de ${team} ${team === 1 ? "integrante" : "integrantes"}`, `data-go="equipo"`, "users") +
+    kpi("Tiempo de primera respuesta", avg === null ? "—" : avg < 60 ? `${avg} min` : `${(avg / 60).toFixed(1).replace(".", ",")} h`, "Promedio", "ok", `de ${firsts.length} tickets respondidos`, `data-gs-state="all"`, "timer");
   const svc = document.getElementById("gsService");
   if (svc.options.length === 1) svc.insertAdjacentHTML("beforeend", SERVICES.map(s => `<option>${s}</option>`).join(""));
   const list = filteredTickets();
   document.getElementById("gsTable").innerHTML = `<div class="tk-row tk-head"><span>Ticket</span><span>Estudiante / Motivo</span><span>Estado</span><span>Moderador</span><span>Prioridad</span></div>`
     + (list.map(t => `<div class="tk-row">
       <div class="row start" style="gap:8px;align-items:flex-start">${isOpen(t) ? `<input type="checkbox" class="vl-check" data-gs-sel="${t.id}" aria-label="Seleccionar ${t.id}" ${gsSel.has(t.id) ? "checked" : ""}>` : ""}<div><button class="link b" type="button" data-case="${t.id}">${t.id}</button><p class="tiny">${ago(t.created)}</p></div></div>
-      <div class="tk-main"><button class="tk-subj" type="button" data-case="${t.id}">${esc(t.subject)}</button><p class="tiny">${esc(t.student.name)} · ${t.service}</p></div>
+      <div class="tk-main row start" style="gap:10px;align-items:flex-start">${svcChip(t.service)}<div style="min-width:0"><button class="tk-subj" type="button" data-case="${t.id}">${esc(t.subject)}</button><p class="tiny">${esc(t.student.name)} · ${t.service}</p></div></div>
       <div>${stPill(t.status)}</div>
       <div>${isOpen(t) ? assignSelect(t) : `<span class="small">${esc(t.mod ? nameOf(t.mod) : "—")}</span>`}</div>
       <div><span class="prio ${t.prio}">${TK_PRIO[t.prio]}</span></div>
@@ -3038,7 +3065,7 @@ function renderModeracion() {
     <div class="md-kpis" role="tablist" aria-label="Bandejas">${kpi(counts.mine, "Mis tickets", "mine")}${kpi(counts.unassigned, "Sin asignar", "unassigned")}${kpi(counts.all, "Todos abiertos", "all")}</div>
     <div class="input"><i data-lucide="search"></i><input id="mdSearch" type="search" placeholder="Buscar ticket o estudiante" aria-label="Buscar tickets" value="${esc(mdQuery)}"></div>
     <div class="input sel sm"><select id="mdSvc" aria-label="Filtrar por servicio">${svcOpts}</select><i data-lucide="chevron-down"></i></div>
-    ${list.map(x => `<button class="card tk-card${x.id === mdSel ? " sel" : ""}" type="button" data-md="${x.id}">
+    ${list.map(x => `<button class="card tk-card ${svcTone(x.service)}${x.id === mdSel ? " sel" : ""}" type="button" data-md="${x.id}">
       <div class="row"><span class="tk-ref">${x.id}</span><span class="prio ${x.prio}">${TK_PRIO[x.prio]}</span></div>
       <b>${esc(x.subject)}</b><span class="small">${esc(x.student.name)} · ${x.service}</span>
       <div class="row start" style="gap:6px;flex-wrap:wrap">${stPill(x.status)}${waitingReply(x) ? `<span class="pill bad">Por responder</span>` : ""}<span class="tiny">${x.mod ? (x.mod === sessionEmail ? "Tuyo" : esc(firstName(nameOf(x.mod)))) : "Sin asignar"} · ${ago(lastActivity(x)).toLowerCase()}</span></div>
@@ -3290,12 +3317,12 @@ function renderCreador() {
   const prev = { mau: prevS.mau, buys: prevS.buys * k, vol: prevS.vol * k, rev: prevS.rev * k };
   const vsTxt = p.partial ? `vs. mismo tramo de ${PERIODS[p.prev].mon}` : `vs. ${PERIODS[p.prev].mon}`;
   document.getElementById("crCompare").textContent = p.partial ? `Comparado con el 1 al 11 de ${PERIODS[p.prev].mon}` : `Comparado con ${PERIODS[p.prev].name.toLowerCase()} de 2026`;
-  const kpi = (label, val, ch) => `<div class="card kpi static"><div class="row"><span class="small">${label}</span><i data-lucide="arrow-up-right"></i></div><b class="kv-big">${val}</b><div class="row start" style="gap:8px"><span class="pill ${ch >= 0 ? "ok" : "bad"}">${signPct(ch)}</span><span class="tiny">${vsTxt}</span></div></div>`;
+  const kpi = (label, val, ch, ic) => `<div class="card kpi static sk"><div class="row"><span class="row start" style="gap:10px">${skIc(ic)}<span class="small">${label}</span></span></div><b class="kv-big">${val}</b><div class="row start" style="gap:8px"><span class="pill ${ch >= 0 ? "ok" : "bad"}">${signPct(ch)}</span><span class="tiny">${vsTxt}</span></div></div>`;
   document.getElementById("crKpis").innerHTML =
-    kpi("Usuarios activos mensuales", int0(cur.mau), cur.mau / prev.mau - 1) +
-    kpi("Compras completadas", int0(cur.buys), cur.buys / prev.buys - 1) +
-    kpi("Volumen de compras", money0(cur.vol), cur.vol / prev.vol - 1) +
-    kpi("Ingresos de Nexo", money0(cur.rev), cur.rev / prev.rev - 1);
+    kpi("Usuarios activos mensuales", int0(cur.mau), cur.mau / prev.mau - 1, "users") +
+    kpi("Compras completadas", int0(cur.buys), cur.buys / prev.buys - 1, "shopping-bag") +
+    kpi("Volumen de compras", money0(cur.vol), cur.vol / prev.vol - 1, "banknote") +
+    kpi("Ingresos de Nexo", money0(cur.rev), cur.rev / prev.rev - 1, "trending-up");
   // Gráfico: ingresos por intervalo, período actual vs. anterior
   const n = p.w.length, sw = sumObj(p.w), pw = PERIODS[p.prev].w.slice(0, n), spw = sumObj(PERIODS[p.prev].w);
   const curV = p.w.map(x => cur.rev * x / sw), prevV = pw.map(x => prevS.rev * x / spw);
@@ -3324,7 +3351,7 @@ function renderCreador() {
     </div>`;
   const tb = cur.buys;
   document.getElementById("crMix").innerHTML = `<h2 class="sec">Compras por servicio</h2><p class="small" style="font-size:12px">Participación del total de ${int0(tb)} compras</p>
-    ${SVC4.map(s => `<div class="mix"><div class="row"><span>${SVC_LABEL[s]}</span><b>${Math.round(p.buys[s] / tb * 100)} %</b></div><div class="track"><i style="width:${p.buys[s] / tb * 100}%"></i></div><span class="tiny">${int0(p.buys[s])} compras · comisión ${String(rates[s]).replace(".", ",")} %</span></div>`).join("")}
+    ${SVC4.map(s => `<div class="mix ${svcTone(s)}"><div class="row"><span class="row start" style="gap:8px">${svcChip(s)}${SVC_LABEL[s]}</span><b>${Math.round(p.buys[s] / tb * 100)} %</b></div><div class="track"><i style="width:${p.buys[s] / tb * 100}%"></i></div><span class="tiny">${int0(p.buys[s])} compras · comisión ${String(rates[s]).replace(".", ",")} %</span></div>`).join("")}
     <div class="sep"></div><p class="tiny">Las comisiones varían por servicio. El ${pctTxt(cur.rev / cur.vol, 2)} es la tasa efectiva agregada, no una tarifa única. <button class="link b" type="button" data-go="config" style="font-size:11px">Ajustar comisiones</button></p>`;
   const open = tickets.filter(isOpen), alta = open.filter(t => t.prio === "alta").length;
   document.getElementById("crHealth").innerHTML = `
@@ -3732,10 +3759,10 @@ function renderLocalPedidos() {
   document.getElementById("lpPause").innerHTML = isPaused(l.id)
     ? `<button class="btn" type="button" data-lp-pause="0"><i data-lucide="circle-play"></i>Reanudar pedidos</button>`
     : `<button class="btn ghost" type="button" data-lp-pause="1"><i data-lucide="circle-pause"></i>Pausar pedidos</button>`;
-  const k = (label, val, sub) => `<div class="card kpi static"><span class="small">${label}</span><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
-  document.getElementById("lpKpis").innerHTML = k("En preparación", prep.length, prep.length ? `El próximo a las ${hhmm(prep[0].o.readyAt)}` : "Nada en cocina")
-    + k("Listos para retirar", ready.length, ready.length ? "Esperando al estudiante" : "Ninguno esperando")
-    + k("Ventas de hoy", money(sales), `${mine.filter(x => x.o.paidAt >= today && !x.o.cancelledAt).length} pedidos pagados`);
+  const k = (label, val, sub, ic) => `<div class="card kpi static sk"><div class="row start" style="gap:10px">${skIc(ic)}<span class="small">${label}</span></div><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
+  document.getElementById("lpKpis").innerHTML = k("En preparación", prep.length, prep.length ? `El próximo a las ${hhmm(prep[0].o.readyAt)}` : "Nada en cocina", "chef-hat")
+    + k("Listos para retirar", ready.length, ready.length ? "Esperando al estudiante" : "Ninguno esperando", "package-check")
+    + k("Ventas de hoy", money(sales), `${mine.filter(x => x.o.paidAt >= today && !x.o.cancelledAt).length} pedidos pagados`, "banknote");
   const lines = o => o.lines.map(x => `<p style="font-size:13px"><b>${x.qty} ×</b> ${esc(x.name)}${x.opts.length ? `<span class="tiny" style="display:block">${x.opts.map(esc).join(" · ")}</span>` : ""}${x.note ? `<span class="note">Nota: ${esc(x.note)}</span>` : ""}</p>`).join("");
   const who = x => esc(x.o.studentName || nameOf(x.email));
   const card = (x, st) => {
@@ -4206,10 +4233,10 @@ function renderValidar() {
   seedCaja();
   const all = cajaItems(), pend = all.filter(x => !x.done), today = day0(new Date()).getTime();
   const doneToday = all.filter(x => x.done && ((x.p.validatedAt || x.p.rejectedAt || 0) >= today));
-  const k = (label, val, sub) => `<div class="card kpi static"><span class="small">${label}</span><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
-  document.getElementById("vlKpis").innerHTML = k("Por validar", pend.length, pend.length ? `El más antiguo: ${ago(Math.min(...pend.map(x => x.sent)))}` : "Todo al día")
-    + k("Monto por validar", money(pend.reduce((a, x) => a + x.usd, 0)), `${pend.filter(x => x.p.currency === "bs").length} en bolívares`)
-    + k("Revisados hoy", doneToday.length, `${doneToday.filter(x => x.p.estado === "pagada" || x.p.estado === "aprobada").length} aprobados · ${doneToday.filter(x => x.p.estado === "rechazada").length} rechazados`);
+  const k = (label, val, sub, ic) => `<div class="card kpi static sk"><div class="row start" style="gap:10px">${skIc(ic)}<span class="small">${label}</span></div><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
+  document.getElementById("vlKpis").innerHTML = k("Por validar", pend.length, pend.length ? `El más antiguo: ${ago(Math.min(...pend.map(x => x.sent)))}` : "Todo al día", "hourglass")
+    + k("Monto por validar", money(pend.reduce((a, x) => a + x.usd, 0)), `${pend.filter(x => x.p.currency === "bs").length} en bolívares`, "banknote")
+    + k("Revisados hoy", doneToday.length, `${doneToday.filter(x => x.p.estado === "pagada" || x.p.estado === "aprobada").length} aprobados · ${doneToday.filter(x => x.p.estado === "rechazada").length} rechazados`, "badge-check");
   const tabs = [["pend", `Por validar · ${pend.length}`], ["factura", "Facturas"], ["recarga", "Recargas"], ["done", "Revisados"]];
   document.getElementById("vlTabs").innerHTML = tabs.map(([t, l]) => `<button class="pill ${t === vlTab ? "ok" : "neutral"}" type="button" data-vl-tab="${t}">${l}</button>`).join("");
   const list = all.filter(x => vlTab === "pend" ? !x.done : vlTab === "done" ? x.done : !x.done && x.kind === vlTab);
@@ -4225,8 +4252,8 @@ function renderValidar() {
            <p class="tiny">El estudiante verá este motivo y podrá registrar el pago de nuevo.</p>
            <div class="row"><button class="btn ghost" type="button" data-vl-no>Volver</button><button class="btn" type="submit" style="background:var(--danger);border-color:var(--danger)">Rechazar pago</button></div></form>`
         : `<div class="row"><button class="btn ghost" type="button" data-vl-rej="${key}"><i data-lucide="circle-x"></i>Rechazar</button><button class="btn" type="button" data-vl-ok="${key}"><i data-lucide="badge-check"></i>Aprobar ${money(x.usd)}</button></div>`;
-    return `<div class="card vl-item">
-      <div class="row" style="align-items:flex-start"><div class="row start" style="align-items:flex-start;gap:10px">${x.done ? "" : `<input type="checkbox" class="vl-check" data-vl-sel="${key}" aria-label="Seleccionar el pago de ${esc(x.who)}" ${vlSel.has(key) ? "checked" : ""}>`}<div><b class="h3">${esc(x.who)}</b><p class="small">${esc(x.title)}${p.pp ? " · con pronto pago" : ""}</p></div></div>${state}</div>
+    return `<div class="card vl-item ${x.kind === "recarga" ? "t-car" : "t-uni"}">
+      <div class="row" style="align-items:flex-start"><div class="row start" style="align-items:flex-start;gap:10px">${x.done ? "" : `<input type="checkbox" class="vl-check" data-vl-sel="${key}" aria-label="Seleccionar el pago de ${esc(x.who)}" ${vlSel.has(key) ? "checked" : ""}>`}<span class="svc-chip"><i data-lucide="${x.kind === "recarga" ? "wallet" : "graduation-cap"}"></i></span><div><b class="h3">${esc(x.who)}</b><p class="small">${esc(x.title)}${p.pp ? " · con pronto pago" : ""}</p></div></div>${state}</div>
       <div class="vl-grid">
         <div><span class="tiny">Monto</span><b>${money(x.usd)}</b>${bs ? `<span class="tiny">${bsAmt(p.paidAmount)}${p.bcvRate ? ` · tasa ${bsAmt(p.bcvRate)}` : ""}</span>` : ""}</div>
         <div><span class="tiny">Método</span><b>${x.kind === "recarga" ? "Pago Móvil" : bs ? "Transferencia en Bs." : "Transferencia en USD"}</b><span class="tiny">${esc(p.bank || "—")}</span></div>
@@ -5273,7 +5300,7 @@ async function renderDueno() {
   const d = st.data; dnUsers = (us && us.data) || [];
   const lg = d.legacy;
   document.getElementById("dnLead").textContent = `Datos en vivo de la base de datos de Nexo. No incluye las cuentas de prueba ni los datos de ejemplo.${lg ? ` Antes de las cuentas reales, el contador temporal anotó ${lg.signups} ${lg.signups === 1 ? "registro" : "registros"} y ${lg.payments} ${lg.payments === 1 ? "pago" : "pagos"}.` : ""}`;
-  const k = (lbl, val, sub, ic) => `<div class="card kpi static"><div class="row"><span class="small">${lbl}</span><i data-lucide="${ic}" style="color:var(--muted)"></i></div><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
+  const k = (lbl, val, sub, ic) => `<div class="card kpi static sk"><div class="row start" style="gap:10px">${skIc(ic)}<span class="small">${lbl}</span></div><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
   const svRows = Object.keys(SV_LBL).map(key => { const x = d.byService[key] || { n: 0, usd: 0, rev: 0, revUsd: 0 };
     return `<div class="tk-row dn-row"><span class="row start" style="gap:10px"><span class="ico"><i data-lucide="${SV_LBL[key][1]}"></i></span><b style="font-size:13px">${SV_LBL[key][0]}</b></span><span><span class="tk-lbl">Confirmados</span>${x.n} · <b>${money(+x.usd)}</b></span><span><span class="tk-lbl">En revisión</span>${x.rev ? `${x.rev} · ${money(+x.revUsd)}` : "—"}</span></div>`; }).join("");
   const recent = d.recent.length ? d.recent.map(e => `<div class="tk-row dn-row"><span class="tiny">${fullDT(e.t)}<br>${esc(e.who || "")}</span><span class="row start" style="gap:8px"><i data-lucide="${SV_LBL[e.service][1]}" style="color:var(--brand);width:16px"></i>${SV_LBL[e.service][0]} · ${MT_LBL[e.method] || "Otro"}</span><span class="row start" style="gap:8px;justify-content:space-between"><span class="pill ${e.status === "En revisión" ? "warn" : "ok"}">${e.status}</span><b>${money(+e.amount)}</b></span></div>`).join("")

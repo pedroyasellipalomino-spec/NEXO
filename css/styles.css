@@ -1269,3 +1269,52 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .dn-user:first-child{border-top:0}
 .dn-user.off{opacity:.6}
 .dn-user .btn{width:auto}
+
+/* ===================== Gestión con identidad ===================== */
+/* Tono por servicio (mismos colores que los accesos de Inicio) */
+.t-food{--tone:#e2612c}.t-car{--tone:#2a78d6}.t-uni{--tone:#6250d6}.t-court{--tone:#0e9a6c}.t-brand{--tone:#0e8c7b}
+.svc-chip{--tone:#0e8c7b;flex:none;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;color:var(--tone);background:color-mix(in srgb,var(--tone) 14%,var(--surface))}
+.svc-chip.t-food{--tone:#e2612c}.svc-chip.t-car{--tone:#2a78d6}.svc-chip.t-uni{--tone:#6250d6}.svc-chip.t-court{--tone:#0e9a6c}
+.svc-chip svg{width:17px;height:17px}
+.vl-item.t-car .svc-chip{--tone:#2a78d6}.vl-item.t-uni .svc-chip{--tone:#6250d6}
+/* Cabecera de gestión: el mismo degradado de Inicio, con tono por rol */
+.staff-hero{--g1:#0e8c7b;--g2:#0b5f56;--g3:#0a3a36;position:relative;overflow:hidden;isolation:isolate;border-radius:24px;padding:24px;color:#fff;
+  background:linear-gradient(135deg,var(--g1) 0%,var(--g2) 48%,var(--g3) 100%);box-shadow:0 20px 50px -20px color-mix(in srgb,var(--g2) 80%,transparent);animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+.staff-hero[data-tone="mod"]{--g1:#6a5ae0;--g2:#4434a8;--g3:#251c63}
+.staff-hero[data-tone="creator"]{--g1:#2f86e0;--g2:#1d58a8;--g3:#123366}
+.staff-hero[data-tone="owner"]{--g1:#0f7a5f;--g2:#0c4a3c;--g3:#14261f}
+.staff-hero[data-tone="local"]{--g1:#ea7a3f;--g2:#b8501f;--g3:#6b2b10}
+.staff-hero .h1{color:#fff}
+.staff-hero .lead,.staff-hero .lead *{color:rgba(255,255,255,.8)}
+.staff-hero .eyebrow{color:#ffd98a}
+.staff-hero .tiny,.staff-hero .small{color:rgba(255,255,255,.78)}
+.sh-kick{font-size:12px;font-weight:600;letter-spacing:.04em;color:rgba(255,255,255,.75);margin-bottom:6px}
+.staff-hero .pill{background:rgba(255,255,255,.14)!important;color:#fff!important;border:1px solid rgba(255,255,255,.24);backdrop-filter:blur(8px)}
+.staff-hero .pill.bad{background:rgba(255,120,110,.3)!important;border-color:rgba(255,170,160,.5)}
+.staff-hero .btn{background:rgba(255,255,255,.95);color:var(--g2);border-color:transparent;box-shadow:0 8px 20px -10px rgba(0,0,0,.5)}
+.staff-hero .btn.ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3)}
+.staff-hero .btn.ghost:hover{background:rgba(255,255,255,.2)}
+.staff-hero .link{color:#fff}
+.staff-hero .hh-orb.o3{background:radial-gradient(circle,rgba(255,217,138,.32),rgba(255,217,138,0) 70%)}
+@media (min-width:700px){.staff-hero{padding:28px 32px}}
+@media (max-width:699px){.staff-hero{padding:20px;border-radius:20px}.staff-hero .h1{font-size:26px}}
+@media (prefers-reduced-motion:reduce){.staff-hero,.staff-hero .hh-orb{animation:none}}
+/* Indicadores con ícono de color: cada uno toma un tono distinto */
+.kpi.sk{--k:#0e8c7b;position:relative;overflow:hidden;isolation:isolate}
+.kpis > .kpi.sk:nth-child(4n+2){--k:#2a78d6}.kpis > .kpi.sk:nth-child(4n+3){--k:#e2612c}.kpis > .kpi.sk:nth-child(4n+4){--k:#6250d6}
+.kpi.sk::after{content:"";position:absolute;right:-34px;bottom:-34px;width:110px;height:110px;border-radius:50%;background:color-mix(in srgb,var(--k) 9%,transparent);z-index:-1;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.kpi.sk:hover::after{transform:scale(1.35)}
+.sk-ic{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,color-mix(in srgb,var(--k) 72%,#fff),var(--k));box-shadow:0 8px 16px -8px color-mix(in srgb,var(--k) 70%,transparent)}
+.sk-ic svg{width:18px;height:18px;color:#fff!important}
+.kpi.sk .kv-big{letter-spacing:-.5px}
+@media (max-width:699px){.sk-ic{width:28px;height:28px;border-radius:9px}.sk-ic svg{width:15px;height:15px}.kpi > .row .sk-ic svg{display:block}}
+/* Tickets y pagos con el color de su servicio */
+.tk-card{position:relative;overflow:hidden}
+.tk-card::before,.vl-item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--tone,transparent)}
+.vl-item{position:relative;overflow:hidden}
+.tk-card.sel{box-shadow:0 10px 24px -14px color-mix(in srgb,var(--tone,#0e8c7b) 70%,transparent)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .svc-chip{background:color-mix(in srgb,var(--tone) 24%,var(--surface))}}
+:root[data-theme="dark"] .svc-chip{background:color-mix(in srgb,var(--tone) 24%,var(--surface))}
+.mix[class*="t-"] .track i{background:var(--tone)}
+.mix[class*="t-"] .row b{color:var(--tone)}
+.mix .svc-chip{width:28px;height:28px;border-radius:9px}.mix .svc-chip svg{width:15px;height:15px}

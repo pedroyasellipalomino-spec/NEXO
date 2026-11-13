@@ -3,6 +3,9 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 13 nov 2026
+- Gestión: cabecera de color con saludo por rol.
+- Indicadores de gestión con íconos de colores.
+- Tickets y pagos con el color de su servicio.
 - Etapa 4 Supabase: reservas de canchas reales.
 - Canchas: nadie reserva la misma hora dos veces.
 - Plan y vehículo guardados en la cuenta.
