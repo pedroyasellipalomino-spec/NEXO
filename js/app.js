@@ -2877,12 +2877,14 @@ function pushStudentMove(email, m) {
 
 /* Conversación (compartida por moderación, administración y estudiante) */
 function convHTML(t, viewer) {
-  return t.messages.filter(m => viewer !== "student" || m.from !== "note").map(m => {
+  return `<div class="chat">` + t.messages.filter(m => viewer !== "student" || m.from !== "note").map(m => {
     if (m.from === "note") return `<div class="msg note"><div class="row"><b><i data-lucide="lock"></i> Nota interna · ${esc(m.name)}</b><span class="tiny">${hhmm(m.t)}</span></div><p>${esc(m.text)}</p></div>`;
     const mine = viewer === "student" ? m.from === "student" : m.from === "mod";
     const who = m.from === "student" ? (viewer === "student" ? "Tú" : `${esc(m.name)} · Estudiante`) : `${esc(m.name)} · ${m.role === "creator" ? "Creador" : "Moderación"}`;
-    return `<div class="msg${m.from === "mod" ? " staff" : ""}${mine ? " mine" : ""}"><div class="row"><b>${who}</b><span class="tiny">${hhmm(m.t)}</span></div><p>${esc(m.text)}</p></div>`;
-  }).join("") + (t.attach && viewer !== "student" ? `<div class="attach"><i data-lucide="file-text"></i><span class="grow">${esc(t.attach)}</span><button class="link" type="button" data-toast="La descarga no está disponible en el prototipo." aria-label="Descargar adjunto"><i data-lucide="download"></i></button></div>` : "");
+    // burbuja de chat: lo propio a la derecha; cada quien con sus iniciales (estudiante gris, equipo con el color de su rol)
+    return `<div class="msg-row${mine ? " mine" : ""}"><span class="avatar xs ${m.from === "student" ? "role-estudiante" : `role-${m.role === "creator" ? "creator" : "mod"}`}" aria-hidden="true">${esc(initialsOf(m.name || "?"))}</span>
+      <div class="msg${m.from === "mod" ? " staff" : ""}${mine ? " mine" : ""}"><div class="row"><b>${who}</b><span class="tiny">${hhmm(m.t)}</span></div><p>${esc(m.text)}</p></div></div>`;
+  }).join("") + `</div>` + (t.attach && viewer !== "student" ? `<div class="attach"><i data-lucide="file-text"></i><span class="grow">${esc(t.attach)}</span><button class="link" type="button" data-toast="La descarga no está disponible en el prototipo." aria-label="Descargar adjunto"><i data-lucide="download"></i></button></div>` : "");
 }
 const actionLabel = a => a.type === "refund" ? `Reembolso de ${money(a.amount)}` : `Compra cancelada (${money(a.amount)})`;
 function purchaseCard(t) {
@@ -3161,9 +3163,10 @@ function renderSoporte() {
     : list.map(t => {
       const last = [...t.messages].reverse().find(m => m.from === "mod");
       const expanded = supOpen === t.id;
-      return `<div class="card">
-        <div class="row"><span class="tiny">${t.id} · ${ago(t.created)}</span>${stPill(t.status)}</div>
-        <div><b>${esc(t.subject)}</b><p class="tiny">${t.service}${t.purchase ? " · Compra " + esc(t.purchase.num) : ""}</p></div>
+      const step = t.status === "resuelto" ? 2 : t.status === "abierto" && !t.mod ? 0 : 1;
+      return `<div class="card sup-card ${svcTone(t.service)}">
+        <div class="row" style="align-items:flex-start"><div class="row start" style="gap:12px;align-items:flex-start">${svcChip(t.service)}<div><b>${esc(t.subject)}</b><p class="tiny">${t.id} · ${t.service}${t.purchase ? " · Compra " + esc(t.purchase.num) : ""} · ${ago(t.created)}</p></div></div>${stPill(t.status)}</div>
+        <ol class="sup-steps" aria-label="Avance de la solicitud">${["Recibida", t.status === "espera" ? "Esperando tu respuesta" : "En revisión", "Resuelta"].map((x, i) => `<li class="${i < step ? "done" : i === step ? "now" : ""}"${i === step ? ' aria-current="step"' : ""}><span class="st-dot">${i < step ? '<i data-lucide="check"></i>' : ""}</span>${x}</li>`).join("")}</ol>
         <p style="font-size:12px">${last ? `<b>${esc(firstName(last.name))}:</b> ${esc(last.text)}` : t.mod ? `${esc(firstName(nameOf(t.mod)))} está revisando tu solicitud.` : "Recibimos tu solicitud. Te responderemos pronto."}</p>
         ${(t.actions || []).map(a => `<span class="pill ok">${actionLabel(a)}</span>`).join("")}
         ${rateHTML(t)}

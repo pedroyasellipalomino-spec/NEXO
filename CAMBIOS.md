@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 13 nov 2026
+- Soporte y moderación como chat con burbujas.
+- Solicitudes con color del servicio y pasos.
 - Dueño: gráfico de dinero por servicio.
 - Dueño: últimos pagos como línea de tiempo.
 - Dueño: usuarios con color según su rol.
