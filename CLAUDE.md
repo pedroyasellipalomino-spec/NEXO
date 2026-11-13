@@ -105,6 +105,7 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 ## Cómo trabajar con el usuario
 
 - Publicación automática: cada cambio terminado y con la prueba de humo en verde se publica de una vez en Netlify (`npm run deploy`) y se le da al usuario el enlace https://nexouni.netlify.app. Si la prueba falla, no se publica.
+- Registro de cambios: cada cambio se anota arriba en `CAMBIOS.md` (fecha, menos de 10 palabras) y se le envía el archivo al usuario después de cada cambio.
 - Cuando haya que elegir entre opciones (qué mejorar, decisiones de diseño, etc.), preséntalas siempre como un formulario de un clic (herramienta de preguntas con opciones), no como una lista en texto. Marca la recomendada.
 
 **Tasa BCV y bolívares.** `BCV` (módulo junto a `money()`) guarda la tasa oficial del dólar: valor inicial `BCV0` = Bs. 901,62 del 11/11/2026, consultado en alcambio.app (fuente oficial: bcv.org.ve, cuya web no se pudo leer desde la sesión por su certificado incompleto). El creador la actualiza en `#config` (formulario `#bcvForm`, `nexo-bcv` global, queda en el registro de cambios). Helpers: `bcvRate()`, `bsOf(usd)`, `bsAmt(bs)`, `bsTag(usd)` (`<span class="bsv">`), `bcvDateTxt()`, `bcvStale()`. Se muestran equivalentes en Bs. en Inicio (pill), menús, detalle, carrito, pedido, planes, recarga, facturas por pagar y Pago Móvil; `refreshBcvUI()` refresca lo estático.
