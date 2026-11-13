@@ -42,7 +42,7 @@ const STAFF_NAV = {
   admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"], ["validar","badge-check","Pagos por validar","validar"]],
   mod: [["moderacion","inbox","Tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]],
   local: [["local-pedidos","chef-hat","Pedidos","local-pedidos"], ["local-menu","book-open","Menú y horario","local-menu"]],
-  owner: [["dueno","shield-check","Datos reales","dueno"]],
+  owner: [["dueno","shield-check","Datos reales","dueno"], ["validar","badge-check","Caja","validar"]],
   creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["validar","badge-check","Pagos por validar","validar"], ["config","settings","Configuración","config"]]
 };
 const ROLE_LABEL = { owner: "Dueño", local: "Comercio", creator: "Creador", admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
@@ -266,7 +266,7 @@ window.addEventListener("click", e => {
   go(to);
 }, true);
 const PUBLIC = ["tutorial", "login", "registro", "ayuda", "invitacion", "recuperar"];
-const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator"] };
+const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"] };
 function show(id) {
   if (/^invitacion-[A-Z0-9]+$/.test(id)) { ivToken = id.slice(11); id = "invitacion"; }
   if (!screens.includes(id)) id = sessionEmail ? "inicio" : "tutorial";
@@ -416,7 +416,7 @@ document.addEventListener("input", e => {
 /* ---------- Planes de estacionamiento: resumen según el plan elegido ---------- */
 let WALLET = isDemo ? 40 : 0;
 try { const w = localStorage.getItem(K("nexo-wallet")); if (w !== null && !isNaN(+w)) WALLET = +w; } catch (err) {}
-const saveWallet = () => { try { localStorage.setItem(K("nexo-wallet"), String(WALLET)); } catch (err) {} };
+const saveWallet = () => { try { localStorage.setItem(K("nexo-wallet"), String(WALLET)); } catch (err) {} try { sbSaveWallet(); } catch (err) {} };
 const money = n => { const [i, d] = Math.abs(n).toFixed(2).split("."); return (n < 0 ? "-" : "") + "$" + i.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + d; };
 /* ---------- Tasa oficial del dólar (BCV) ----------
    Valor inicial: Dólar BCV del miércoles 11/11/2026 = Bs. 901,62, consultado en alcambio.app (fuente oficial: bcv.org.ve).
@@ -544,7 +544,7 @@ renderReserva();
 const TRIM_ID = "2026-sep-nov", TRIM_LABEL = "sep–nov 2026";
 let MATERIAS = isDemo ? [{ n: "Matemáticas II", c: "BPTMI02" }, { n: "Física II", c: "BPTFI02" }, { n: "Algoritmos y Programación", c: "BPTSP05" }] : [];
 try { const sm = JSON.parse(localStorage.getItem(K("nexo-materias")) || "null"); if (sm && sm.trim === TRIM_ID && Array.isArray(sm.list) && !sm.list.some(m => /^[A-Z]{3}-\d{3}$/.test(m.c || ""))) MATERIAS = sm.list.map(m => (m.c && MATDB[m.c]) ? m : findSubject(m.n, myCareer())); } catch (err) {}
-const saveMaterias = () => { try { localStorage.setItem(K("nexo-materias"), JSON.stringify({ trim: TRIM_ID, list: MATERIAS })); } catch (err) {} };
+const saveMaterias = () => { try { localStorage.setItem(K("nexo-materias"), JSON.stringify({ trim: TRIM_ID, list: MATERIAS })); } catch (err) {} try { sbSaveState(); } catch (err) {} };
 const PRICE_REG = 160, PRICE_PP = 150;
 const MONTHS = [{ id: "sep", mes: "septiembre", m: 8 }, { id: "oct", mes: "octubre", m: 9 }, { id: "nov", mes: "noviembre", m: 10 }];
 const MES_CORTO = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
@@ -597,7 +597,7 @@ const activeInvoices = () => MATERIAS.length ? INVOICES : [];
 const realToday = () => { const t = day0(new Date()); const min = new Date(2026, 8, 1), max = new Date(2026, 10, 30); return t < min ? min : t > max ? max : t; };
 try { const s = localStorage.getItem(K("nexo-sim")); simDate = s ? new Date(s + "T12:00") : null; } catch (err) {}
 if (!simDate || isNaN(simDate)) simDate = realToday();
-const savePagos = () => { try { localStorage.setItem(K("nexo-pagos"), JSON.stringify(pagos)); } catch (err) {} };
+const savePagos = () => { try { localStorage.setItem(K("nexo-pagos"), JSON.stringify(pagos)); } catch (err) {} try { sbSaveState(); } catch (err) {} };
 const isoD = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 function statusOf(iv) {
@@ -735,6 +735,7 @@ function addMovement(title, detail, amount, pill, pillCls, extra = {}) {
   const m = { id: "m" + Date.now(), title, detail, amount, pill, pillCls, date: fmtD(day0(simDate)), ...extra };
   moves.push(m);
   try { localStorage.setItem(K("nexo-moves"), JSON.stringify(moves)); } catch (err) {}
+  try { sbSaveState(); } catch (err) {}
   drawMovement(m);
   refreshActivity();
 }
@@ -1106,7 +1107,7 @@ const RC_MIN = 5, RC_MAX = 100;
 let rcAmount = 10, rcMethod = "card", rcCardId = null, afReturn = "recarga";
 let pendRec = [];
 try { pendRec = JSON.parse(localStorage.getItem(K("nexo-pendrec")) || "[]") || []; } catch (err) {}
-const savePend = () => { try { localStorage.setItem(K("nexo-pendrec"), JSON.stringify(pendRec)); } catch (err) {} };
+const savePend = () => { try { localStorage.setItem(K("nexo-pendrec"), JSON.stringify(pendRec)); } catch (err) {} try { sbSaveState(); } catch (err) {} };
 const parseAmt = s => { const v = parseFloat(String(s).replace(/[^\d,.]/g, "").replace(/\./g, "").replace(",", ".")); return isNaN(v) ? 0 : v; };
 function rcValid() { return rcAmount >= RC_MIN && rcAmount <= RC_MAX; }
 function renderRecarga() {
@@ -2742,7 +2743,7 @@ document.getElementById("cpForm").addEventListener("submit", e => {
     box.hidden = false; (bad[0][0] === "cp-file" ? document.querySelector("label.upload") : document.getElementById(bad[0][0])).focus(); return;
   }
   const o = draftOrder, v = id => document.getElementById(id).value.trim();
-  Object.assign(o, { ref: v("cp-r"), bank: v("cp-b"), currency: cpCur, paidAmount: parseAmt(v("cp-m")), receipt: cpFile.name, bcvRate: cpCur === "bs" ? bcvRate() : undefined });
+  Object.assign(o, { ref: v("cp-r"), bank: v("cp-b"), currency: cpCur, paidAmount: parseAmt(v("cp-m")), receipt: cpFile.name, receiptPath: sbUploadReceipt(cpFile, "pedido") || undefined, bcvRate: cpCur === "bs" ? bcvRate() : undefined });
   draftOrder = null; cpReset();
   confirmOrder(o);
 });
@@ -2836,7 +2837,9 @@ const lastActivity = t => Math.max(t.created, ...t.messages.map(m => m.t), ...(t
 
 /* Movimiento en la Actividad del estudiante (sus datos se guardan por cuenta) */
 function pushStudentMove(email, m) {
-  if (/^[0-9a-f-]{36}$/.test(email)) return; // estudiante con cuenta real: lo verá en su pedido (etapa 3: movimientos en Supabase)
+  // personal o comercio con cuenta real: el movimiento va a Supabase (push_move valida el permiso)
+  if (sbShared()) { sb.rpc("push_move", { target: email, p_move: { id: "m" + Date.now(), ...m }, p_order: m.order || null }).then(({ error }) => { if (error) console.warn("Nexo: movimiento sin anotar", error.message); }); return; }
+  if (/^[0-9a-f-]{36}$/.test(email)) return;
   const key = "nexo-moves:" + email;
   try { const list = JSON.parse(localStorage.getItem(key) || "[]") || []; list.push({ id: "m" + Date.now(), ...m }); localStorage.setItem(key, JSON.stringify(list)); } catch (err) {}
 }
@@ -4153,8 +4156,8 @@ document.getElementById("utForm").addEventListener("submit", e => {
     box.querySelector('[data-ut="err"]').textContent = bad.length === 1 ? bad[0][1] : `Revisa los ${bad.length} datos marcados en rojo antes de enviar tu comprobante.`;
     box.hidden = false; (bad[0][0] === "ut-file" ? document.querySelector("#utForm label.upload") : document.getElementById(bad[0][0])).focus(); return;
   }
-  const v = id => document.getElementById(id).value.trim(), paid = parseAmt(v("ut-m")), usdTotal = utUsd();
-  sel.forEach(iv => { const m = amountOf(iv); pagos[iv.id] = { estado: "revision", monto: m, pp: statusOf(iv) === "pronto", ref: v("ut-r"), bank: v("ut-b"), currency: utCur, paidAmount: utCur === "bs" ? Math.round(paid * m / usdTotal * 100) / 100 : m, bcvRate: utCur === "bs" ? bcvRate() : undefined, receipt: utFile.name, date: v("ut-f"), sentAt: Date.now() }; });
+  const v = id => document.getElementById(id).value.trim(), paid = parseAmt(v("ut-m")), usdTotal = utUsd(), rPath = sbUploadReceipt(utFile, "factura");
+  sel.forEach(iv => { const m = amountOf(iv); pagos[iv.id] = { estado: "revision", ...(rPath ? { receiptPath: rPath, studentName: user.full } : {}), monto: m, pp: statusOf(iv) === "pronto", ref: v("ut-r"), bank: v("ut-b"), currency: utCur, paidAmount: utCur === "bs" ? Math.round(paid * m / usdTotal * 100) / 100 : m, bcvRate: utCur === "bs" ? bcvRate() : undefined, receipt: utFile.name, date: v("ut-f"), sentAt: Date.now() }; });
   savePagos();
   addMovement(sel.map(iv => `Factura de ${iv.mes}`).join(" + "), `Universidad · Transferencia${utCur === "bs" ? ` en Bs. (${bsAmt(paid)})` : ""} · Ref. ${v("ut-r").slice(-6)}`, money(usdTotal), "En revisión", "neutral");
   utReset(); document.getElementById("utForm").hidden = true; document.querySelector("[data-ut-open]").hidden = false;
@@ -4168,6 +4171,7 @@ document.getElementById("utForm").addEventListener("submit", e => {
 const VL_REASONS = ["El monto no coincide con el comprobante", "No encontramos la referencia en el banco", "El comprobante no se lee bien", "La transferencia llegó a otra cuenta"];
 const MES_DE = id => (MONTHS.find(m => m.id === id) || { mes: id }).mes;
 function seedCaja() {
+  if (sbShared()) return; // con cuenta real, Caja solo muestra pagos reales
   try { if (localStorage.getItem("nexo-cajaseed")) return; localStorage.setItem("nexo-cajaseed", "1"); } catch (err) { return; }
   const n = Date.now(), d = k => { const x = new Date(n - k * 864e5); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
   const put = (key, fn) => { try { const v = fn(JSON.parse(localStorage.getItem(key) || "null")); localStorage.setItem(key, JSON.stringify(v)); } catch (err) {} };
@@ -4176,6 +4180,7 @@ function seedCaja() {
   put("nexo-pendrec:luis.perez@correo.unimet.edu.ve", r => [...(r || []), { id: "r" + (n - 5 * 36e5), amount: 20, ref: "0098765432", bank: "Mercantil · 0105", date: d(0), bs: Math.round(20 * bcvRate() * 100) / 100, estado: "revision", sentAt: n - 5 * 36e5, studentName: "Luis Pérez" }]);
 }
 function cajaItems() {
+  if (sbShared()) return sbCajaItems();
   const out = [];
   try {
     Object.keys(localStorage).forEach(k => {
@@ -4193,7 +4198,7 @@ function cajaItems() {
 }
 let vlTab = "pend", vlReject = null;
 function renderValidar() {
-  if (roleOf(account) === "creator") relabelForCreator();
+  if (["creator", "owner"].includes(roleOf(account))) relabelForCreator(roleOf(account));
   seedCaja();
   const all = cajaItems(), pend = all.filter(x => !x.done), today = day0(new Date()).getTime();
   const doneToday = all.filter(x => x.done && ((x.p.validatedAt || x.p.rejectedAt || 0) >= today));
@@ -4222,29 +4227,30 @@ function renderValidar() {
         <div><span class="tiny">Monto</span><b>${money(x.usd)}</b>${bs ? `<span class="tiny">${bsAmt(p.paidAmount)}${p.bcvRate ? ` · tasa ${bsAmt(p.bcvRate)}` : ""}</span>` : ""}</div>
         <div><span class="tiny">Método</span><b>${x.kind === "recarga" ? "Pago Móvil" : bs ? "Transferencia en Bs." : "Transferencia en USD"}</b><span class="tiny">${esc(p.bank || "—")}</span></div>
         <div><span class="tiny">Referencia</span><b class="mono">${esc(p.ref || "—")}</b><span class="tiny">${p.date ? `Pagado el ${fmtD(new Date(p.date + "T12:00"))}` : ""}</span></div>
-        <div><span class="tiny">Comprobante</span>${p.receipt ? `<button class="link b" type="button" data-toast="Vista previa de ${esc(p.receipt)} no disponible en el prototipo." style="font-size:12px"><i data-lucide="file-text"></i> ${esc(p.receipt)}</button>` : `<b style="font-size:12px">Datos del Pago Móvil</b>`}<span class="tiny">Enviado ${ago(x.sent).toLowerCase()}</span></div>
+        <div><span class="tiny">Comprobante</span>${p.receipt && p.receiptPath ? `<button class="link b" type="button" data-vl-receipt="${esc(p.receiptPath)}" style="font-size:12px"><i data-lucide="file-text"></i> ${esc(p.receipt)}</button>` : p.receipt ? `<button class="link b" type="button" data-toast="Vista previa de ${esc(p.receipt)} no disponible en el prototipo." style="font-size:12px"><i data-lucide="file-text"></i> ${esc(p.receipt)}</button>` : `<b style="font-size:12px">Datos del Pago Móvil</b>`}<span class="tiny">Enviado ${ago(x.sent).toLowerCase()}</span></div>
       </div>
       ${actions}
     </div>`;
   }).join("") || `<div class="card" style="align-items:flex-start"><span class="ico lg"><i data-lucide="badge-check"></i></span><h2 class="h2">${vlTab === "done" ? "Aún no hay pagos revisados" : "No hay pagos por validar"}</h2><p class="small" style="font-size:13px">${vlTab === "done" ? "Los pagos que apruebes o rechaces aparecerán aquí." : "Cuando un estudiante registre una transferencia o un Pago Móvil, aparecerá aquí."}</p></div>`;
   icons();
 }
-function relabelForCreator() {
-  // la sección usa el menú de administración; para el creador se reemplaza por el suyo
+function relabelForCreator(role = "creator") {
+  // la sección usa el menú de administración; para el creador (o el dueño) se reemplaza por el suyo
   const sec = document.getElementById("validar");
-  if (sec.dataset.navFor === "creator") return;
-  const nav = STAFF_NAV.creator, mk = n => `<button type="button" data-go="${n[3]}" class="${n[0] === "validar" ? "on" : ""}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`;
+  if (sec.dataset.navFor === role) return;
+  const nav = STAFF_NAV[role], RL = role === "owner" ? "Dueño" : "Creador", mk = n => `<button type="button" data-go="${n[3]}" class="${n[0] === "validar" ? "on" : ""}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`;
   const sideNav = sec.querySelector(".side .nav"); if (sideNav) sideNav.innerHTML = nav.map(mk).join("") + `<button type="button" class="mode-nav" data-mode-switch="usuario"><i data-lucide="user-round"></i>Usar Nexo como usuario</button>`;
   const bar = sec.querySelector(".tabbar"); if (bar) bar.innerHTML = nav.map(mk).join("") + `<button type="button" data-logout><i data-lucide="log-out"></i>Salir</button>`;
-  sec.querySelectorAll(".side .user span:last-child").forEach(el => el.textContent = "Creador · Menú");
-  sec.querySelectorAll(".mbar .pill, .deskbar .acts .pill:not(.modebtn)").forEach(el => el.textContent = el.textContent.includes("Acceso") ? "Acceso: Creador" : "Creador");
-  const c = sec.querySelector(".deskbar .crumbs span"); if (c) c.innerHTML = "Gestión&nbsp;&nbsp;/&nbsp;&nbsp;Creador&nbsp;&nbsp;/&nbsp;&nbsp;Pagos por validar";
-  sec.dataset.navFor = "creator";
+  sec.querySelectorAll(".side .user span:last-child").forEach(el => el.textContent = RL + " · Menú");
+  sec.querySelectorAll(".mbar .pill, .deskbar .acts .pill:not(.modebtn)").forEach(el => el.textContent = el.textContent.includes("Acceso") ? "Acceso: " + RL : RL);
+  const c = sec.querySelector(".deskbar .crumbs span"); if (c) c.innerHTML = `Gestión&nbsp;&nbsp;/&nbsp;&nbsp;${RL}&nbsp;&nbsp;/&nbsp;&nbsp;Pagos por validar`;
+  sec.dataset.navFor = role;
 }
 function vlUpdateMove(email, match, pill, cls) {
   try { const k = "nexo-moves:" + email, mv = JSON.parse(localStorage.getItem(k) || "[]") || []; const m = mv.slice().reverse().find(x => x.pill === "En revisión" && match(x)); if (m) { m.pill = pill; m.pillCls = cls; localStorage.setItem(k, JSON.stringify(mv)); } } catch (err) {}
 }
 function vlDecide(key, ok, motivo, quiet = false) {
+  if (key.startsWith("sb:")) return sbCajaDecide(key, ok, motivo, quiet);
   const i = key.lastIndexOf("|"), sk = key.slice(0, i), id = key.slice(i + 1), now = Date.now(), me = user.full;
   const item = cajaItems().find(x => x.key === sk && x.id === id); if (!item) return;
   const ref6 = (item.p.ref || "").slice(-6);
@@ -4667,7 +4673,7 @@ function liveKeys() {
         if (LIVE_ROLE === "mod" && t.mod === me && last && last.from === "student") add(`tkr:${t.id}:${last.t}`, { text: `${firstName(t.student.name)} respondió en ${t.id}`, go: "moderacion", tk: t.id });
       });
     }
-    if (["admin", "creator"].includes(LIVE_ROLE)) cajaItems().filter(x => !x.done).forEach(x => add(`cj:${x.kind}:${x.key}:${x.id}`, { text: `Pago por validar: ${x.title} de ${x.who} · ${money(x.usd)}`, go: "validar" }));
+    if (["admin", "creator", "owner"].includes(LIVE_ROLE)) cajaItems().filter(x => !x.done).forEach(x => add(`cj:${x.kind}:${x.key}:${x.id}`, { text: `Pago por validar: ${x.title} de ${x.who} · ${money(x.usd)}`, go: "validar" }));
     if (LIVE_ROLE === "local" && account.local) allOrders().filter(({ o }) => o.local === account.local && o.paidAt && !o.cancelledAt && !o.pickedAt).forEach(({ o }) => add("lo:" + o.id, { text: `Pedido nuevo ${o.num} · ${money(o.total)}`, go: "local-pedidos" }));
   } catch (err) {}
   return out;
@@ -5035,6 +5041,8 @@ async function sbLoadShared() {
 async function sbSharedInit() {
   if (!sbShared()) return;
   try { await sbLoadShared(); } catch (err) { console.warn("Nexo: no se cargaron los datos compartidos", err); }
+  try { await sbStateInit(); } catch (err) { console.warn("Nexo: no se cargó el wallet", err); }
+  if (sbIsCaja()) try { await sbLoadCaja(); } catch (err) {}
   try { liveSeen = liveKeys(); } catch (err) {}
   sbRefreshScreens();
   sb.channel("nexo-vivo")
@@ -5060,8 +5068,135 @@ async function sbSharedInit() {
       sbLive();
       sbRefreshScreens();
     })
+    .on("postgres_changes", { event: "*", schema: "public", table: "student_state" }, ({ new: row }) => {
+      if (!row || !row.user_id) return;
+      if (row.user_id === account.sb && sbStateReady && !sbPending("state") && !sbPending("wallet")) sbApplyState(row);
+      if (sbIsCaja()) {
+        const i = sbCajaRows.findIndex(r => r.user_id === row.user_id), prev = sbCajaRows[i];
+        if (prev) { sbCajaRows[i] = { ...prev, pagos: row.pagos, pendrec: row.pendrec, updated_at: row.updated_at }; sbLive(); if (current === "validar") renderValidar(); }
+        else sbLoadCaja().then(() => { sbLive(); if (current === "validar") renderValidar(); });
+      }
+    })
     .subscribe();
 }
+/* Etapa 3 · wallet, facturas, recargas, comprobantes y Caja en vivo (Supabase: student_state, Storage "comprobantes").
+   Cuenta real: pagos, pendRec, moves y MATERIAS se guardan con save_my_state (el servidor mezcla con lo que decidió Caja
+   o anotó el personal); el saldo del wallet solo cambia por diferencias con wallet_add (nunca queda negativo).
+   Caja (admin, creador, dueño) lee caja_state y decide con caja_decide, que actualiza factura/recarga, saldo, movimiento
+   y el pago del dueño de una sola vez. Reembolsos y cancelaciones llegan con push_move. */
+let sbStateReady = false, sbStateDirty = false, sbWalletKnown = 0, sbStateTimer = null, sbCajaRows = [];
+const sbIsCaja = () => sbShared() && ["admin", "creator", "owner"].includes(roleOf(account));
+const r2 = n => Math.round(n * 100) / 100;
+function sbStateArgs() { return { p_pagos: pagos, p_pendrec: pendRec, p_moves: moves, p_materias: { trim: TRIM_ID, list: MATERIAS } }; }
+function sbSaveState() {
+  if (!sbShared()) return;
+  if (!sbStateReady) { sbStateDirty = true; return; }
+  clearTimeout(sbStateTimer);
+  sbStateTimer = setTimeout(() => sbPush("state", () => sb.rpc("save_my_state", sbStateArgs()).then(r => {
+    if (!r.error && r.data && !sbQ.state.again) sbApplyState(r.data, true);
+    return r;
+  }), err => { console.warn("Nexo: estado sin guardar", err && err.message); toast("No pudimos guardar tu pago en tu cuenta. Revisa tu conexión."); }), 250);
+}
+function sbSaveWallet() {
+  if (!sbShared() || !sbStateReady) return;
+  sbPush("wallet", () => {
+    const d = r2(WALLET - sbWalletKnown);
+    if (!d) return Promise.resolve({});
+    sbWalletKnown = r2(sbWalletKnown + d);
+    return sb.rpc("wallet_add", { delta: d }).then(r => {
+      if (r.error) { sbWalletKnown = r2(sbWalletKnown - d); WALLET = r2(WALLET - d); sbWalletLocal(); toast(/insuficiente/i.test(r.error.message) ? "Tu saldo no alcanza para ese pago." : "No pudimos actualizar tu saldo. Revisa tu conexión."); return {}; }
+      sbWalletKnown = +r.data; if (!sbQ.wallet.again) { WALLET = +r.data; sbWalletLocal(); }
+      return r;
+    });
+  }, err => console.warn("Nexo: saldo sin guardar", err && err.message));
+}
+function sbWalletLocal() { try { localStorage.setItem(K("nexo-wallet"), String(WALLET)); } catch (err) {} try { renderWallet(); } catch (err) {} }
+// Pone lo que dice el servidor en las variables de la app y repinta (sin volver a subirlo)
+function sbApplyState(row, fromSave) {
+  if (!sbPending("wallet") && !(sbQ.wallet && sbQ.wallet.again)) { sbWalletKnown = +row.wallet || 0; WALLET = sbWalletKnown; }
+  const same = JSON.stringify([pagos, pendRec, moves]) === JSON.stringify([{ ...JSON.parse(JSON.stringify(PAGOS0)), ...(row.pagos || {}) }, row.pendrec || [], row.moves || []]);
+  pagos = { ...JSON.parse(JSON.stringify(PAGOS0)), ...(row.pagos || {}) };
+  pendRec = row.pendrec || []; moves = row.moves || [];
+  if (row.materias && row.materias.trim === TRIM_ID && Array.isArray(row.materias.list)) MATERIAS = row.materias.list;
+  try {
+    localStorage.setItem(K("nexo-pagos"), JSON.stringify(pagos)); localStorage.setItem(K("nexo-pendrec"), JSON.stringify(pendRec));
+    localStorage.setItem(K("nexo-moves"), JSON.stringify(moves)); localStorage.setItem(K("nexo-wallet"), String(WALLET));
+    localStorage.setItem(K("nexo-materias"), JSON.stringify({ trim: TRIM_ID, list: MATERIAS }));
+  } catch (err) {}
+  try { renderWallet(); } catch (err) {}
+  if (same && fromSave) return;
+  try { const card = document.getElementById("mvCount").closest(".card"); card.querySelectorAll(".move").forEach(el => el.remove()); moves.forEach(drawMovement); refreshActivity(); } catch (err) {}
+  [renderDebt, renderRecarga, renderMatList, renderNotifs, renderHome].forEach(f => { try { f(); } catch (err) {} });
+  try { if (current === "pedido") renderPedido(); } catch (err) {}
+}
+async function sbStateInit() {
+  const { data, error } = await sb.from("student_state").select("*").eq("user_id", account.sb).maybeSingle();
+  if (error) { console.warn("Nexo: no se cargó tu estado", error.message); return; }
+  const localWallet = WALLET;
+  if (!data || sbStateDirty) {
+    // primera vez con esta cuenta (o cambios hechos mientras cargaba): se sube lo de este navegador y el servidor mezcla
+    const r = await sb.rpc("save_my_state", sbStateArgs());
+    if (r.error) { console.warn("Nexo: no se subió tu estado", r.error.message); return; }
+    sbStateReady = true; sbApplyState(r.data);
+    if (!data && localWallet > 0) { WALLET = localWallet; sbSaveWallet(); }
+  } else { sbStateReady = true; sbApplyState(data); }
+  sbStateDirty = false;
+}
+// Caja
+async function sbLoadCaja() {
+  const { data, error } = await sb.from("caja_state").select("user_id,full_name,email,pagos,pendrec,updated_at");
+  if (!error && data) sbCajaRows = data;
+}
+function sbCajaItems() {
+  const out = [];
+  sbCajaRows.forEach(row => {
+    const name = row.full_name || row.email || "Estudiante";
+    Object.entries(row.pagos || {}).forEach(([id, p]) => {
+      if (p && ["revision", "pagada", "rechazada"].includes(p.estado) && (p.estado === "revision" || p.validatedAt || p.rejectedAt))
+        out.push({ kind: "factura", key: "sb:" + row.user_id, email: row.email, id, p, who: p.studentName || name, usd: p.monto, title: `Factura de ${MES_DE(id)}`, sent: p.sentAt || (p.date ? new Date(p.date + "T12:00").getTime() : 0), done: p.estado !== "revision" });
+    });
+    (row.pendrec || []).forEach(r => out.push({ kind: "recarga", key: "sb:" + row.user_id, email: row.email, id: r.id, p: { ...r, currency: "bs", paidAmount: r.bs, receipt: null }, who: name, usd: r.amount, title: "Recarga de wallet · Pago Móvil", sent: r.sentAt || 0, done: r.estado !== "revision" }));
+  });
+  return out.sort((a, b) => b.sent - a.sent);
+}
+function sbCajaDecide(key, ok, motivo, quiet) {
+  const i = key.lastIndexOf("|"), sk = key.slice(0, i), id = key.slice(i + 1), uid = sk.slice(3);
+  const item = sbCajaItems().find(x => x.key === sk && x.id === id); if (!item || item.done) return;
+  const now = Date.now(), me = user.full;
+  // se marca al instante; si el servidor lo rechaza, se recarga la lista
+  Object.assign(item.p, ok ? { estado: item.kind === "factura" ? "pagada" : "aprobada", validatedAt: now, validatedBy: me } : { estado: "rechazada", motivo, rejectedAt: now, rejectedBy: me });
+  const row = sbCajaRows.find(r => r.user_id === uid);
+  if (row) { if (item.kind === "factura") row.pagos = { ...row.pagos, [id]: { ...row.pagos[id], ...item.p } }; else row.pendrec = row.pendrec.map(r => r.id === id ? { ...r, estado: item.p.estado, motivo: item.p.motivo, validatedAt: item.p.validatedAt, rejectedAt: item.p.rejectedAt, validatedBy: item.p.validatedBy, rejectedBy: item.p.rejectedBy } : r); }
+  sbLastWrite = now;
+  sb.rpc("caja_decide", { target: uid, kind: item.kind, item_id: id, ok, motivo: motivo || null, fecha: fmtD(new Date(now)), match: item.kind === "factura" ? `Factura de ${MES_DE(id)}` : "Recarga de wallet" }).then(({ error }) => {
+    sbLastWrite = Date.now();
+    if (error) { toast(/Ya revisado/.test(error.message) ? `Otra persona de Caja ya revisó el pago de ${item.who}.` : "No pudimos guardar la decisión. Inténtalo de nuevo."); sbLoadCaja().then(() => { if (current === "validar") renderValidar(); }); }
+  });
+  logAudit("caja", ok ? `Aprobó ${item.title.toLowerCase()} de ${item.who} (${money(item.usd)}, ref. ${item.p.ref}).` : `Rechazó ${item.title.toLowerCase()} de ${item.who}: ${motivo}.`);
+  vlReject = null; vlSel.delete(key);
+  if (quiet) return item;
+  toast(ok ? `Aprobaste el pago de ${item.who} por ${money(item.usd)}.` : `Rechazaste el pago de ${item.who}. Le avisaremos el motivo.`);
+  renderValidar();
+  return item;
+}
+// Comprobantes: se suben a Storage en la carpeta de la persona; devuelve la ruta al instante
+function sbUploadReceipt(file, kind) {
+  if (!sbShared() || !file) return null;
+  const ext = (file.name.split(".").pop() || "pdf").toLowerCase().replace(/[^a-z]/g, "").slice(0, 4) || "pdf";
+  const path = `${account.sb}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+  sb.storage.from("comprobantes").upload(path, file, { contentType: file.type || undefined, upsert: false }).then(({ error }) => {
+    if (error) { console.warn("Nexo: comprobante sin subir", error.message); toast("No pudimos subir tu comprobante. Si Caja te lo pide, envíalo por soporte."); }
+  });
+  return path;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-vl-receipt]"); if (!b || !sb) return;
+  const w = window.open("", "_blank");
+  sb.storage.from("comprobantes").createSignedUrl(b.dataset.vlReceipt, 300).then(({ data, error }) => {
+    if (error || !data) { if (w) w.close(); toast("El comprobante no está disponible (puede que no se haya subido)."); return; }
+    if (w) w.location = data.signedUrl; else location.href = data.signedUrl;
+  });
+});
 sbSharedInit();
 // Pantalla "Datos reales" del dueño
 const SV_LBL = { comida: ["Comida", "utensils"], estacionamiento: ["Estacionamiento", "car-front"], materias: ["Materias", "graduation-cap"], canchas: ["Canchas", "dribbble"], recarga: ["Recargas de wallet", "wallet"] };

@@ -3,6 +3,10 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 13 nov 2026
+- Etapa 3 Supabase: wallet, facturas y recargas reales.
+- Comprobantes de pago guardados en Supabase Storage.
+- Caja valida en vivo; dueño también entra.
+- Reembolsos llegan a la Actividad del estudiante.
 - Registro de cambios creado (este archivo).
 
 ## 12 nov 2026
