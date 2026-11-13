@@ -5285,7 +5285,21 @@ const SV_LBL = { comida: ["Comida", "utensils"], estacionamiento: ["Estacionamie
 const MT_LBL = { tarjeta: "Tarjeta", transferencia: "Transferencia", "pago-movil": "Pago Móvil", wallet: "Wallet Nexo", otro: "Otro" };
 const ROLE_OPTS = [["estudiante", "Estudiante"], ["local", "Comercio"], ["mod", "Moderador"], ["admin", "Administrador"], ["creator", "Creador"]];
 const fullDT = t => { const d = new Date(t); return `${d.getDate()} ${MES_CORTO[d.getMonth()]} ${d.getFullYear()}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
-let dnBusy = false, dnUsers = [], dnFilter = "";
+let dnBusy = false, dnUsers = [], dnFilter = "", dnTable = false, dnLast = null;
+const SV_TONE = { comida: "t-food", estacionamiento: "t-car", materias: "t-uni", canchas: "t-court", recarga: "t-brand" };
+// Gráfico de barras horizontales: confirmado (verde) + en revisión (ámbar), con leyenda, valores y detalle al pasar
+function dnChart(by) {
+  const rows = Object.keys(SV_LBL).map(k => { const x = by[k] || { n: 0, usd: 0, rev: 0, revUsd: 0 }; return { k, n: +x.n, usd: +x.usd, rev: +x.rev, revUsd: +x.revUsd }; })
+    .sort((a, b) => (b.usd + b.revUsd) - (a.usd + a.revUsd));
+  const max = Math.max(1, ...rows.map(r => r.usd + r.revUsd));
+  if (!rows.some(r => r.usd + r.revUsd)) return emptyState("chart-no-axes-column", "Aún no hay dinero que mostrar", "Cuando alguien pague con su cuenta, verás aquí cuánto mueve cada servicio.");
+  return `<div class="dn-legend"><span><i class="sw ok"></i>Confirmado</span><span><i class="sw rev"></i>En revisión</span></div>
+    <div class="dn-bars" role="list">${rows.map(r => `<div class="dn-bar" role="listitem" tabindex="0" aria-label="${SV_LBL[r.k][0]}: ${money(r.usd)} confirmados en ${r.n} pagos${r.rev ? `, ${money(r.revUsd)} en revisión` : ""}">
+      <span class="dn-lbl"><i data-lucide="${SV_LBL[r.k][1]}"></i>${SV_LBL[r.k][0]}</span>
+      <span class="dn-track">${r.usd ? `<i class="seg ok" style="width:${r.usd / max * 100}%"></i>` : ""}${r.revUsd ? `<i class="seg rev" style="width:${r.revUsd / max * 100}%"></i>` : ""}</span>
+      <span class="dn-val"><b>${money(r.usd)}</b>${r.revUsd ? `<span class="tiny">+ ${money(r.revUsd)}</span>` : ""}</span>
+      <span class="dn-tip" role="tooltip"><b>${SV_LBL[r.k][0]}</b><span>${r.n} ${r.n === 1 ? "pago confirmado" : "pagos confirmados"} · ${money(r.usd)}</span><span>${r.rev ? `${r.rev} en revisión · ${money(r.revUsd)}` : "Nada en revisión"}</span></span></div>`).join("")}</div>`;
+}
 async function renderDueno() {
   const body = document.getElementById("dnBody"), acts = document.getElementById("dnActs"); if (!body) return;
   if (!sb || !account || !account.sb) { acts.innerHTML = ""; body.innerHTML = `<div class="notice warn"><i data-lucide="globe"></i><p>Los datos reales solo se ven en la app publicada: abre <strong>https://nexouni.netlify.app</strong> y entra con tu cuenta de dueño.</p></div>`; icons(); return; }
@@ -5303,12 +5317,15 @@ async function renderDueno() {
   const k = (lbl, val, sub, ic) => `<div class="card kpi static sk"><div class="row start" style="gap:10px">${skIc(ic)}<span class="small">${lbl}</span></div><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
   const svRows = Object.keys(SV_LBL).map(key => { const x = d.byService[key] || { n: 0, usd: 0, rev: 0, revUsd: 0 };
     return `<div class="tk-row dn-row"><span class="row start" style="gap:10px"><span class="ico"><i data-lucide="${SV_LBL[key][1]}"></i></span><b style="font-size:13px">${SV_LBL[key][0]}</b></span><span><span class="tk-lbl">Confirmados</span>${x.n} · <b>${money(+x.usd)}</b></span><span><span class="tk-lbl">En revisión</span>${x.rev ? `${x.rev} · ${money(+x.revUsd)}` : "—"}</span></div>`; }).join("");
-  const recent = d.recent.length ? d.recent.map(e => `<div class="tk-row dn-row"><span class="tiny">${fullDT(e.t)}<br>${esc(e.who || "")}</span><span class="row start" style="gap:8px"><i data-lucide="${SV_LBL[e.service][1]}" style="color:var(--brand);width:16px"></i>${SV_LBL[e.service][0]} · ${MT_LBL[e.method] || "Otro"}</span><span class="row start" style="gap:8px;justify-content:space-between"><span class="pill ${e.status === "En revisión" ? "warn" : "ok"}">${e.status}</span><b>${money(+e.amount)}</b></span></div>`).join("")
+  const recent = d.recent.length ? `<ol class="dn-tl">${d.recent.map(e => `<li class="${SV_TONE[e.service] || "t-brand"}"><span class="dn-dot"><i data-lucide="${SV_LBL[e.service][1]}"></i></span>
+      <div class="grow" style="min-width:0"><b style="font-size:13px">${SV_LBL[e.service][0]} · ${MT_LBL[e.method] || "Otro"}</b><span class="tiny" style="display:block">${esc(e.who || "Alguien")} · ${fullDT(e.t)}</span></div>
+      <div class="dn-amt"><b>${money(+e.amount)}</b><span class="pill ${e.status === "En revisión" ? "warn" : e.status === "Rechazado" ? "bad" : "ok"}">${e.status}</span></div></li>`).join("")}</ol>`
     : emptyState("receipt-text", "Aún no hay pagos reales", "Cuando alguien pague en nexouni.netlify.app con su cuenta, aparecerá aquí al instante.");
   const conf = d.users.confirmed;
   body.innerHTML = `<div class="kpis dn-kpis">${k("Usuarios registrados", d.users.total, `${conf} con correo confirmado · ${d.users.today} hoy · ${d.users.last7} en 7 días`, "users")}${k("Pagos confirmados", d.payments.count, `${money(+d.payments.usd)} en total · ${d.payments.payers} ${d.payments.payers === 1 ? "persona pagó" : "personas pagaron"}`, "badge-check")}${k("Pagos en revisión", d.payments.review, d.payments.review ? `${money(+d.payments.reviewUsd)} esperando validación` : "Nada pendiente", "hourglass")}${d.orders ? k("Pedidos de comida", d.orders.total, `${d.orders.active} en curso · ${d.orders.delivered} entregados${d.orders.cancelled ? ` · ${d.orders.cancelled} cancelados` : ""}`, "utensils") : ""}${d.tickets ? k("Tickets de soporte", d.tickets.open, `abiertos · ${d.tickets.unassigned} sin asignar · ${d.tickets.resolved} resueltos`, "message-circle") : ""}${x4 ? k("Reservas de canchas", x4.courts.total, `${x4.courts.upcoming} por jugar`, "dribbble") + k("Estacionamiento", x4.parking.plans, `planes vigentes · ${x4.parking.vehicles} ${x4.parking.vehicles === 1 ? "vehículo registrado" : "vehículos registrados"}`, "car-front") + k("Saldo en wallets", money(+x4.wallet), "suma de todos los wallets", "wallet") : ""}</div>
-    <div class="card" style="padding:0;gap:0"><div class="tk-row tk-head dn-row"><span>Servicio</span><span>Confirmados</span><span>En revisión</span></div>${svRows}</div>
-    <div class="card" style="padding:0;gap:0"><div class="row" style="padding:16px 18px 8px"><h2 class="sec">Últimos pagos reales</h2><span class="tiny">Actualizado ${fullDT(d.now)}</span></div><div class="tk-row tk-head dn-row"><span>Fecha y persona</span><span>Servicio y método</span><span>Estado y monto</span></div>${recent}</div>
+    <div class="card dn-chart"><div class="row" style="flex-wrap:wrap;gap:8px"><div><h2 class="sec">Dinero por servicio</h2><p class="small">Pagos reales en dólares, desde la primera cuenta.</p></div><button class="link b" type="button" data-dn-view>${dnTable ? "Ver gráfico" : "Ver tabla"}</button></div>
+      ${dnTable ? `<div style="margin:0 -18px -18px"><div class="tk-row tk-head dn-row"><span>Servicio</span><span>Confirmados</span><span>En revisión</span></div>${svRows}</div>` : dnChart(d.byService)}</div>
+    <div class="card"><div class="row"><h2 class="sec">Últimos pagos reales</h2><span class="tiny">Actualizado ${fullDT(d.now)}</span></div>${recent}</div>
     <div class="card" style="gap:12px"><div class="row" style="flex-wrap:wrap;gap:10px"><div><h2 class="sec">Usuarios</h2><p class="small">Cambia el rol de cada cuenta o desactívala. Los cambios se aplican la próxima vez que esa persona abra la app.</p></div>
       <div class="input" style="max-width:280px"><i data-lucide="search"></i><input id="dnSearch" type="search" placeholder="Buscar por nombre, correo o carnet" value="${esc(dnFilter)}" aria-label="Buscar usuarios"></div></div>
       <div id="dnUsers"></div></div>
@@ -5319,8 +5336,8 @@ async function renderDueno() {
 function renderDnUsers() {
   const box = document.getElementById("dnUsers"); if (!box) return;
   const f = normTxt(dnFilter), list = dnUsers.filter(u => !f || normTxt(`${u.full_name} ${u.email} ${u.carnet || ""}`).includes(f));
-  box.innerHTML = list.length ? list.map(u => `<div class="dn-user${u.disabled ? " off" : ""}"><span class="avatar sm">${esc(initialsOf(u.full_name || u.email))}</span>
-      <div class="grow" style="min-width:0"><b style="font-size:13px">${esc(u.full_name || "Sin nombre")}${u.role === "owner" ? ' <span class="pill ok">Dueño</span>' : ""}</b><span class="tiny" style="display:block;overflow:hidden;text-overflow:ellipsis">${esc(u.email)}${u.carnet ? ` · ${esc(u.carnet)}` : ""} · desde ${fmtD(new Date(u.created_at))}</span></div>
+  box.innerHTML = list.length ? list.map(u => `<div class="dn-user${u.disabled ? " off" : ""}"><span class="avatar sm role-${u.role}">${esc(initialsOf(u.full_name || u.email))}</span>
+      <div class="grow" style="min-width:0"><b style="font-size:13px">${esc(u.full_name || "Sin nombre")} <span class="role-tag role-${u.role}">${u.role === "owner" ? "Dueño" : (ROLE_OPTS.find(r => r[0] === u.role) || [0, "Estudiante"])[1]}${u.disabled ? " · desactivada" : ""}</span></b><span class="tiny" style="display:block;overflow:hidden;text-overflow:ellipsis">${esc(u.email)}${u.carnet ? ` · ${esc(u.carnet)}` : ""} · desde ${fmtD(new Date(u.created_at))}</span></div>
       ${u.role === "owner" ? "" : `<div class="row start" style="gap:6px;flex-wrap:wrap"><div class="input sel sm"><select data-dn-role="${u.id}" aria-label="Rol de ${esc(u.full_name)}">${ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? " selected" : ""}>${l}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div>
         ${u.role === "local" ? `<div class="input sel sm"><select data-dn-local="${u.id}" aria-label="Local de ${esc(u.full_name)}">${LOCALES.map(l => `<option value="${l.id}"${u.local_id === l.id ? " selected" : ""}>${esc(l.name)}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div>` : ""}
         <button class="btn ghost sm" type="button" data-dn-toggle="${u.id}">${u.disabled ? "Reactivar" : "Desactivar"}</button></div>`}</div>`).join("")
@@ -5343,6 +5360,7 @@ document.addEventListener("change", e => {
 document.addEventListener("input", e => { if (e.target.id === "dnSearch") { dnFilter = e.target.value; renderDnUsers(); } });
 document.addEventListener("click", e => {
   if (e.target.closest("[data-dn-refresh]")) { renderDueno(); return; }
+  if (e.target.closest("[data-dn-view]")) { dnTable = !dnTable; renderDueno(); return; }
   const t = e.target.closest("[data-dn-toggle]"); if (t) { const u = dnUsers.find(x => x.id === t.dataset.dnToggle); if (!u) return;
     if (u.disabled) return dnSetRole(u.id, u.role, u.local_id, false);
     askConfirm({ icon: "user-x", title: `¿Desactivar a ${u.full_name}?`, text: "Podrá seguir entrando, pero como estudiante y sin acceso de gestión, hasta que lo reactives.", ok: "Desactivar", danger: true, onOk: () => dnSetRole(u.id, u.role, u.local_id, true) }); }

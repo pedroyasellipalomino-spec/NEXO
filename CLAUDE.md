@@ -104,6 +104,8 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 
 **Gestión con identidad.** El marco envuelve el encabezado (primer bloque con `.h1`) de cada pantalla `data-staff` en `.staff-hero`: degradado como Inicio con orbes y saludo (`[data-staff-greet]`, `staffGreet()`: día, fecha y "Buenos días, Nombre"); tono por rol en `data-tone` (admin verde Nexo, mod violeta, creador azul, dueño verde oscuro, comercio naranja). Indicadores `.kpi.sk` con `skIc(ícono)` (mosaico con degradado) y un tono distinto por posición. Color por servicio: `SVC_TONE`, `svcTone(servicio)` → `t-food/t-car/t-uni/t-court` (variable `--tone`, mismos colores que `.svt`) y `svcChip(servicio)`; se usa en la tabla de Gestión, la bandeja de Moderación (franja izquierda), Caja (recarga azul, factura violeta) y las barras de "Compras por servicio".
 
+**Panel del dueño visual.** `dnChart(byService)`: barras horizontales por servicio (ordenadas por monto) con dos tramos, confirmado (`--c-ok` #0e8c7b, oscuro #1f9c88) y en revisión (`--c-rev` #e0a106, oscuro #b98010; ambos pares validados con la guía de visualización), leyenda, valor al final y detalle al pasar o enfocar (`.dn-tip`); "Ver tabla" (`[data-dn-view]`, `dnTable`) muestra la tabla de antes. Últimos pagos como línea de tiempo (`.dn-tl`, ícono con el tono del servicio: `SV_TONE`). Usuarios con avatar y etiqueta de color por rol (`.role-<rol>`). Indicadores en 4 columnas en pantallas grandes y 2 en móvil (`.dn-kpis`).
+
 ## Cómo trabajar con el usuario
 
 - Publicación automática: cada cambio terminado y con la prueba de humo en verde se publica de una vez en Netlify (`npm run deploy`) y se le da al usuario el enlace https://nexouni.netlify.app. Si la prueba falla, no se publica.

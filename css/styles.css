@@ -1318,3 +1318,49 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .mix[class*="t-"] .track i{background:var(--tone)}
 .mix[class*="t-"] .row b{color:var(--tone)}
 .mix .svc-chip{width:28px;height:28px;border-radius:9px}.mix .svc-chip svg{width:15px;height:15px}
+
+/* ===================== Panel del dueño ===================== */
+.dn-chart{--c-ok:#0e8c7b;--c-rev:#e0a106}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .dn-chart{--c-ok:#1f9c88;--c-rev:#b98010}}
+:root[data-theme="dark"] .dn-chart{--c-ok:#1f9c88;--c-rev:#b98010}
+.dn-legend{display:flex;gap:16px;font-size:12px;color:var(--muted)}
+.dn-legend span{display:inline-flex;align-items:center;gap:6px}
+.dn-legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.sw.ok,.seg.ok{background:var(--c-ok)}.sw.rev,.seg.rev{background:var(--c-rev)}
+.dn-bars{display:flex;flex-direction:column;gap:4px}
+.dn-bar{position:relative;display:grid;grid-template-columns:180px 1fr 110px;align-items:center;gap:14px;padding:8px 10px;margin:0 -10px;border-radius:12px;outline:none;transition:background .15s}
+.dn-bar:hover,.dn-bar:focus-visible{background:var(--bg)}
+.dn-bar:focus-visible{box-shadow:0 0 0 2px var(--brand)}
+.dn-lbl{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink)}
+.dn-lbl svg{width:16px;height:16px;color:var(--muted)}
+.dn-track{display:flex;gap:2px;height:14px;align-items:stretch}
+.seg{display:block;min-width:4px;border-radius:2px}
+.seg:last-child{border-radius:2px 4px 4px 2px}
+.dn-val{display:flex;flex-direction:column;align-items:flex-end;font-size:13px;color:var(--ink)}
+.dn-tip{position:absolute;left:190px;bottom:calc(100% - 4px);z-index:5;display:none;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:var(--ink);color:var(--surface);font-size:12px;box-shadow:0 12px 28px -12px rgba(0,0,0,.45);pointer-events:none;white-space:nowrap}
+.dn-tip b{font-size:13px}
+.dn-bar:hover .dn-tip,.dn-bar:focus-visible .dn-tip{display:flex}
+@media (max-width:699px){.dn-bar{grid-template-columns:1fr auto;row-gap:6px}.dn-track{grid-column:1/-1;grid-row:2}.dn-tip{left:10px}}
+/* Últimos pagos como línea de tiempo */
+.dn-tl{list-style:none;margin:0;padding:0;position:relative}
+.dn-tl::before{content:"";position:absolute;left:17px;top:18px;bottom:18px;width:2px;background:var(--line)}
+.dn-tl li{position:relative;display:flex;align-items:center;gap:12px;padding:10px 0}
+.dn-dot{position:relative;z-index:1;flex:none;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:#fff;background:var(--tone,#0e8c7b);box-shadow:0 0 0 4px var(--surface)}
+.dn-dot svg{width:17px;height:17px}
+.dn-amt{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.dn-amt b{font-size:14px}
+/* Usuarios con color por rol */
+.avatar.role-owner{background:linear-gradient(145deg,#1b8f6f,#0c4a3c)}
+.avatar.role-admin{background:linear-gradient(145deg,#2fb39e,#0b5f56)}
+.avatar.role-mod{background:linear-gradient(145deg,#8677ee,#4434a8)}
+.avatar.role-creator{background:linear-gradient(145deg,#5aa2ec,#1d58a8)}
+.avatar.role-local{background:linear-gradient(145deg,#f09a63,#b8501f)}
+.avatar.role-estudiante{background:linear-gradient(145deg,#7f9497,#4c6266)}
+.role-tag{display:inline-block;margin-left:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;vertical-align:1px;background:var(--chip);color:var(--muted)}
+.role-tag.role-owner{background:#e3f4ee;color:#0c5a47}.role-tag.role-admin{background:#e2f5f1;color:#0b5f56}.role-tag.role-mod{background:#ece9fc;color:#4434a8}
+.role-tag.role-creator{background:#e3eefb;color:#1d58a8}.role-tag.role-local{background:#fdeae1;color:#9a4315}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .role-tag:not(.role-estudiante){background:color-mix(in srgb,currentColor 18%,var(--surface));filter:brightness(1.6)}}
+:root[data-theme="dark"] .role-tag:not(.role-estudiante){background:color-mix(in srgb,currentColor 18%,var(--surface));filter:brightness(1.6)}
+.dn-tl .grow{flex:1}
+@media (min-width:1200px){.dn-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+@media (max-width:699px){.dn-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}.dn-kpis .kpi .small{font-size:12px}}
