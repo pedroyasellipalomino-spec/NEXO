@@ -446,7 +446,7 @@ const plusDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() +
 const PLAN_DESC = { dia: "Un acceso · 24 horas", semanal: "Accesos ilimitados · 7 días", mensual: "Accesos ilimitados · 30 días", bimestral: "Accesos ilimitados · 60 días", trimestral: "Accesos ilimitados · 90 días" };
 let plan = isDemo ? { key: "mensual", name: "Mensual", price: 28, days: 30, start: "2026-11-02", end: "2026-12-01" } : null;
 try { const sp = localStorage.getItem(K("nexo-plan")); if (sp !== null) plan = JSON.parse(sp); } catch (err) {}
-const savePlan = () => { try { localStorage.setItem(K("nexo-plan"), JSON.stringify(plan)); } catch (err) {} };
+const savePlan = () => { try { localStorage.setItem(K("nexo-plan"), JSON.stringify(plan)); } catch (err) {} try { sbSaveState(); } catch (err) {} };
 const todayNoon = () => { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate(), 12); };
 const planActive = () => !!plan && dOf(plan.end) >= todayNoon();
 let pendingPlan = null;
@@ -507,15 +507,19 @@ function courtArt(id) {
 }
 
 const SPORTS = {"futbol": {"label": "Fútbol", "court": "Cancha de fútbol 7", "desc": "Césped sintético · Hasta 14 personas · Iluminación", "price": 20, "busy": ["17:00", "19:00"], "icon": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"sport-svg\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7.5l3.2 2.3-1.2 3.7h-4l-1.2-3.7z\"/><path d=\"M12 7.5V3.2M15.2 9.8l4-1.4M14 13.5l2.5 3.5M10 13.5l-2.5 3.5M8.8 9.8l-4-1.4\"/></svg>"}, "beisbol": {"label": "Béisbol", "court": "Campo de béisbol", "desc": "Tierra y grama · Hasta 18 personas · Dugouts", "price": 30, "busy": ["16:00", "20:00"], "icon": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"sport-svg\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M7.5 4.3c2 2.2 2.6 5.4 1.6 8.4-.6 1.9-1.8 3.5-3.4 4.7\"/><path d=\"M16.5 19.7c-2-2.2-2.6-5.4-1.6-8.4.6-1.9 1.8-3.5 3.4-4.7\"/></svg>"}, "tenis": {"label": "Tenis", "court": "Cancha de tenis 02", "desc": "Superficie dura · Hasta 4 personas · Iluminación", "price": 12, "busy": ["17:00", "20:00"], "icon": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"sport-svg\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M5.6 5.6c3.5 3.5 3.5 9.3 0 12.8\"/><path d=\"M18.4 5.6c-3.5 3.5-3.5 9.3 0 12.8\"/></svg>"}, "padel": {"label": "Pádel", "court": "Cancha de pádel 01", "desc": "Cristal y césped · Hasta 4 personas · Iluminación", "price": 14, "busy": ["18:00", "21:00"], "icon": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"sport-svg\" aria-hidden=\"true\"><path d=\"M9.5 3.5c3.6 0 6.5 2.6 6.5 6 0 2.3-1.4 4.2-3.4 5.2L11 19.5\"/><path d=\"M9.5 3.5C5.9 3.5 3 6.1 3 9.5c0 2.3 1.4 4.2 3.4 5.2l1.6 4.8\"/><path d=\"M8 19.5h3\"/><circle cx=\"19\" cy=\"17\" r=\"2\"/></svg>"}, "baloncesto": {"label": "Baloncesto", "court": "Cancha de baloncesto", "desc": "Techada · Hasta 10 personas · Tableros reglamentarios", "price": 10, "busy": ["19:00"], "icon": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"sport-svg\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M3 12h18M12 3v18\"/><path d=\"M5.6 5.6c2.3 2.3 2.3 10.5 0 12.8M18.4 5.6c-2.3 2.3-2.3 10.5 0 12.8\"/></svg>"}, "voleibol": {"label": "Voleibol", "court": "Cancha de voleibol", "desc": "Techada · Hasta 12 personas · Red reglamentaria", "price": 10, "busy": ["16:00", "17:00"], "icon": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"sport-svg\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 12c0-4 1.5-7 4-8.2\"/><path d=\"M12 12c-3.5 2-6.8 2.2-8.9.9\"/><path d=\"M12 12c3.5 2 5.4 4.8 5.3 7.3\"/></svg>"}};
-const res = { sport: "tenis", day: "12", dname: "Jue", slot: "18:00" };
+const res = { sport: "tenis", day: "12", dname: "Jue", slot: "18:00", mon: 10, yr: 2026 };
+const MES_LARGO = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const resMes = () => MES_LARGO[res.mon].slice(0, 3);
 const pad2 = n => String(n).padStart(2, "0");
 const DAYS_LONG = { Lun: "Lunes", Mar: "Martes", "Mié": "Miércoles", Jue: "Jueves", Vie: "Viernes", "Sáb": "Sábado", Dom: "Domingo" };
 function renderReserva() {
   const sp = SPORTS[res.sport];
   document.querySelectorAll("#sportPicker .sport").forEach(b => b.classList.toggle("on", b.dataset.sport === res.sport));
   document.querySelectorAll("#dayPicker .day").forEach(b => b.classList.toggle("on", b.dataset.day === res.day));
-  const busy = sp.busy;
-  if (busy.includes(res.slot)) res.slot = ["16:00","17:00","18:00","19:00","20:00","21:00"].find(t => !busy.includes(t));
+  const busy = typeof sbCourtBusyFor === "function" && sbShared() ? sbCourtBusyFor(res.sport, res.iso) : sp.busy;
+  if (busy.includes(res.slot)) res.slot = ["16:00","17:00","18:00","19:00","20:00","21:00"].find(t => !busy.includes(t)) || res.slot;
+  const full = busy.includes(res.slot);
+  document.querySelectorAll("[data-court-pay], [data-r-cta]").forEach(b => { b.disabled = full; });
   document.querySelectorAll("#slotPicker .slot").forEach(b => {
     const t = b.dataset.slot, isBusy = busy.includes(t), on = t === res.slot;
     b.classList.toggle("busy", isBusy); b.disabled = isBusy; b.classList.toggle("on", on);
@@ -525,8 +529,8 @@ function renderReserva() {
   const fee = Math.round(sp.price * 5) / 100, total = sp.price + fee;
   const v = {
     label: sp.label, court: sp.court, desc: sp.desc, pricehour: money(sp.price),
-    date: `${res.day} nov 2026`, datelong: `${res.dname}, ${res.day} nov 2026`,
-    dayhint: `${DAYS_LONG[res.dname]}, ${res.day} de noviembre · Selecciona una hora`,
+    date: `${res.day} ${resMes()} ${res.yr}`, datelong: `${res.dname}, ${res.day} ${resMes()} ${res.yr}`,
+    dayhint: full ? `${DAYS_LONG[res.dname]}, ${res.day} de ${MES_LARGO[res.mon]} · No quedan horas libres` : `${DAYS_LONG[res.dname]}, ${res.day} de ${MES_LARGO[res.mon]} · Selecciona una hora`,
     time: `${res.slot} – ${end}`, timeh: `${res.slot} – ${end} · 1 h`,
     rent: money(sp.price), fee: money(fee), total: money(total)
   };
@@ -537,7 +541,7 @@ function renderReserva() {
 }
 document.querySelectorAll("#sportPicker .sport").forEach(b => { const svg = b.querySelector("svg"); if (svg && BALL_ART[b.dataset.sport]) svg.outerHTML = ballArt(b.dataset.sport); });
 document.getElementById("sportPicker").addEventListener("click", e => { const b = e.target.closest(".sport"); if (b) { res.sport = b.dataset.sport; renderReserva(); } });
-document.getElementById("dayPicker").addEventListener("click", e => { const b = e.target.closest(".day"); if (b) { res.day = b.dataset.day; res.dname = b.dataset.dname; renderReserva(); } });
+document.getElementById("dayPicker").addEventListener("click", e => { const b = e.target.closest(".day"); if (b && !b.disabled) { res.day = b.dataset.day; res.dname = b.dataset.dname; if (b.dataset.iso) { res.iso = b.dataset.iso; res.mon = +b.dataset.iso.slice(5, 7) - 1; res.yr = +b.dataset.iso.slice(0, 4); } renderReserva(); } });
 document.getElementById("slotPicker").addEventListener("click", e => { const b = e.target.closest(".slot"); if (b && !b.disabled) { res.slot = b.dataset.slot; renderReserva(); } });
 renderReserva();
 /* ---------- Facturas mensuales del trimestre ---------- */
@@ -1337,7 +1341,7 @@ const CAR_MODELS = {"Toyota": ["Corolla", "Yaris", "Hilux", "Fortuner", "4Runner
 const PLATE_RE = /^[A-Z]{2}\d{3}[A-Z]{2}$|^[A-Z]{3}\d{2}[A-Z]$|^[A-Z]\d{2}[A-Z]{3}$/;
 let vehicle = isDemo ? { brand: "Toyota", model: "Yaris", year: "2019", plate: "AB123CD" } : null;
 try { const sv = localStorage.getItem(K("nexo-vehicle")); if (sv !== null) vehicle = JSON.parse(sv); } catch (err) {}
-const saveVehicle = () => { try { localStorage.setItem(K("nexo-vehicle"), JSON.stringify(vehicle)); } catch (err) {} };
+const saveVehicle = () => { try { localStorage.setItem(K("nexo-vehicle"), JSON.stringify(vehicle)); } catch (err) {} try { sbSaveState(); } catch (err) {} };
 function renderVehicle() {
   const v = vehicle;
   setTimeout(() => { const s = document.querySelector("#planList .opt.plan.on"); if (s) try { updatePlan(s); } catch (err) {} }, 0);
@@ -4970,7 +4974,7 @@ function trackMove(title, detail, amount, pill, extra) {
 document.addEventListener("click", e => {
   if (!e.target.closest("[data-court-pay]")) return;
   const sp = SPORTS[res.sport], fee = Math.round(sp.price * 5) / 100, end = pad2(parseInt(res.slot) + 1) + ":00";
-  addMovement(sp.court, `Canchas · ${res.dname} ${res.day} nov · ${res.slot}–${end}`, "−" + money(sp.price + fee), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
+  addMovement(sp.court, `Canchas · ${res.dname} ${res.day} ${resMes()} · ${res.slot}–${end}`, "−" + money(sp.price + fee), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
 });
 // Mi cuenta: los cambios de una cuenta real se guardan también en Supabase
 function sbSaveProfile(changes) {
@@ -5043,6 +5047,7 @@ async function sbSharedInit() {
   try { await sbLoadShared(); } catch (err) { console.warn("Nexo: no se cargaron los datos compartidos", err); }
   try { await sbStateInit(); } catch (err) { console.warn("Nexo: no se cargó el wallet", err); }
   if (sbIsCaja()) try { await sbLoadCaja(); } catch (err) {}
+  try { await sbCourtsInit(); } catch (err) { console.warn("Nexo: no se cargaron las canchas", err); }
   try { liveSeen = liveKeys(); } catch (err) {}
   sbRefreshScreens();
   sb.channel("nexo-vivo")
@@ -5068,6 +5073,7 @@ async function sbSharedInit() {
       sbLive();
       sbRefreshScreens();
     })
+    .on("postgres_changes", { event: "*", schema: "public", table: "court_bookings" }, () => { sbLoadCourts(); })
     .on("postgres_changes", { event: "*", schema: "public", table: "student_state" }, ({ new: row }) => {
       if (!row || !row.user_id) return;
       if (row.user_id === account.sb && sbStateReady && !sbPending("state") && !sbPending("wallet")) sbApplyState(row);
@@ -5087,7 +5093,7 @@ async function sbSharedInit() {
 let sbStateReady = false, sbStateDirty = false, sbWalletKnown = 0, sbStateTimer = null, sbCajaRows = [];
 const sbIsCaja = () => sbShared() && ["admin", "creator", "owner"].includes(roleOf(account));
 const r2 = n => Math.round(n * 100) / 100;
-function sbStateArgs() { return { p_pagos: pagos, p_pendrec: pendRec, p_moves: moves, p_materias: { trim: TRIM_ID, list: MATERIAS } }; }
+function sbStateArgs() { return { p_pagos: pagos, p_pendrec: pendRec, p_moves: moves, p_materias: { trim: TRIM_ID, list: MATERIAS }, p_park: { plan: plan || null, vehicle: vehicle || null } }; }
 function sbSaveState() {
   if (!sbShared()) return;
   if (!sbStateReady) { sbStateDirty = true; return; }
@@ -5118,13 +5124,17 @@ function sbApplyState(row, fromSave) {
   pagos = { ...JSON.parse(JSON.stringify(PAGOS0)), ...(row.pagos || {}) };
   pendRec = row.pendrec || []; moves = row.moves || [];
   if (row.materias && row.materias.trim === TRIM_ID && Array.isArray(row.materias.list)) MATERIAS = row.materias.list;
+  const parkSame = JSON.stringify([plan || null, vehicle || null]) === JSON.stringify([row.plan || null, row.vehicle || null]);
+  if ("plan" in row) { plan = row.plan || null; vehicle = row.vehicle || null; }
+  try { localStorage.setItem(K("nexo-plan"), JSON.stringify(plan)); localStorage.setItem(K("nexo-vehicle"), JSON.stringify(vehicle)); } catch (err) {}
   try {
     localStorage.setItem(K("nexo-pagos"), JSON.stringify(pagos)); localStorage.setItem(K("nexo-pendrec"), JSON.stringify(pendRec));
     localStorage.setItem(K("nexo-moves"), JSON.stringify(moves)); localStorage.setItem(K("nexo-wallet"), String(WALLET));
     localStorage.setItem(K("nexo-materias"), JSON.stringify({ trim: TRIM_ID, list: MATERIAS }));
   } catch (err) {}
   try { renderWallet(); } catch (err) {}
-  if (same && fromSave) return;
+  if (same && parkSame && fromSave) return;
+  [renderPlanState, renderVehicle].forEach(f => { try { f(); } catch (err) {} });
   try { const card = document.getElementById("mvCount").closest(".card"); card.querySelectorAll(".move").forEach(el => el.remove()); moves.forEach(drawMovement); refreshActivity(); } catch (err) {}
   [renderDebt, renderRecarga, renderMatList, renderNotifs, renderHome].forEach(f => { try { f(); } catch (err) {} });
   try { if (current === "pedido") renderPedido(); } catch (err) {}
@@ -5133,6 +5143,7 @@ async function sbStateInit() {
   const { data, error } = await sb.from("student_state").select("*").eq("user_id", account.sb).maybeSingle();
   if (error) { console.warn("Nexo: no se cargó tu estado", error.message); return; }
   const localWallet = WALLET;
+  if (data && data.plan == null && data.vehicle == null && (plan || vehicle)) sbStateDirty = true; // plan o vehículo de antes de la etapa 4
   if (!data || sbStateDirty) {
     // primera vez con esta cuenta (o cambios hechos mientras cargaba): se sube lo de este navegador y el servidor mezcla
     const r = await sb.rpc("save_my_state", sbStateArgs());
@@ -5197,6 +5208,50 @@ document.addEventListener("click", e => {
     if (w) w.location = data.signedUrl; else location.href = data.signedUrl;
   });
 });
+/* Etapa 4 · canchas compartidas (court_bookings: una reserva activa por cancha, día y hora; book_court valida y evita
+   choques) y estacionamiento (plan y vehículo viajan en student_state con save_my_state). Con cuenta real el selector
+   de días muestra hoy y los 6 días siguientes, y las horas ocupadas salen de las reservas reales (sin datos de ejemplo). */
+let sbCourtRows = [];
+const isoDay = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+function sbCourtBusyFor(sport, iso) {
+  try {
+    const now = new Date(), past = iso === isoDay(now) ? ["16:00", "17:00", "18:00", "19:00", "20:00", "21:00"].filter(t => parseInt(t) <= now.getHours()) : [];
+    return [...new Set([...past, ...sbCourtRows.filter(r => r.sport === sport && r.day === iso).map(r => r.slot)])];
+  } catch (err) { return []; }
+}
+function sbCourtDays() {
+  const box = document.getElementById("dayPicker"); if (!box) return;
+  const t = new Date(), days = [...Array(7)].map((_, i) => new Date(t.getFullYear(), t.getMonth(), t.getDate() + i, 12));
+  const DN = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+  if (!days.some(d => isoDay(d) === res.iso)) { const d = days[0]; Object.assign(res, { iso: isoDay(d), day: String(d.getDate()), dname: DN[d.getDay()], mon: d.getMonth(), yr: d.getFullYear() }); }
+  box.innerHTML = days.map(d => `<button class="day${isoDay(d) === res.iso ? " on" : ""}" type="button" data-day="${d.getDate()}" data-dname="${DN[d.getDay()]}" data-iso="${isoDay(d)}"><small>${DN[d.getDay()][0]}</small>${d.getDate()}</button>`).join("");
+}
+async function sbLoadCourts() {
+  const { data, error } = await sb.from("court_bookings").select("sport,day,slot").is("cancelled_at", null).gte("day", isoDay(new Date()));
+  if (!error && data) sbCourtRows = data;
+  if (["reserva", "revision"].includes(current)) renderReserva();
+}
+async function sbCourtsInit() {
+  sbCourtDays(); renderReserva();
+  await sbLoadCourts();
+  // si el día cambia con la app abierta, el selector se rehace
+  setInterval(() => { if (!document.querySelector(`#dayPicker [data-iso="${isoDay(new Date())}"]`)) { sbCourtDays(); renderReserva(); } }, 60000);
+}
+// Pagar la reserva: primero se aparta el horario en el servidor; si alguien se adelantó, se avisa y se vuelve a elegir
+document.addEventListener("click", e => {
+  const btn = e.target.closest("[data-court-pay]"); if (!btn || !sbShared()) return;
+  e.preventDefault(); e.stopPropagation();
+  if (btn.classList.contains("loading")) return;
+  const sp = SPORTS[res.sport], fee = Math.round(sp.price * 5) / 100, end = pad2(parseInt(res.slot) + 1) + ":00", total = r2(sp.price + fee);
+  btn.classList.add("loading"); btn.disabled = true;
+  sb.rpc("book_court", { p_sport: res.sport, p_day: res.iso, p_slot: res.slot, p_price: total }).then(({ error }) => {
+    btn.classList.remove("loading"); btn.disabled = false;
+    if (error) { toast(/reservado|pasó|Máximo|14 días/.test(error.message) ? error.message + "." : "No pudimos reservar. Revisa tu conexión."); sbLoadCourts(); go("reserva"); return; }
+    sbCourtRows.push({ sport: res.sport, day: res.iso, slot: res.slot });
+    addMovement(sp.court, `Canchas · ${res.dname} ${res.day} ${resMes()} · ${res.slot}–${end}`, "−" + money(total), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
+    go("qr");
+  });
+}, true);
 sbSharedInit();
 // Pantalla "Datos reales" del dueño
 const SV_LBL = { comida: ["Comida", "utensils"], estacionamiento: ["Estacionamiento", "car-front"], materias: ["Materias", "graduation-cap"], canchas: ["Canchas", "dribbble"], recarga: ["Recargas de wallet", "wallet"] };
@@ -5211,8 +5266,9 @@ async function renderDueno() {
   acts.innerHTML = `<button class="btn ghost sm" type="button" data-dn-refresh><i data-lucide="refresh-cw"></i>Actualizar</button>`;
   if (!body.querySelector(".dn-kpis")) body.innerHTML = `<p class="small">Cargando datos reales…</p>`;
   icons();
-  const [st, us] = await Promise.all([sb.rpc("owner_stats"), sb.from("profiles").select("id,full_name,email,carnet,role,local_id,disabled,created_at").order("created_at", { ascending: false })]).catch(e => [{ error: e }, {}]);
+  const [st, us, ex] = await Promise.all([sb.rpc("owner_stats"), sb.from("profiles").select("id,full_name,email,carnet,role,local_id,disabled,created_at").order("created_at", { ascending: false }), sb.rpc("owner_extra")]).catch(e => [{ error: e }, {}, {}]);
   dnBusy = false;
+  const x4 = (ex && ex.data) || null;
   if (st.error || !st.data) { body.innerHTML = `<div class="notice warn"><i data-lucide="wifi-off"></i><p>No pudimos cargar los datos (${esc(sbMsg(st.error)[0])}). Toca Actualizar.</p></div>`; icons(); return; }
   const d = st.data; dnUsers = (us && us.data) || [];
   const lg = d.legacy;
@@ -5223,7 +5279,7 @@ async function renderDueno() {
   const recent = d.recent.length ? d.recent.map(e => `<div class="tk-row dn-row"><span class="tiny">${fullDT(e.t)}<br>${esc(e.who || "")}</span><span class="row start" style="gap:8px"><i data-lucide="${SV_LBL[e.service][1]}" style="color:var(--brand);width:16px"></i>${SV_LBL[e.service][0]} · ${MT_LBL[e.method] || "Otro"}</span><span class="row start" style="gap:8px;justify-content:space-between"><span class="pill ${e.status === "En revisión" ? "warn" : "ok"}">${e.status}</span><b>${money(+e.amount)}</b></span></div>`).join("")
     : emptyState("receipt-text", "Aún no hay pagos reales", "Cuando alguien pague en nexouni.netlify.app con su cuenta, aparecerá aquí al instante.");
   const conf = d.users.confirmed;
-  body.innerHTML = `<div class="kpis dn-kpis">${k("Usuarios registrados", d.users.total, `${conf} con correo confirmado · ${d.users.today} hoy · ${d.users.last7} en 7 días`, "users")}${k("Pagos confirmados", d.payments.count, `${money(+d.payments.usd)} en total · ${d.payments.payers} ${d.payments.payers === 1 ? "persona pagó" : "personas pagaron"}`, "badge-check")}${k("Pagos en revisión", d.payments.review, d.payments.review ? `${money(+d.payments.reviewUsd)} esperando validación` : "Nada pendiente", "hourglass")}${d.orders ? k("Pedidos de comida", d.orders.total, `${d.orders.active} en curso · ${d.orders.delivered} entregados${d.orders.cancelled ? ` · ${d.orders.cancelled} cancelados` : ""}`, "utensils") : ""}${d.tickets ? k("Tickets de soporte", d.tickets.open, `abiertos · ${d.tickets.unassigned} sin asignar · ${d.tickets.resolved} resueltos`, "message-circle") : ""}</div>
+  body.innerHTML = `<div class="kpis dn-kpis">${k("Usuarios registrados", d.users.total, `${conf} con correo confirmado · ${d.users.today} hoy · ${d.users.last7} en 7 días`, "users")}${k("Pagos confirmados", d.payments.count, `${money(+d.payments.usd)} en total · ${d.payments.payers} ${d.payments.payers === 1 ? "persona pagó" : "personas pagaron"}`, "badge-check")}${k("Pagos en revisión", d.payments.review, d.payments.review ? `${money(+d.payments.reviewUsd)} esperando validación` : "Nada pendiente", "hourglass")}${d.orders ? k("Pedidos de comida", d.orders.total, `${d.orders.active} en curso · ${d.orders.delivered} entregados${d.orders.cancelled ? ` · ${d.orders.cancelled} cancelados` : ""}`, "utensils") : ""}${d.tickets ? k("Tickets de soporte", d.tickets.open, `abiertos · ${d.tickets.unassigned} sin asignar · ${d.tickets.resolved} resueltos`, "message-circle") : ""}${x4 ? k("Reservas de canchas", x4.courts.total, `${x4.courts.upcoming} por jugar`, "dribbble") + k("Estacionamiento", x4.parking.plans, `planes vigentes · ${x4.parking.vehicles} ${x4.parking.vehicles === 1 ? "vehículo registrado" : "vehículos registrados"}`, "car-front") + k("Saldo en wallets", money(+x4.wallet), "suma de todos los wallets", "wallet") : ""}</div>
     <div class="card" style="padding:0;gap:0"><div class="tk-row tk-head dn-row"><span>Servicio</span><span>Confirmados</span><span>En revisión</span></div>${svRows}</div>
     <div class="card" style="padding:0;gap:0"><div class="row" style="padding:16px 18px 8px"><h2 class="sec">Últimos pagos reales</h2><span class="tiny">Actualizado ${fullDT(d.now)}</span></div><div class="tk-row tk-head dn-row"><span>Fecha y persona</span><span>Servicio y método</span><span>Estado y monto</span></div>${recent}</div>
     <div class="card" style="gap:12px"><div class="row" style="flex-wrap:wrap;gap:10px"><div><h2 class="sec">Usuarios</h2><p class="small">Cambia el rol de cada cuenta o desactívala. Los cambios se aplican la próxima vez que esa persona abra la app.</p></div>

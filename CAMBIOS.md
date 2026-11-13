@@ -3,6 +3,10 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 13 nov 2026
+- Etapa 4 Supabase: reservas de canchas reales.
+- Canchas: nadie reserva la misma hora dos veces.
+- Plan y vehículo guardados en la cuenta.
+- Panel del dueño: canchas, estacionamiento y wallets.
 - Etapa 3 Supabase: wallet, facturas y recargas reales.
 - Comprobantes de pago guardados en Supabase Storage.
 - Caja valida en vivo; dueño también entra.
