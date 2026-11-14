@@ -2,6 +2,9 @@
 
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
+## 14 nov 2026
+- Tasa BCV actualizada a Bs. 911,22.
+
 ## 13 nov 2026
 - Inicio de sesión compacto en el celular.
 - Soporte y moderación como chat con burbujas.

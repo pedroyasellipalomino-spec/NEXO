@@ -446,11 +446,11 @@ try { const w = localStorage.getItem(K("nexo-wallet")); if (w !== null && !isNaN
 const saveWallet = () => { try { localStorage.setItem(K("nexo-wallet"), String(WALLET)); } catch (err) {} try { sbSaveWallet(); } catch (err) {} };
 const money = n => { const [i, d] = Math.abs(n).toFixed(2).split("."); return (n < 0 ? "-" : "") + "$" + i.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + d; };
 /* ---------- Tasa oficial del dólar (BCV) ----------
-   Valor inicial: Dólar BCV del miércoles 11/11/2026 = Bs. 901,62, consultado en alcambio.app (fuente oficial: bcv.org.ve).
+   Valor inicial: Dólar BCV del sábado 14/11/2026 = Bs. 911,22, indicado por el dueño (fuente oficial: bcv.org.ve).
    El creador la actualiza en Configuración (nexo-bcv, global). Todos los equivalentes en bolívares salen de aquí. */
-const BCV0 = { rate: 901.62, date: "2026-11-11", source: "alcambio.app · fuente oficial BCV" };
+const BCV0 = { rate: 911.22, date: "2026-11-14", source: "BCV · indicada por el dueño" };
 let BCV = { ...BCV0 };
-try { const b = JSON.parse(localStorage.getItem("nexo-bcv") || "null"); if (b && b.rate > 0 && b.date) BCV = { ...BCV0, ...b }; } catch (err) {}
+try { const b = JSON.parse(localStorage.getItem("nexo-bcv") || "null"); if (b && b.rate > 0 && b.date && b.date >= BCV0.date) BCV = { ...BCV0, ...b }; } catch (err) {}
 const saveBCV = () => { try { localStorage.setItem("nexo-bcv", JSON.stringify(BCV)); } catch (err) {} };
 const bcvRate = () => BCV.rate;
 const bsAmt = n => "Bs. " + money(n).slice(1);
