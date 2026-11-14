@@ -18,9 +18,12 @@ def call(method, path, data=None, ctype="application/json"):
     h = {"Content-Type": ctype}
     if os.environ.get("NETLIFY_AUTH_TOKEN"):
         h["Authorization"] = "Bearer " + os.environ["NETLIFY_AUTH_TOKEN"]
-    with urllib.request.urlopen(urllib.request.Request(API + path, data=body, headers=h, method=method), timeout=180) as r:
-        t = r.read()
-        return json.loads(t) if t else {}
+    try:
+        with urllib.request.urlopen(urllib.request.Request(API + path, data=body, headers=h, method=method), timeout=180) as r:
+            t = r.read()
+            return json.loads(t) if t else {}
+    except urllib.error.HTTPError as e:
+        raise SystemExit(f"Netlify respondió {e.code} en {method} {path}: {e.read()[:500].decode('utf-8', 'replace')}")
 
 subprocess.run([sys.executable, str(ROOT / "scripts" / "build_pwa.py")], check=True)
 fns = []
