@@ -10,6 +10,7 @@ Es un prototipo: no hay backend. Los datos viven en el navegador (localStorage/s
 - `npm run dev` → sirve la carpeta en http://localhost:3000
 - Un solo archivo para compartir: `npm run build` → `dist/nexo-prototipo.html` (CSS, JS e íconos adentro; `dist/` no se versiona). Ese archivo no es instalable.
 - App instalable (PWA): `npm run build:app` → `dist/nexo-app/` + `dist/nexo-app.zip`, para publicar en un hosting con https (Netlify Drop, GitHub Pages). El script pone la fecha en `VERSION` de `sw.js` para que cada publicación actualice la app instalada.
+- **Publicar en GitHub Pages** (activo desde el 15/11/2026, mientras Netlify no tenga créditos): `python3 scripts/deploy_pages.py` arma la PWA y la sube (forzada) a la rama `gh-pages` de `pedroyasellipalomino-spec/NEXO` → https://pedroyasellipalomino-spec.github.io/NEXO/ (Pages: Settings → Pages → Deploy from a branch → `gh-pages` / root). La rama solo guarda la app construida; el código va en `main`. Supabase tiene esa dirección en `uri_allow_list` (los enlaces de correo usan `location`, así que llevan a donde se registró la persona).
 - Netlify bloquea publicaciones nuevas cuando la cuenta se queda sin créditos (403 "Account credit usage exceeded"); el script lo muestra. Hasta que el usuario agregue créditos o se renueve el período, no se puede publicar ahí.
 - Publicar en Netlify (sitio `nexouni` → https://nexouni.netlify.app, id `fc24f73e-44ed-43df-8f6e-916a33f1422f`): `npm run deploy` (producción) o `npm run deploy:borrador` (vista previa con dirección propia, no toca el sitio real). `scripts/deploy_netlify.py` arma la PWA y sube el .zip a la API de Netlify. En la sesión de Claude Code el token lo pone el proxy (secreto guardado para `api.netlify.com`); fuera, usar `NETLIFY_AUTH_TOKEN`. El dominio `nexouni.netlify.app` no está permitido en la red de la sesión: revisar lo publicado por la API (`/sites/<id>/files`).
 - Prueba de humo: `npm test` (necesita `pip install playwright` y `playwright install chromium`)
@@ -113,7 +114,7 @@ Pantallas: tutorial, login, registro, ayuda, inicio, servicios, comida, local, d
 
 ## Cómo trabajar con el usuario
 
-- Publicación automática: cada cambio terminado y con la prueba de humo en verde se publica de una vez en Netlify (`npm run deploy`) y se le da al usuario el enlace https://nexouni.netlify.app. Si la prueba falla, no se publica.
+- Publicación automática: cada cambio terminado y con la prueba de humo en verde se publica de una vez en GitHub Pages (`python3 scripts/deploy_pages.py`) y se le da al usuario el enlace https://pedroyasellipalomino-spec.github.io/NEXO/. Netlify (https://nexouni.netlify.app) queda con la versión del 13/11 hasta que tenga créditos. Si la prueba falla, no se publica.
 - Respaldo: el código vive en GitHub, `pedroyasellipalomino-spec/NEXO` (rama `main`, la cuenta del usuario; nunca usar otra). Después de cada commit, `git push origin main`.
 - Registro de cambios: cada cambio se anota arriba en `CAMBIOS.md` (fecha, menos de 10 palabras) y se le envía el archivo al usuario después de cada cambio.
 - Cuando haya que elegir entre opciones (qué mejorar, decisiones de diseño, etc.), preséntalas siempre como un formulario de un clic (herramienta de preguntas con opciones), no como una lista en texto. Marca la recomendada.

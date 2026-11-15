@@ -5305,7 +5305,7 @@ function dnChart(by) {
 }
 async function renderDueno() {
   const body = document.getElementById("dnBody"), acts = document.getElementById("dnActs"); if (!body) return;
-  if (!sb || !account || !account.sb) { acts.innerHTML = ""; body.innerHTML = `<div class="notice warn"><i data-lucide="globe"></i><p>Los datos reales solo se ven en la app publicada: abre <strong>https://nexouni.netlify.app</strong> y entra con tu cuenta de dueño.</p></div>`; icons(); return; }
+  if (!sb || !account || !account.sb) { acts.innerHTML = ""; body.innerHTML = `<div class="notice warn"><i data-lucide="globe"></i><p>Los datos reales solo se ven en la app publicada: abre la app publicada (<strong>pedroyasellipalomino-spec.github.io/NEXO</strong>) y entra con tu cuenta de dueño.</p></div>`; icons(); return; }
   if (dnBusy) return; dnBusy = true;
   acts.innerHTML = `<button class="btn ghost sm" type="button" data-dn-refresh><i data-lucide="refresh-cw"></i>Actualizar</button>`;
   if (!body.querySelector(".dn-kpis")) body.innerHTML = `<p class="small">Cargando datos reales…</p>`;
@@ -5323,7 +5323,7 @@ async function renderDueno() {
   const recent = d.recent.length ? `<ol class="dn-tl">${d.recent.map(e => `<li class="${SV_TONE[e.service] || "t-brand"}"><span class="dn-dot"><i data-lucide="${SV_LBL[e.service][1]}"></i></span>
       <div class="grow" style="min-width:0"><b style="font-size:13px">${SV_LBL[e.service][0]} · ${MT_LBL[e.method] || "Otro"}</b><span class="tiny" style="display:block">${esc(e.who || "Alguien")} · ${fullDT(e.t)}</span></div>
       <div class="dn-amt"><b>${money(+e.amount)}</b><span class="pill ${e.status === "En revisión" ? "warn" : e.status === "Rechazado" ? "bad" : "ok"}">${e.status}</span></div></li>`).join("")}</ol>`
-    : emptyState("receipt-text", "Aún no hay pagos reales", "Cuando alguien pague en nexouni.netlify.app con su cuenta, aparecerá aquí al instante.");
+    : emptyState("receipt-text", "Aún no hay pagos reales", "Cuando alguien pague en la app publicada con su cuenta, aparecerá aquí al instante.");
   const conf = d.users.confirmed;
   body.innerHTML = `<div class="kpis dn-kpis">${k("Usuarios registrados", d.users.total, `${conf} con correo confirmado · ${d.users.today} hoy · ${d.users.last7} en 7 días`, "users")}${k("Pagos confirmados", d.payments.count, `${money(+d.payments.usd)} en total · ${d.payments.payers} ${d.payments.payers === 1 ? "persona pagó" : "personas pagaron"}`, "badge-check")}${k("Pagos en revisión", d.payments.review, d.payments.review ? `${money(+d.payments.reviewUsd)} esperando validación` : "Nada pendiente", "hourglass")}${d.orders ? k("Pedidos de comida", d.orders.total, `${d.orders.active} en curso · ${d.orders.delivered} entregados${d.orders.cancelled ? ` · ${d.orders.cancelled} cancelados` : ""}`, "utensils") : ""}${d.tickets ? k("Tickets de soporte", d.tickets.open, `abiertos · ${d.tickets.unassigned} sin asignar · ${d.tickets.resolved} resueltos`, "message-circle") : ""}${x4 ? k("Reservas de canchas", x4.courts.total, `${x4.courts.upcoming} por jugar`, "dribbble") + k("Estacionamiento", x4.parking.plans, `planes vigentes · ${x4.parking.vehicles} ${x4.parking.vehicles === 1 ? "vehículo registrado" : "vehículos registrados"}`, "car-front") + k("Saldo en wallets", money(+x4.wallet), "suma de todos los wallets", "wallet") : ""}</div>
     <div class="card dn-chart"><div class="row" style="flex-wrap:wrap;gap:8px"><div><h2 class="sec">Dinero por servicio</h2><p class="small">Pagos reales en dólares, desde la primera cuenta.</p></div><button class="link b" type="button" data-dn-view>${dnTable ? "Ver gráfico" : "Ver tabla"}</button></div>
@@ -5344,7 +5344,7 @@ function renderDnUsers() {
       ${u.role === "owner" ? "" : `<div class="row start" style="gap:6px;flex-wrap:wrap"><div class="input sel sm"><select data-dn-role="${u.id}" aria-label="Rol de ${esc(u.full_name)}">${ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? " selected" : ""}>${l}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div>
         ${u.role === "local" ? `<div class="input sel sm"><select data-dn-local="${u.id}" aria-label="Local de ${esc(u.full_name)}">${LOCALES.map(l => `<option value="${l.id}"${u.local_id === l.id ? " selected" : ""}>${esc(l.name)}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div>` : ""}
         <button class="btn ghost sm" type="button" data-dn-toggle="${u.id}">${u.disabled ? "Reactivar" : "Desactivar"}</button></div>`}</div>`).join("")
-    : emptyState("users", dnUsers.length ? "Nadie coincide con la búsqueda" : "Aún no hay usuarios", dnUsers.length ? "Prueba con otro nombre, correo o carnet." : "Cuando alguien cree su cuenta en nexouni.netlify.app aparecerá aquí.");
+    : emptyState("users", dnUsers.length ? "Nadie coincide con la búsqueda" : "Aún no hay usuarios", dnUsers.length ? "Prueba con otro nombre, correo o carnet." : "Cuando alguien cree su cuenta en la app publicada aparecerá aquí.");
   icons();
 }
 async function dnSetRole(id, role, local, disabled) {

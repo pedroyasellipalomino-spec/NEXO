@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 15 nov 2026
+- App publicada en GitHub Pages.
+- Supabase acepta la dirección de GitHub Pages.
 - Código respaldado en GitHub (repositorio NEXO).
 
 ## 14 nov 2026
