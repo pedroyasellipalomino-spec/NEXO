@@ -1439,3 +1439,28 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .mc-row > .pill{flex:none}
 .my-courts > .row{flex-wrap:wrap;row-gap:2px}
 .my-courts > .row .sec{white-space:nowrap}
+
+/* ===================== Comercio con identidad ===================== */
+/* Estados del tablero: en cocina ámbar, programado gris azulado, listo verde señal, atrasado rojo, entregado gris */
+.lp-col.st-prep,.lp-card.st-prep{--st:#D98A12}
+.lp-card.st-sched{--st:#6B8A9A}
+.lp-col.st-ready,.lp-card.st-ready{--st:#1F9A62}
+.lp-col.st-done{--st:#7C8F86}
+.lp-card.late{--st:#C2412D}
+.lp-card{position:relative;overflow:hidden}
+.lp-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--st,transparent)}
+.lp-card.ready{border-color:color-mix(in srgb,var(--st) 55%,var(--line))}
+.lp-card.late{border-color:color-mix(in srgb,var(--st) 45%,var(--line))}
+.lp-colh{display:flex;align-items:center;gap:10px}
+.lp-ic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,color-mix(in srgb,var(--st) 72%,#fff),var(--st));box-shadow:0 6px 14px -8px var(--st)}
+.lp-ic svg{width:16px;height:16px}
+.lp-line{display:flex;align-items:flex-start;gap:10px}
+.lp-line .prod-art,.lp-line > svg{flex:none}
+.lp-bar{height:6px;border-radius:99px;background:var(--chip);overflow:hidden}
+.lp-bar i{display:block;height:100%;border-radius:inherit;background:var(--st);transition:width .6s ease}
+.lp-art .food-art{width:64px;height:64px;border-radius:18px;box-shadow:0 8px 20px -10px rgba(0,0,0,.45),inset 0 0 0 2px rgba(255,255,255,.35)}
+@media (max-width:699px){.lp-art .food-art{width:52px;height:52px;border-radius:15px}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .lp-col.st-prep,:root:not([data-theme="light"]) .lp-card.st-prep{--st:#E9A23B}:root:not([data-theme="light"]) .lp-card.late{--st:#E0634F}:root:not([data-theme="light"]) .lp-col.st-ready,:root:not([data-theme="light"]) .lp-card.st-ready{--st:#3DBE85}}
+:root[data-theme="dark"] .lp-col.st-prep,:root[data-theme="dark"] .lp-card.st-prep{--st:#E9A23B}
+:root[data-theme="dark"] .lp-card.late{--st:#E0634F}
+:root[data-theme="dark"] .lp-col.st-ready,:root[data-theme="dark"] .lp-card.st-ready{--st:#3DBE85}

@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 16 nov 2026
+- Comercio: pedidos con dibujo del producto.
+- Comercio: colores por estado y barra de avance.
 - Mis reservas: lista de canchas reservadas.
 - Cancelar cancha sin cargo hasta 2 horas antes.
 - Paleta verde de la propuesta en toda la app.

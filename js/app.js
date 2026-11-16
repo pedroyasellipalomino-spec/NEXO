@@ -3762,6 +3762,7 @@ function renderLocalPedidos() {
   const sales = mine.filter(x => x.o.paidAt >= today && !x.o.cancelledAt).reduce((a, x) => a + x.o.total, 0);
   document.getElementById("lpTitle").textContent = isPaused(l.id) ? "Pedidos en pausa" : "Pedidos de hoy";
   document.getElementById("lpLead").textContent = `${l.name} · ${l.place} · Hoy ${todayHours(l)}`;
+  document.getElementById("lpArt").innerHTML = foodArt(l.id, "sm");
   document.getElementById("lpPause").innerHTML = isPaused(l.id)
     ? `<button class="btn" type="button" data-lp-pause="0"><i data-lucide="circle-play"></i>Reanudar pedidos</button>`
     : `<button class="btn ghost" type="button" data-lp-pause="1"><i data-lucide="circle-pause"></i>Pausar pedidos</button>`;
@@ -3769,30 +3770,32 @@ function renderLocalPedidos() {
   document.getElementById("lpKpis").innerHTML = k("En preparación", prep.length, prep.length ? `El próximo a las ${hhmm(prep[0].o.readyAt)}` : "Nada en cocina", "chef-hat")
     + k("Listos para retirar", ready.length, ready.length ? "Esperando al estudiante" : "Ninguno esperando", "package-check")
     + k("Ventas de hoy", money(sales), `${mine.filter(x => x.o.paidAt >= today && !x.o.cancelledAt).length} pedidos pagados`, "banknote");
-  const lines = o => o.lines.map(x => `<p style="font-size:13px"><b>${x.qty} ×</b> ${esc(x.name)}${x.opts.length ? `<span class="tiny" style="display:block">${x.opts.map(esc).join(" · ")}</span>` : ""}${x.note ? `<span class="note">Nota: ${esc(x.note)}</span>` : ""}</p>`).join("");
+  const lines = o => o.lines.map(x => `<div class="lp-line">${prodArt(x.item, x.icon || "utensils", "xs", x.name)}<p style="font-size:13px"><b>${x.qty} ×</b> ${esc(x.name)}${(x.opts || []).length ? `<span class="tiny" style="display:block">${x.opts.map(esc).join(" · ")}</span>` : ""}${x.note ? `<span class="note">Nota: ${esc(x.note)}</span>` : ""}</p></div>`).join("");
   const who = x => esc(x.o.studentName || nameOf(x.email));
   const card = (x, st) => {
     const o = x.o, left = Math.max(0, Math.ceil((o.readyAt - Date.now()) / MIN)), key = `${x.email}|${o.id}`;
     const head = `<div class="row"><span class="tk-ref">${o.num}</span><span class="tiny">${who(x)} · ${o.time}</span></div>`;
     const confirm = lpConfirm === key ? `<div class="confirm"><p>¿Cancelar el pedido y devolver ${money(o.total)} a ${esc(o.card || "su método de pago")}? Le avisaremos al estudiante.</p><div class="row"><button class="btn ghost" type="button" data-lp-no>Volver</button><button class="btn" type="button" data-lp-cancel-yes="${key}">Cancelar pedido</button></div></div>` : "";
-    if (st === "preparando" && orderStatus(o) === "programado") return `<div class="card lp-card sched">${head}${lines(o)}
+    if (st === "preparando" && orderStatus(o) === "programado") return `<div class="card lp-card st-sched">${head}${lines(o)}
       <div class="row"><span class="pill neutral"><i data-lucide="calendar-clock"></i>&nbsp;Programado · retiro ${whenTxt(o.readyAt)}</span><b>${money(o.total)}</b></div>
       <p class="tiny">Empieza a prepararlo a las ${hhmm(o.prepStart)}.</p>
       ${confirm || `<div class="row"><button class="link b" type="button" data-lp-ready="${key}">Ya está listo</button><button class="link" type="button" style="color:var(--danger)" data-lp-cancel="${key}">Cancelar pedido</button></div>`}</div>`;
-    if (st === "preparando") return `<div class="card lp-card">${head}${lines(o)}
-      <div class="row"><span class="pill ${left <= 2 ? "warn" : "neutral"}"><i data-lucide="timer"></i>&nbsp;${left <= 0 ? "Ya debería estar listo" : `Listo en ${left} min · ${hhmm(o.readyAt)}`}</span><b>${money(o.total)}</b></div>
+    const start = o.prepStart || o.paidAt || o.readyAt, pct = Math.max(4, Math.min(100, Math.round((Date.now() - start) / Math.max(1, o.readyAt - start) * 100)));
+    if (st === "preparando") return `<div class="card lp-card st-prep${left <= 0 ? " late" : ""}">${head}${lines(o)}
+      <div class="lp-bar" role="progressbar" aria-label="Tiempo de preparación" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+      <div class="row"><span class="pill ${left <= 0 ? "bad" : left <= 2 ? "warn" : "neutral"}"><i data-lucide="timer"></i>&nbsp;${left <= 0 ? "Atrasado · ya debería estar listo" : `Listo en ${left} min · ${hhmm(o.readyAt)}`}</span><b>${money(o.total)}</b></div>
       ${o.delayMin ? `<p class="tiny">Avisaste una demora de ${o.delayMin} min.</p>` : ""}
       ${confirm || `<button class="btn" type="button" data-lp-ready="${key}"><i data-lucide="package-check"></i>Marcar como listo</button>
       <div class="row"><button class="link b" type="button" data-lp-delay="${key}">Avisar demora +5 min</button><button class="link" type="button" style="color:var(--danger)" data-lp-cancel="${key}">Cancelar pedido</button></div>`}</div>`;
-    if (st === "listo") return `<div class="card lp-card ready">${head}${lines(o)}
+    if (st === "listo") return `<div class="card lp-card ready st-ready">${head}${lines(o)}
       <div class="row"><span class="pill ok">Listo desde las ${hhmm(o.readyAt)}</span><b>${money(o.total)}</b></div>
       ${lpDeliver === key ? `<form class="stack s14" data-lp-code="${key}"><label class="small" style="font-weight:600">Pide el código de 4 dígitos al estudiante</label><div class="row"><div class="input" style="flex:1"><input inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000" aria-label="Código de retiro"></div><button class="btn" type="submit" style="width:auto;padding:0 18px">Entregar</button></div><button class="link" type="button" data-lp-deliver="">Cerrar</button></form>`
         : `<button class="btn" type="button" data-lp-deliver="${key}"><i data-lucide="hand-platter"></i>Entregar pedido</button>`}</div>`;
     return `<div class="row lp-done"><div><span class="tk-ref">${o.num}</span> <span class="tiny">${who(x)}</span></div><span class="tiny">${o.cancelledAt ? `Cancelado · ${hhmm(o.cancelledAt)}` : `Entregado · ${hhmm(o.pickedAt)}`}</span><b class="${o.cancelledAt ? "neg" : ""}" style="font-size:12px">${o.cancelledAt ? "−" : ""}${money(o.total)}</b></div>`;
   };
-  const col = (title, icon, list, st, empty) => `<div class="stack s14"><div class="row"><h2 class="sec"><i data-lucide="${icon}" style="color:var(--brand)"></i> ${title}</h2><span class="pill neutral">${list.length}</span></div>${list.map(x => card(x, st)).join("") || `<p class="small lp-empty">${empty}</p>`}</div>`;
+  const col = (title, icon, list, st, empty) => `<div class="stack s14 lp-col st-${st === "listo" ? "ready" : "prep"}"><div class="row"><h2 class="sec lp-colh"><span class="lp-ic"><i data-lucide="${icon}"></i></span>${title}</h2><span class="pill neutral">${list.length}</span></div>${list.map(x => card(x, st)).join("") || `<p class="small lp-empty">${empty}</p>`}</div>`;
   document.getElementById("lpBoard").innerHTML = col("En preparación", "chef-hat", prep, "preparando", "No hay pedidos en cocina.") + col("Listos para retirar", "package-check", ready, "listo", "Nada esperando retiro.")
-    + `<div class="stack s14"><div class="row"><h2 class="sec"><i data-lucide="check" style="color:var(--brand)"></i> Entregados hoy</h2><span class="pill neutral">${done.length}</span></div><div class="card" style="gap:0">${done.map(x => card(x, "done")).join("") || `<p class="small">Todavía no entregas pedidos hoy.</p>`}</div></div>`;
+    + `<div class="stack s14 lp-col st-done"><div class="row"><h2 class="sec lp-colh"><span class="lp-ic"><i data-lucide="check"></i></span>Entregados hoy</h2><span class="pill neutral">${done.length}</span></div><div class="card" style="gap:0">${done.map(x => card(x, "done")).join("") || `<p class="small">Todavía no entregas pedidos hoy.</p>`}</div></div>`;
   icons();
 }
 let lhDraft = null;
@@ -3801,6 +3804,7 @@ function renderLocalMenu() {
   if (!lhDraft) lhDraft = weekOf(l).map(x => ({ ...x }));
   const st = lstate(l.id), n = st.soldout.length;
   document.getElementById("lmLead").textContent = `${l.name} · ${l.tagline}`;
+  document.getElementById("lmArt").innerHTML = foodArt(l.id, "sm");
   document.getElementById("lmBody").innerHTML = `
     <div class="card">
       <div class="row"><h2 class="h2">Productos</h2><span class="small">${n ? `${n} agotado${n === 1 ? "" : "s"}` : "Todo disponible"}</span></div>
