@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 16 nov 2026
+- Equipo: avatares y etiquetas con color por rol.
+- Movimientos y configuración con íconos por tipo.
 - Comercio: pedidos con dibujo del producto.
 - Comercio: colores por estado y barra de avance.
 - Mis reservas: lista de canchas reservadas.

@@ -1464,3 +1464,12 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 :root[data-theme="dark"] .lp-col.st-prep,:root[data-theme="dark"] .lp-card.st-prep{--st:#E9A23B}
 :root[data-theme="dark"] .lp-card.late{--st:#E0634F}
 :root[data-theme="dark"] .lp-col.st-ready,:root[data-theme="dark"] .lp-card.st-ready{--st:#3DBE85}
+
+/* Equipo, movimientos y configuración */
+.svc-chip.t-refund{--tone:#C2412D}
+.svc-chip.au-caja{--tone:#D98A12}.svc-chip.au-rol{--tone:#1F7A55}.svc-chip.au-soporte{--tone:#6250d6}.svc-chip.au-reembolso{--tone:#C2412D}.svc-chip.au-config{--tone:#2a78d6}
+.tk-row .svc-chip,.cf-lbl .svc-chip{width:30px;height:30px;border-radius:10px}
+.tk-row .svc-chip svg,.cf-lbl .svc-chip svg{width:15px;height:15px}
+.member .avatar.sm{flex:none;color:#fff}
+.member .role-tag{margin-left:0}
+.avatar.sm svg{width:15px;height:15px}

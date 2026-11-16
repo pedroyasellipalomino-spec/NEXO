@@ -2968,7 +2968,7 @@ function renderEquipo() {
     const act = r.kind === "inv" ? `<div class="stack" style="gap:6px"><button class="link b" type="button" data-inv-copy="${r.email}">Copiar enlace</button><button class="link" type="button" data-inv-cancel="${r.email}">Cancelar invitación</button></div>`
       : r.kind === "off" ? `<button class="link b" type="button" data-mod-on="${r.email}">Reactivar</button>`
       : `<button class="link" type="button" style="color:var(--danger)" data-mod-off="${r.email}">Desactivar</button>`;
-    return `<div class="tk-row eq"><div class="row start"><span class="avatar sm">${r.kind === "inv" ? `<i data-lucide="mail"></i>` : initialsOf(r.name)}</span><div style="min-width:0"><b style="font-size:13px">${esc(r.name)}</b><p class="tiny" title="${esc(r.email)}">${r.kind === "inv" ? `Invitado como moderador · ${invNote(invByEmail(r.email))}` : esc(r.email)}</p></div></div>
+    return `<div class="tk-row eq"><div class="row start"><span class="avatar sm role-${r.role || "mod"}">${r.kind === "inv" ? `<i data-lucide="mail"></i>` : initialsOf(r.name)}</span><div style="min-width:0"><b style="font-size:13px">${esc(r.name)}</b><p class="tiny" title="${esc(r.email)}">${r.kind === "inv" ? `Invitado como moderador · ${invNote(invByEmail(r.email))}` : esc(r.email)}</p></div></div>
       <div><span class="tk-lbl">Abiertos</span>${r.kind === "inv" ? "—" : open}</div><div><span class="tk-lbl">Resueltos</span>${r.kind === "inv" ? "—" : done}${r.kind === "inv" ? "" : rateSummary(r.email)}</div><div>${st}</div><div>${act}</div></div>`;
   }).join("") || emptyState("users", "Aún no hay moderadores", "Invita al primero para que responda los tickets de los estudiantes."));
   document.getElementById("eqSide").innerHTML = inviteCard() + `<div class="notice"><i data-lucide="info"></i><p>Al desactivar a un moderador pierde el acceso a la moderación, pero puede seguir usando Nexo como usuario. Sus tickets abiertos quedan sin asignar para que los repartas.</p></div>`;
@@ -3401,9 +3401,9 @@ function renderCreadorEquipo() {
       const menu = ceMenu === r.email ? `<div class="menu">${r.kind === "inv"
         ? `<button class="link b" type="button" data-inv-copy="${r.email}">Copiar enlace de invitación</button><button class="link b" type="button" data-inv-renew="${r.email}">Reenviar (7 días más)</button><button class="link" type="button" data-inv-cancel="${r.email}">Cancelar invitación</button>`
         : `<button class="link b" type="button" data-ce-role="${r.email}">Cambiar a ${r.role === "admin" ? "moderador" : "administrador"}</button>${r.kind === "off" ? `<button class="link b" type="button" data-mod-on="${r.email}">Reactivar</button>` : `<button class="link" type="button" style="color:var(--danger)" data-mod-off="${r.email}">Desactivar</button>`}`}</div>` : "";
-      return `<div class="member"><span class="avatar soft">${initialsOf(r.kind === "inv" ? r.email.split("@")[0].replace(/[._]/g, " ") : r.name)}</span>
+      return `<div class="member"><span class="avatar sm role-${r.role}">${initialsOf(r.kind === "inv" ? r.email.split("@")[0].replace(/[._]/g, " ") : r.name)}</span>
         <div class="who"><b>${esc(r.kind === "inv" ? r.email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : r.name)}</b><span class="tiny">${esc(r.email)}${r.kind === "inv" ? ` · ${invNote(invByEmail(r.email))}` : ""}</span></div>
-        <span class="pill neutral">${ROLE_LABEL[r.role]}</span>${st}
+        <span class="role-tag role-${r.role}">${ROLE_LABEL[r.role]}</span>${st}
         <button class="dots" type="button" aria-label="Opciones de ${esc(r.name)}" aria-expanded="${ceMenu === r.email}" data-ce-menu="${r.email}"><i data-lucide="ellipsis"></i></button></div>${menu}`;
     }).join("") || `<p class="small">Aún no hay equipo de gestión. Invita a la primera persona.</p>`);
   document.getElementById("ceInvite").innerHTML = creatorInvite();
@@ -3451,6 +3451,7 @@ function renderCeTicket() {
 
 /* Movimientos: transacciones de este navegador y registro de cambios */
 let mvTab = "tx";
+const AUDIT_ICON = { caja: "badge-check", rol: "users", soporte: "message-circle", reembolso: "rotate-ccw", config: "settings" };
 const AUDIT_TYPE = { caja: ["Caja", "warn"], rol: ["Roles", "ok"], soporte: ["Soporte", "neutral"], reembolso: ["Reembolso", "warn"], config: ["Configuración", "neutral"] };
 function allTransactions() {
   const out = [];
@@ -3473,11 +3474,11 @@ function renderMovimientos() {
   if (mvTab === "tx") {
     const tx = allTransactions();
     box.innerHTML = `<div class="tk-row tk-head mv"><span>Fecha</span><span>Concepto</span><span>Método</span><span>Monto</span><span>Comisión</span></div>`
-      + (tx.map(x => `<div class="tk-row mv"><span class="tiny">${x.t ? fullDate(x.t) : "—"}</span><span class="tk-main"><b style="font-size:12px">${esc(x.concept)}</b><span class="tiny" style="display:block">${esc(x.who)}</span></span><span class="small">${esc(x.method)}</span><b class="${x.amount < 0 ? "neg" : ""}" style="font-size:13px">${x.amount < 0 ? "−" + money(-x.amount) : money(x.amount)}</b><span class="small">${x.fee === null ? "—" : money(x.fee)}</span></div>`).join("")
+      + (tx.map(x => `<div class="tk-row mv"><span class="tiny">${x.t ? fullDate(x.t) : "—"}</span><span class="tk-main row start" style="gap:10px">${x.amount < 0 ? `<span class="svc-chip t-refund" aria-hidden="true"><i data-lucide="rotate-ccw"></i></span>` : svcChip("Comida")}<span style="min-width:0"><b style="font-size:12px">${esc(x.concept)}</b><span class="tiny" style="display:block">${esc(x.who)}</span></span></span><span class="small">${esc(x.method)}</span><b class="${x.amount < 0 ? "neg" : ""}" style="font-size:13px">${x.amount < 0 ? "−" + money(-x.amount) : money(x.amount)}</b><span class="small">${x.fee === null ? "—" : money(x.fee)}</span></div>`).join("")
         || emptyState("receipt-text", "Aún no hay compras", "Cuando un estudiante pague un pedido de comida, aparecerá aquí. Los totales del Resumen son datos de ejemplo."));
   } else {
     box.innerHTML = `<div class="tk-row tk-head au"><span>Cuándo</span><span>Quién</span><span>Cambio</span><span>Tipo</span></div>`
-      + (audit.slice().sort((a, b) => b.t - a.t).map(a => `<div class="tk-row au"><span class="tiny">${ago(a.t)}</span><span><b style="font-size:12px">${esc(a.who)}</b><span class="tiny" style="display:block">${ROLE_LABEL[a.role] || ""}</span></span><span style="font-size:12px">${esc(a.text)}</span><span><span class="pill ${(AUDIT_TYPE[a.type] || AUDIT_TYPE.soporte)[1]}">${(AUDIT_TYPE[a.type] || AUDIT_TYPE.soporte)[0]}</span></span></div>`).join(""));
+      + (audit.slice().sort((a, b) => b.t - a.t).map(a => `<div class="tk-row au"><span class="tiny">${ago(a.t)}</span><span class="row start" style="gap:10px;align-items:flex-start"><span class="svc-chip au-${AUDIT_TYPE[a.type] ? a.type : "soporte"}" aria-hidden="true"><i data-lucide="${AUDIT_ICON[a.type] || "message-circle"}"></i></span><span><b style="font-size:12px">${esc(a.who)}</b><span class="tiny" style="display:block">${ROLE_LABEL[a.role] || ""}</span></span></span><span style="font-size:12px">${esc(a.text)}</span><span><span class="pill ${(AUDIT_TYPE[a.type] || AUDIT_TYPE.soporte)[1]}">${(AUDIT_TYPE[a.type] || AUDIT_TYPE.soporte)[0]}</span></span></div>`).join(""));
   }
   icons();
 }
@@ -3486,7 +3487,7 @@ function renderMovimientos() {
 let cfConfirm = false;
 function renderConfig() {
   document.getElementById("cfForm").innerHTML = `<div><h2 class="h2">Comisiones por servicio</h2><p class="small" style="font-size:13px">Porcentaje que Nexo cobra sobre cada compra. El resto va al comercio o a la universidad.</p></div>
-    ${SVC4.map(s => `<div class="field"><label for="cf-${s}">${SVC_LABEL[s]}</label><div class="input"><input id="cf-${s}" data-rate="${s}" type="number" inputmode="decimal" min="0" max="15" step="0.25" value="${rates[s]}"><span class="small">%</span></div></div>`).join("")}
+    ${SVC4.map(s => `<div class="field"><label for="cf-${s}" class="row start cf-lbl" style="gap:10px">${svcChip(s)}${SVC_LABEL[s]}</label><div class="input"><input id="cf-${s}" data-rate="${s}" type="number" inputmode="decimal" min="0" max="15" step="0.25" value="${rates[s]}"><span class="small">%</span></div></div>`).join("")}
     <div class="notice" id="cfPreview"></div>
     <div class="row"><button class="btn ghost" type="button" data-cf-default>Valores por defecto</button><button class="btn" type="submit"><i data-lucide="check"></i>Guardar cambios</button></div>`;
   document.getElementById("cfSide").innerHTML = `<form class="card" id="bcvForm" novalidate><div class="row"><h2 class="h2">Dólar BCV</h2><span class="pill ${bcvStale() ? "warn" : "ok"}">${bcvStale() ? "Desactualizada" : "Al día"}</span></div>
