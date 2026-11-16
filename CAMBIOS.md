@@ -2,6 +2,9 @@
 
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
+## 16 nov 2026
+- Tasa BCV actualizada a Bs. 915,74.
+
 ## 15 nov 2026
 - App publicada en GitHub Pages.
 - Supabase acepta la dirección de GitHub Pages.
