@@ -3,6 +3,7 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 16 nov 2026
+- Paleta verde de la propuesta en toda la app.
 - Arreglo: el personal ya puede pagar canchas.
 - Palabra "nexo" con la O como eslabón.
 - Logo nuevo: la cadena de dos eslabones.

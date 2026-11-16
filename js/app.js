@@ -138,8 +138,8 @@ function drawQR(c) {
   const ctx = c.getContext("2d"), N = 29;
   let seed = [...c.dataset.qr].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
   const rnd = () => (seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296;
-  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, N, N); ctx.fillStyle = "#162e33";
-  const finder = (x, y) => { ctx.fillRect(x, y, 7, 7); ctx.clearRect(x+1, y+1, 5, 5); ctx.fillStyle="#fff"; ctx.fillRect(x+1,y+1,5,5); ctx.fillStyle="#162e33"; ctx.fillRect(x+2, y+2, 3, 3); };
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, N, N); ctx.fillStyle = "#0F3D2E";
+  const finder = (x, y) => { ctx.fillRect(x, y, 7, 7); ctx.clearRect(x+1, y+1, 5, 5); ctx.fillStyle="#fff"; ctx.fillRect(x+1,y+1,5,5); ctx.fillStyle="#0F3D2E"; ctx.fillRect(x+2, y+2, 3, 3); };
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const inF = (x < 8 && y < 8) || (x > N-9 && y < 8) || (x < 8 && y > N-9);
     if (!inF && rnd() > .52) ctx.fillRect(x, y, 1, 1);
@@ -1796,7 +1796,7 @@ const FOOD_ART = {
     <path d="M32 46h48v20c0 13-11 22-24 22s-24-9-24-22z" fill="#fff"/>
     <path d="M80 52h4c7 0 11 5 11 10s-4 10-11 10h-6" stroke="#fff" stroke-width="5" fill="none"/>
     <ellipse cx="56" cy="46" rx="24" ry="5" fill="#7a4a2a"/><ellipse cx="56" cy="45.5" rx="17" ry="3" fill="#a46a3f"/>
-    <path d="M34 62c6 4 38 4 44 0" stroke="#0e8c7b" stroke-width="4" fill="none"/>
+    <path d="M34 62c6 4 38 4 44 0" stroke="#1F7A55" stroke-width="4" fill="none"/>
     <g transform="translate(78 76) rotate(-12)"><path d="M0 10C2 2 10-2 18 0s14 8 16 12c-8 2-30 2-34-2z" fill="#e9a24a"/>
       <path d="M8 2c2 4 2 8 0 11M17 0c2 5 2 9 0 13M26 3c1 4 1 7 0 10" stroke="#c97c2a" stroke-width="2" fill="none" stroke-linecap="round"/></g>` },
   migrill: { bg: "#ffd2c2", svg: `
@@ -1816,13 +1816,13 @@ const FOOD_ART = {
     <rect x="34" y="62" width="30" height="24" rx="3" fill="#bfe3ff"/><path d="M38 80l8-10 6 6 4-4 6 8" stroke="#7fb5e6" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
     <rect x="70" y="64" width="16" height="36" rx="2" fill="#2a78d6"/><circle cx="82" cy="83" r="1.6" fill="#fff"/>
     <rect x="28" y="88" width="38" height="6" rx="2" fill="#e8eef5"/>
-    <path d="M20 36h80l6 16H14z" fill="#0e8c7b"/>
-    <path d="M14 52a6.5 6.5 0 0 0 13 0a6.5 6.5 0 0 0 13 0a6.5 6.5 0 0 0 13 0a6.5 6.5 0 0 0 13 0a6.5 6.5 0 0 0 13 0a6.5 6.5 0 0 0 13 0a6.5 6.5 0 0 0 14 0" fill="#0e8c7b"/>
+    <path d="M20 36h80l6 16H14z" fill="#1F7A55"/>
+    <path d="M14 52a6.5 6.5 0 0 0 13 0a6.5 6.5 0 0 0 13 0a6.5 6.5 0 0 0 13 0a6.5 6.5 0 0 0 13 0a6.5 6.5 0 0 0 13 0a6.5 6.5 0 0 0 13 0a6.5 6.5 0 0 0 14 0" fill="#1F7A55"/>
     <path d="M27 36l-3 16M47 36l-1 16M67 36v16M87 36l2 16" stroke="#fff" stroke-width="7" opacity=".9"/>
-    <rect x="40" y="20" width="40" height="14" rx="4" fill="#fff"/><text x="60" y="30.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="700" fill="#0e8c7b">{{SIGN}}</text>` },
+    <rect x="40" y="20" width="40" height="14" rx="4" fill="#fff"/><text x="60" y="30.5" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="9" font-weight="700" fill="#1F7A55">{{SIGN}}</text>` },
   believe: { bg: "#fbd9e8", svg: `
     <ellipse cx="60" cy="100" rx="28" ry="5" fill="#000" opacity=".08"/>
-    <path d="M66 14l-4 30" stroke="#0e8c7b" stroke-width="5" stroke-linecap="round"/><path d="M66 14l12-4" stroke="#0e8c7b" stroke-width="5" stroke-linecap="round"/>
+    <path d="M66 14l-4 30" stroke="#1F7A55" stroke-width="5" stroke-linecap="round"/><path d="M66 14l12-4" stroke="#1F7A55" stroke-width="5" stroke-linecap="round"/>
     <path d="M36 40h48l-6 58H42z" fill="#e94f86"/>
     <path d="M38 52h44l-1 10H39z" fill="#fff" opacity=".9"/><text x="60" y="60" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="7" font-weight="700" fill="#e94f86">BELIEVE</text>
     <path d="M42 70c4 18 4 22 2 26" stroke="#ff8fb7" stroke-width="3" stroke-linecap="round" fill="none"/>
@@ -1865,7 +1865,7 @@ const FOOD_ART = {
     <circle cx="84" cy="24" r="4" fill="#c0392b"/><circle cx="80" cy="36" r="3.5" fill="#c0392b"/>` },
   juicebar: { bg: "#fff0b8", svg: `
     <ellipse cx="56" cy="100" rx="30" ry="5" fill="#000" opacity=".08"/>
-    <path d="M62 12l-6 40" stroke="#0e8c7b" stroke-width="5" stroke-linecap="round"/>
+    <path d="M62 12l-6 40" stroke="#1F7A55" stroke-width="5" stroke-linecap="round"/>
     <path d="M32 34h48l-6 64H38z" fill="#fff" opacity=".85"/><path d="M34 48h44l-5 48H39z" fill="#ff9a2e"/>
     <path d="M38 52h36" stroke="#ffc07a" stroke-width="3" stroke-linecap="round"/><rect x="44" y="62" width="9" height="9" rx="2" fill="#fff" opacity=".45"/><rect x="58" y="72" width="9" height="9" rx="2" fill="#fff" opacity=".45"/>
     <circle cx="82" cy="34" r="12" fill="#ffb02e"/><circle cx="82" cy="34" r="9" fill="#ffd27a"/><path d="M82 25v18M73 34h18M76 28l12 12M88 28L76 40" stroke="#ffb02e" stroke-width="1.4"/>
@@ -1889,7 +1889,7 @@ const PA_BG = { cafe: "#f1dcc4", fria: "#d6ecfb", comida: "#ffe2a8", grill: "#ff
 const paSh = `<ellipse cx="32" cy="56" rx="20" ry="3" fill="#000" opacity=".08"/>`;
 const paCup = (fill, top = "") => `${paSh}<path d="M46 30h3a6 6 0 0 1 0 12h-3" stroke="#fff" stroke-width="3.5" fill="none"/><path d="M16 26h32v12a16 14 0 0 1-32 0z" fill="#fff"/><ellipse cx="32" cy="52" rx="20" ry="3.5" fill="#fff"/><ellipse cx="32" cy="26" rx="16" ry="4" fill="${fill}"/>${top}<path d="M27 18c-2-3 2-5 0-8M35 18c-2-3 2-5 0-8" stroke="#fff" stroke-width="2.2" stroke-linecap="round" fill="none" opacity=".9"/>`;
 const paGlass = (liq, extra = "") => `${paSh}<path d="M19 14h26l-3 40H22z" fill="#fff" opacity=".75"/><path d="M20.5 24h23l-2.3 29H22.8z" fill="${liq}"/>${extra}<path d="M19 14h26" stroke="#fff" stroke-width="2"/>`;
-const paBowl = top => `${paSh}${top}<path d="M10 32h44c0 12-10 21-22 21S10 44 10 32z" fill="#0e8c7b"/><path d="M14 36c2 7 9 12 18 12" stroke="#4cc3ae" stroke-width="2.5" stroke-linecap="round" fill="none"/><rect x="10" y="30" width="44" height="4" rx="2" fill="#12a690"/>`;
+const paBowl = top => `${paSh}${top}<path d="M10 32h44c0 12-10 21-22 21S10 44 10 32z" fill="#1F7A55"/><path d="M14 36c2 7 9 12 18 12" stroke="#4cc3ae" stroke-width="2.5" stroke-linecap="round" fill="none"/><rect x="10" y="30" width="44" height="4" rx="2" fill="#12a690"/>`;
 const paBurger = patty => `${paSh}<path d="M14 40h36v3c0 5-4 8-9 8H23c-5 0-9-3-9-8z" fill="#d48b34"/><rect x="13" y="34" width="38" height="7" rx="3.5" fill="${patty}"/><path d="M13 34c4-3 6 2 10-1s6 2 10-1 6 2 10-1 6 2 8 0v3H13z" fill="#5cb85c"/><path d="M17 33l7-5 6 5z" fill="#ffd35c"/><path d="M14 31c0-9 8-15 18-15s18 6 18 15z" fill="#f2b45f"/><circle cx="26" cy="22" r="1" fill="#fff3d6"/><circle cx="34" cy="20" r="1" fill="#fff3d6"/><circle cx="40" cy="24" r="1" fill="#fff3d6"/>`;
 const PROD_ART = {
   almuerzo: ["comida", `${paSh}<ellipse cx="32" cy="38" rx="24" ry="13" fill="#fff"/><ellipse cx="32" cy="37" rx="18" ry="9" fill="#f1f1ec"/><ellipse cx="25" cy="35" rx="8" ry="5" fill="#fff"/><circle cx="23" cy="34" r=".8" fill="#e9e5da"/><circle cx="27" cy="36" r=".8" fill="#e9e5da"/><path d="M33 30c6-3 12 0 11 5-1 4-8 5-12 2z" fill="#a8622f"/><ellipse cx="34" cy="42" rx="6" ry="3" fill="#5cb85c"/><path d="M40 41c3-2 7-1 7 1-2 2-5 2-7-1z" fill="#ffc23d"/><circle cx="30" cy="42" r="2" fill="#e2483d"/>`],
@@ -1897,7 +1897,7 @@ const PROD_ART = {
   wrap: ["comida", `${paSh}<g transform="rotate(-25 32 34)"><rect x="12" y="24" width="40" height="20" rx="10" fill="#f3d9a4"/><ellipse cx="50" cy="34" rx="6" ry="10" fill="#fff4d8"/><circle cx="49" cy="31" r="3" fill="#5cb85c"/><circle cx="51" cy="37" r="2.5" fill="#e2483d"/><circle cx="48" cy="38" r="2" fill="#c98a52"/><path d="M18 28h22M18 40h22" stroke="#e2c27f" stroke-width="2" stroke-linecap="round"/></g>`],
   sandjq: ["comida", `${paSh}<path d="M10 48l22-32 22 32z" fill="#f2c27a"/><path d="M14 44l18-25 18 25z" fill="#fff4d8"/><path d="M12 46l20-28 20 28" stroke="#f19aa8" stroke-width="3" fill="none"/><path d="M16 48l16-22 16 22" stroke="#ffd35c" stroke-width="3" fill="none"/>`],
   reina: ["comida", `${paSh}<ellipse cx="32" cy="42" rx="20" ry="9" fill="#e9c27d"/><path d="M14 38c6-4 30-4 36 0-2 3-34 3-36 0z" fill="#9bd36e"/><circle cx="22" cy="36" r="3" fill="#7cc46a"/><circle cx="32" cy="34" r="3.5" fill="#b9e08a"/><circle cx="42" cy="36" r="3" fill="#7cc46a"/><path d="M12 34c0-8 9-12 20-12s20 4 20 12z" fill="#f2d28f"/><circle cx="24" cy="27" r="1.2" fill="#d9a85a"/><circle cx="38" cy="26" r="1.2" fill="#d9a85a"/>`],
-  limonada: ["fria", paGlass("#d9f06a", `<rect x="26" y="28" width="7" height="7" rx="1.5" fill="#fff" opacity=".6"/><circle cx="44" cy="16" r="7" fill="#c6e84a"/><circle cx="44" cy="16" r="5" fill="#eaf8a6"/><path d="M44 11v10M39 16h10" stroke="#c6e84a" stroke-width="1"/><path d="M36 6l-4 40" stroke="#0e8c7b" stroke-width="2.5" stroke-linecap="round"/>`)],
+  limonada: ["fria", paGlass("#d9f06a", `<rect x="26" y="28" width="7" height="7" rx="1.5" fill="#fff" opacity=".6"/><circle cx="44" cy="16" r="7" fill="#c6e84a"/><circle cx="44" cy="16" r="5" fill="#eaf8a6"/><path d="M44 11v10M39 16h10" stroke="#c6e84a" stroke-width="1"/><path d="M36 6l-4 40" stroke="#1F7A55" stroke-width="2.5" stroke-linecap="round"/>`)],
   papelon: ["fria", paGlass("#c8893e", `<rect x="27" y="30" width="7" height="7" rx="1.5" fill="#fff" opacity=".5"/><circle cx="44" cy="16" r="7" fill="#7cc46a"/><circle cx="44" cy="16" r="5" fill="#c9eea6"/>`)],
   guayoyo: ["cafe", paCup("#5a3420")],
   negro: ["cafe", paCup("#3d2414")],
@@ -1933,7 +1933,7 @@ const PROD_ART = {
 /* Productos de los locales nuevos (TEEB, Molokai, Sanahoria, Granier, Pepperonis, Juice Bar, Dey Donuts) */
 const paDonut = (glaze, sprinkles) => `${paSh}<circle cx="32" cy="34" r="20" fill="#e9a24a"/><path d="M32 15c10 0 18 7 18 17 0 3-2 3-3 2s-3 1-4 3-3 1-4 0-3 1-4 2-4 0-5-2-3-2-4 0-4 0-4-2-3-1-4-3c-1-5 2-19 17-19z" fill="${glaze}"/><circle cx="32" cy="32" r="6" fill="#fde0ec"/>${sprinkles ? [[22, 24, "#ffd35c", 20], [28, 19, "#4cc3ae", -30], [38, 20, "#2a78d6", 40], [44, 28, "#fff", -10], [24, 33, "#fff", 60], [40, 36, "#ffd35c", 10]].map(([x, y, c, r]) => `<rect x="${x}" y="${y}" width="4.5" height="1.8" rx=".9" fill="${c}" transform="rotate(${r} ${x} ${y})"/>`).join("") : ""}`;
 const paSlice = (top, dots) => `${paSh}<path d="M10 16l44 8-26 30z" fill="#ffd35c" stroke="#e9a24a" stroke-width="5" stroke-linejoin="round"/>${top}${dots.map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="3.6" fill="${c}"/>`).join("")}`;
-const paTall = (liq, extra = "") => `${paSh}<path d="M20 14h24l-3 40H23z" fill="#fff" opacity=".8"/><path d="M21.2 22h21.6l-2.5 31H23.7z" fill="${liq}"/>${extra}<path d="M36 4l-4 34" stroke="#0e8c7b" stroke-width="2.5" stroke-linecap="round"/>`;
+const paTall = (liq, extra = "") => `${paSh}<path d="M20 14h24l-3 40H23z" fill="#fff" opacity=".8"/><path d="M21.2 22h21.6l-2.5 31H23.7z" fill="${liq}"/>${extra}<path d="M36 4l-4 34" stroke="#1F7A55" stroke-width="2.5" stroke-linecap="round"/>`;
 Object.assign(PROD_ART, {
   papas: ["comida", `${paSh}<path d="M18 54h28l-4-26H22z" fill="#e2483d"/><path d="M22 28h20l-1 5H23z" fill="#fff" opacity=".85"/><path d="M25 28l-2-16M29 28l-1-19M33 28l1-18M37 28l2-15M31 28v-13" stroke="#ffc23d" stroke-width="3.5" stroke-linecap="round"/>`],
   tostones: ["comida", `${paSh}${[[20, 40], [36, 44], [30, 30], [44, 32]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="10" ry="8" fill="#f0c04a"/><ellipse cx="${x}" cy="${y}" rx="6" ry="4.5" fill="#f6d77a"/>`).join("")}<path d="M18 30l4 2M28 22l4 3M40 26l3 3M34 40l4 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`],
