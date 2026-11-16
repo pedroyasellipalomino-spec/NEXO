@@ -56,7 +56,7 @@ document.querySelectorAll("[data-account]").forEach(el => el.append(document.get
   const lines = N.map(([, x, y], i) => `<path class="hn-path" style="animation-delay:${i * -0.6}s" d="M50 47 Q ${(50 + x) / 2 + (i % 2 ? 8 : -8)} ${(47 + y) / 2 + (i < 2 ? 6 : -6)} ${x} ${y}"/>`).join("");
   const html = `<div class="hero-net" aria-hidden="true">
     <svg viewBox="0 0 100 100" preserveAspectRatio="none"><circle class="hn-ring" cx="50" cy="47" r="20"/><circle class="hn-ring r2" cx="50" cy="47" r="33"/>${lines}</svg>
-    <span class="hn-core"><svg viewBox="0 0 24 24" fill="none"><path d="M7 17.5V8.2a1 1 0 0 1 1.8-.6l6.4 8.8a1 1 0 0 0 1.8-.6V6.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="6.2" r="2" fill="#b6f0e2"/><circle cx="17" cy="17.8" r="2" fill="#b6f0e2"/></svg></span>
+    <span class="hn-core"><svg class="nexo-mark" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" stroke="#3DBE85" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="#EEF4F0" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" stroke="#3DBE85" stroke-width="10"/></svg></span>
     ${N.map(([ic, x, y, l, c], i) => `<span class="hn-node ${c}" style="left:${x}%;top:${y}%;animation-delay:${i * 0.4}s"><span class="svt-ic"><i data-lucide="${ic}"></i></span><em>${l}</em></span>`).join("")}
     <span class="hn-spark" style="left:34%;top:16%"></span><span class="hn-spark" style="left:68%;top:84%"></span><span class="hn-spark" style="left:92%;top:42%"></span>
   </div>`;
@@ -72,7 +72,7 @@ document.querySelectorAll("section.app").forEach(sec => {
   const side = document.createElement("aside");
   side.className = "side";
   side.innerHTML = `
-    <button class="brand" type="button" data-go="${home}" style="color:#fff"><span class="emblem"><svg class="nexo-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17.5V8.2a1 1 0 0 1 1.8-.6l6.4 8.8a1 1 0 0 0 1.8-.6V6.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="6.2" r="2" fill="#b6f0e2"/><circle cx="17" cy="17.8" r="2" fill="#b6f0e2"/></svg></span>nexo</button>
+    <button class="brand" type="button" data-go="${home}" style="color:#fff"><span class="emblem"><svg class="nexo-mark" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" stroke="#3DBE85" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="#EEF4F0" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" stroke="#3DBE85" stroke-width="10"/></svg></span>nexo</button>
     <div class="inst"><b>U. Metropolitana</b><span>Campus Central · Caracas</span></div>
     <nav class="nav">${nav.map(n => `<button type="button" data-go="${n[3]}" class="${n[0]===tab?'on':''}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`).join("")}</nav>
     ${staff
@@ -84,7 +84,7 @@ document.querySelectorAll("section.app").forEach(sec => {
   main.className = "main";
   const left = back
     ? `<button class="title" type="button" data-go="${back}" data-back-btn><i data-lucide="arrow-left"></i>${title}</button>`
-    : `<button class="brand" type="button" data-go="${home}"><span class="emblem"><svg class="nexo-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17.5V8.2a1 1 0 0 1 1.8-.6l6.4 8.8a1 1 0 0 0 1.8-.6V6.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="6.2" r="2" fill="#b6f0e2"/><circle cx="17" cy="17.8" r="2" fill="#b6f0e2"/></svg></span>nexo</button>`;
+    : `<button class="brand" type="button" data-go="${home}"><span class="emblem"><svg class="nexo-mark" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" stroke="#3DBE85" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="#EEF4F0" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" stroke="#3DBE85" stroke-width="10"/></svg></span>nexo</button>`;
   const macts = staff
     ? `<span class="pill ok">${ROLE_LABEL[staff]}</span><button class="avatarbtn" type="button" aria-label="Menú de usuario" aria-haspopup="menu" data-usermenu><span data-user="initials">AT</span></button>`
     : `<button class="bellbtn" type="button" aria-label="Notificaciones" data-go="notificaciones"><i data-lucide="bell"></i><span class="nbadge" data-notif-badge hidden></span></button><button class="avatarbtn" type="button" aria-label="Menú de usuario" aria-haspopup="menu" data-usermenu><span data-user="initials">AT</span></button>`;

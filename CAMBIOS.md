@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 16 nov 2026
+- Logo nuevo: la cadena de dos eslabones.
+- Íconos de la app con el logo nuevo.
 - La app siempre carga la versión más reciente.
 - Tasa BCV actualizada a Bs. 915,74.
 

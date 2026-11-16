@@ -1407,3 +1407,13 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
   .campus .place{display:none}
 }
 @media (max-width:699px){.auth-wrap{align-content:start;gap:20px}}
+
+/* ===================== Logo: la cadena (propuesta de identidad) ===================== */
+/* Dos eslabones entrelazados sobre verde bosque (#0A2A20): verde señal #3DBE85 y niebla #EEF4F0.
+   El tramo inferior del eslabón verde se repinta encima para que se vean enlazados. */
+.emblem{background:#0A2A20!important;box-shadow:inset 0 0 0 1px rgba(238,244,240,.12),0 2px 6px rgba(10,42,32,.35)!important}
+.nexo-mark{width:84%;height:auto}
+.pass-brand .emblem{background:#0A2A20!important}
+.hn-core{background:#0A2A20!important}
+.hn-core svg{width:76%!important;height:auto!important}
+.campus .hn-core svg{width:76%!important;height:auto!important}
