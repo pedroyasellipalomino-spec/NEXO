@@ -7,7 +7,8 @@ const SHELL = [
   "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/maskable-512.png", "./icons/apple-touch-icon.png", "./icons/icon-32.png", "./icons/icon.svg"
 ];
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // cache: "reload" salta la caché del navegador (GitHub Pages la guarda 10 min) para instalar la versión recién publicada
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
@@ -25,7 +26,8 @@ self.addEventListener("fetch", e => {
   if (url.origin !== location.origin) return; // Supabase y otros servicios: siempre por la red, nunca de la copia
   // Navegación y archivos propios: red primero, copia guardada si no hay conexión
   e.respondWith(
-    fetch(req).then(res => {
+    // cache: "no-cache" pregunta siempre al servidor si hay versión nueva (sin esto el navegador reusa su copia hasta 10 min)
+    fetch(req, { cache: "no-cache" }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: true }).then(hit => hit || (req.mode === "navigate" ? caches.match("./index.html") : undefined)))

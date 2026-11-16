@@ -3,6 +3,7 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 16 nov 2026
+- La app siempre carga la versión más reciente.
 - Tasa BCV actualizada a Bs. 915,74.
 
 ## 15 nov 2026

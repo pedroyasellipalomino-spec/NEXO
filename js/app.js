@@ -4814,7 +4814,7 @@ document.addEventListener("click", e => {
 });
 if (canServeWorker) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").then(reg => {
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(reg => {
       const offer = w => toast("Hay una versión nueva de Nexo.", { persist: true, action: "Actualizar", onAction: () => w.postMessage("skipWaiting") });
       if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
       reg.addEventListener("updatefound", () => { const w = reg.installing; w && w.addEventListener("statechange", () => { if (w.state === "installed" && navigator.serviceWorker.controller) offer(w); }); });
