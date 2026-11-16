@@ -542,6 +542,24 @@ async def main() -> int:
         await pg.click("[data-sport='futbol']")
         check(await pg.locator("#sportPicker .ball-art").count() == 6 and await pg.locator(".court-card .court-art svg").count() == 1, "canchas muestra la pelota de cada deporte y el dibujo de la cancha")
 
+        # mis reservas: reservar una cancha, verla en la lista y cancelarla con reembolso (hasta 2 h antes)
+        await pg.click("#dayPicker [data-day='13']")
+        await pg.click("#slotPicker [data-slot='18:00']")
+        await pg.click("[data-r-cta]")
+        await pg.wait_for_timeout(300)
+        await pg.click("[data-court-pay]")
+        await pg.wait_for_timeout(400)
+        await pg.evaluate("go('reserva')")
+        await pg.wait_for_timeout(300)
+        mc = await pg.inner_text("#myCourts")
+        check(await pg.is_visible("#myCourts") and "Cancha de fútbol" in mc and "Vie 13 nov · 18:00–19:00" in mc, "la reserva pagada aparece en Mis reservas")
+        check(await pg.evaluate("[...document.querySelectorAll('#slotPicker .slot.busy')].map(b => b.dataset.slot).includes('18:00')"), "la hora reservada queda ocupada")
+        await pg.click("[data-court-cancel]")
+        await pg.wait_for_timeout(200)
+        await pg.click("[data-cdlg-ok]")
+        await pg.wait_for_timeout(400)
+        check(await pg.is_hidden("#myCourts") and await pg.evaluate("moves.some(m => m.title.startsWith('Reserva cancelada') && m.pill === 'Reembolsado')"), "cancelar devuelve el dinero y quita la reserva")
+
         # sin campos de fecha/hora nativos: los pagos eligen entre los últimos 7 días
         check(await pg.locator('input[type="date"], input[type="time"]').count() == 0 and await pg.locator("#pm-date option").count() == 7 and (await pg.locator("#pm-date option").first.inner_text()).startswith("Hoy"), "las fechas de pago se eligen entre los últimos 7 días, sin el campo nativo")
 

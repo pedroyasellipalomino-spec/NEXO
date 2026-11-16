@@ -325,6 +325,7 @@ function show(id) {
   if (id === "inicio" && typeof renderHome === "function") try { renderHome(); } catch (err) {}
   if (id === "dueno" && typeof renderDueno === "function") try { renderDueno(); } catch (err) {}
   if (id === "comida" && typeof renderFoodList === "function") renderFoodList();
+  if (id === "reserva" && typeof renderReserva === "function") try { renderReserva(); } catch (err) {} // horas ocupadas y Mis reservas al día
   if (id === "comida" && typeof renderFoodOrders === "function") try { renderFoodOrders(); } catch (err) {}
   if (id === "comida" && typeof renderFoodAgain === "function") try { renderFoodAgain(); } catch (err) {}
   if (id === "local" && typeof renderLocal === "function") renderLocal();
@@ -544,7 +545,7 @@ function renderReserva() {
   const sp = SPORTS[res.sport];
   document.querySelectorAll("#sportPicker .sport").forEach(b => b.classList.toggle("on", b.dataset.sport === res.sport));
   document.querySelectorAll("#dayPicker .day").forEach(b => b.classList.toggle("on", b.dataset.day === res.day));
-  const busy = typeof sbCourtBusyFor === "function" && sbShared() ? sbCourtBusyFor(res.sport, res.iso) : sp.busy;
+  const busy = typeof sbCourtBusyFor === "function" && sbShared() ? sbCourtBusyFor(res.sport, res.iso) : [...sp.busy, ...myCourtSlots(res.sport)];
   if (busy.includes(res.slot)) res.slot = ["16:00","17:00","18:00","19:00","20:00","21:00"].find(t => !busy.includes(t)) || res.slot;
   const full = busy.includes(res.slot);
   document.querySelectorAll("[data-court-pay], [data-r-cta]").forEach(b => { b.disabled = full; });
@@ -566,6 +567,7 @@ function renderReserva() {
     const k = el.dataset.r;
     if (k === "icon") { el.innerHTML = el.classList.contains("court-ico") ? courtArt(res.sport) : ballArt(res.sport); el.classList.add("art-on"); } else if (k in v) el.textContent = v[k];
   });
+  try { renderMyCourts(); } catch (err) {}
 }
 document.querySelectorAll("#sportPicker .sport").forEach(b => { const svg = b.querySelector("svg"); if (svg && BALL_ART[b.dataset.sport]) svg.outerHTML = ballArt(b.dataset.sport); });
 document.getElementById("sportPicker").addEventListener("click", e => { const b = e.target.closest(".sport"); if (b) { res.sport = b.dataset.sport; renderReserva(); } });
@@ -5006,6 +5008,7 @@ document.addEventListener("click", e => {
   if (!e.target.closest("[data-court-pay]")) return;
   const sp = SPORTS[res.sport], fee = Math.round(sp.price * 5) / 100, end = pad2(parseInt(res.slot) + 1) + ":00";
   addMovement(sp.court, `Canchas · ${res.dname} ${res.day} ${resMes()} · ${res.slot}–${end}`, "−" + money(sp.price + fee), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
+  rememberCourt({ id: "c" + Date.now(), sport: res.sport, iso: courtIso(), slot: res.slot, price: Math.round((sp.price + fee) * 100) / 100 });
 });
 // Mi cuenta: los cambios de una cuenta real se guardan también en Supabase
 function sbSaveProfile(changes) {
@@ -5260,6 +5263,8 @@ function sbCourtDays() {
 async function sbLoadCourts() {
   const { data, error } = await sb.from("court_bookings").select("sport,day,slot").is("cancelled_at", null).gte("day", isoDay(new Date()));
   if (!error && data) sbCourtRows = data;
+  const mine = await sb.from("court_bookings").select("id,sport,day,slot,price").eq("user_id", account.sb).is("cancelled_at", null).gte("day", isoDay(new Date()));
+  if (!mine.error && mine.data) { myCourts = mine.data.map(r => ({ id: r.id, sport: r.sport, iso: r.day, slot: r.slot, price: +r.price })); saveMyCourts(); }
   if (["reserva", "revision"].includes(current)) renderReserva();
 }
 async function sbCourtsInit() {
@@ -5275,10 +5280,11 @@ document.addEventListener("click", e => {
   if (btn.classList.contains("loading")) return;
   const sp = SPORTS[res.sport], fee = Math.round(sp.price * 5) / 100, end = pad2(parseInt(res.slot) + 1) + ":00", total = r2(sp.price + fee);
   btn.classList.add("loading"); btn.disabled = true;
-  sb.rpc("book_court", { p_sport: res.sport, p_day: res.iso, p_slot: res.slot, p_price: total }).then(({ error }) => {
+  sb.rpc("book_court", { p_sport: res.sport, p_day: res.iso, p_slot: res.slot, p_price: total }).then(({ data, error }) => {
     btn.classList.remove("loading"); btn.disabled = false;
     if (error) { toast(/reservado|pasó|Máximo|14 días/.test(error.message) ? error.message + "." : "No pudimos reservar. Revisa tu conexión."); sbLoadCourts(); go("reserva"); return; }
     sbCourtRows.push({ sport: res.sport, day: res.iso, slot: res.slot });
+    if (data && data.id) rememberCourt({ id: data.id, sport: res.sport, iso: res.iso, slot: res.slot, price: total });
     addMovement(sp.court, `Canchas · ${res.dname} ${res.day} ${resMes()} · ${res.slot}–${end}`, "−" + money(total), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
     go("qr");
   });
@@ -5323,7 +5329,7 @@ async function renderDueno() {
     return `<div class="tk-row dn-row"><span class="row start" style="gap:10px"><span class="ico"><i data-lucide="${SV_LBL[key][1]}"></i></span><b style="font-size:13px">${SV_LBL[key][0]}</b></span><span><span class="tk-lbl">Confirmados</span>${x.n} · <b>${money(+x.usd)}</b></span><span><span class="tk-lbl">En revisión</span>${x.rev ? `${x.rev} · ${money(+x.revUsd)}` : "—"}</span></div>`; }).join("");
   const recent = d.recent.length ? `<ol class="dn-tl">${d.recent.map(e => `<li class="${SV_TONE[e.service] || "t-brand"}"><span class="dn-dot"><i data-lucide="${SV_LBL[e.service][1]}"></i></span>
       <div class="grow" style="min-width:0"><b style="font-size:13px">${SV_LBL[e.service][0]} · ${MT_LBL[e.method] || "Otro"}</b><span class="tiny" style="display:block">${esc(e.who || "Alguien")} · ${fullDT(e.t)}</span></div>
-      <div class="dn-amt"><b>${money(+e.amount)}</b><span class="pill ${e.status === "En revisión" ? "warn" : e.status === "Rechazado" ? "bad" : "ok"}">${e.status}</span></div></li>`).join("")}</ol>`
+      <div class="dn-amt"><b>${money(+e.amount)}</b><span class="pill ${e.status === "En revisión" ? "warn" : e.status === "Rechazado" ? "bad" : e.status === "Reembolsado" ? "neutral" : "ok"}">${e.status}</span></div></li>`).join("")}</ol>`
     : emptyState("receipt-text", "Aún no hay pagos reales", "Cuando alguien pague en la app publicada con su cuenta, aparecerá aquí al instante.");
   const conf = d.users.confirmed;
   body.innerHTML = `<div class="kpis dn-kpis">${k("Usuarios registrados", d.users.total, `${conf} con correo confirmado · ${d.users.today} hoy · ${d.users.last7} en 7 días`, "users")}${k("Pagos confirmados", d.payments.count, `${money(+d.payments.usd)} en total · ${d.payments.payers} ${d.payments.payers === 1 ? "persona pagó" : "personas pagaron"}`, "badge-check")}${k("Pagos en revisión", d.payments.review, d.payments.review ? `${money(+d.payments.reviewUsd)} esperando validación` : "Nada pendiente", "hourglass")}${d.orders ? k("Pedidos de comida", d.orders.total, `${d.orders.active} en curso · ${d.orders.delivered} entregados${d.orders.cancelled ? ` · ${d.orders.cancelled} cancelados` : ""}`, "utensils") : ""}${d.tickets ? k("Tickets de soporte", d.tickets.open, `abiertos · ${d.tickets.unassigned} sin asignar · ${d.tickets.resolved} resueltos`, "message-circle") : ""}${x4 ? k("Reservas de canchas", x4.courts.total, `${x4.courts.upcoming} por jugar`, "dribbble") + k("Estacionamiento", x4.parking.plans, `planes vigentes · ${x4.parking.vehicles} ${x4.parking.vehicles === 1 ? "vehículo registrado" : "vehículos registrados"}`, "car-front") + k("Saldo en wallets", money(+x4.wallet), "suma de todos los wallets", "wallet") : ""}</div>
@@ -5370,6 +5376,57 @@ document.addEventListener("click", e => {
     askConfirm({ icon: "user-x", title: `¿Desactivar a ${u.full_name}?`, text: "Podrá seguir entrando, pero como estudiante y sin acceso de gestión, hasta que lo reactives.", ok: "Desactivar", danger: true, onOk: () => dnSetRole(u.id, u.role, u.local_id, true) }); }
 });
 if (current === "dueno") try { renderDueno(); } catch (err) {}
+
+/* ---------- Mis reservas de canchas ----------
+   Próximas reservas de la cuenta (`nexo-courts`; con cuenta real vienen de court_bookings) y cancelar sin cargo
+   hasta 2 horas antes del turno: con cuenta real lo valida cancel_court (el pago del dueño queda "Reembolsado");
+   el reembolso entra a la Actividad. Con cuenta de prueba la hora se mide sobre la fecha simulada. */
+var myCourts = [];
+try { myCourts = JSON.parse(localStorage.getItem(K("nexo-courts")) || "[]") || []; } catch (err) {}
+function saveMyCourts() { try { localStorage.setItem(K("nexo-courts"), JSON.stringify(myCourts)); } catch (err) {} }
+function courtIso() { return res.iso || `${res.yr || 2026}-${pad2((res.mon ?? 10) + 1)}-${pad2(res.day)}`; }
+function courtNow() { const n = new Date(); if (sbShared()) return n; const d = day0(simDate); d.setHours(n.getHours(), n.getMinutes()); return d; }
+const courtStart = c => new Date(`${c.iso}T${c.slot}:00`);
+const courtEnd = c => courtStart(c).getTime() + 3600e3;
+const courtCanCancel = c => courtStart(c) - courtNow() >= 2 * 3600e3;
+function upcomingCourts() { const now = courtNow().getTime(); return myCourts.filter(c => courtEnd(c) > now).sort((a, b) => courtStart(a) - courtStart(b)); }
+function myCourtSlots(sport) { try { const iso = courtIso(); return myCourts.filter(c => c.sport === sport && c.iso === iso).map(c => c.slot); } catch (err) { return []; } }
+function rememberCourt(c) { myCourts = [...myCourts.filter(x => x.id !== c.id), c]; saveMyCourts(); try { renderMyCourts(); } catch (err) {} }
+const DN_CORTO = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const courtDate = c => { const d = new Date(c.iso + "T12:00"); return `${DN_CORTO[d.getDay()]} ${d.getDate()} ${MES_CORTO[d.getMonth()]}`; };
+const courtHours = c => `${c.slot}–${pad2(parseInt(c.slot) + 1)}:00`;
+function renderMyCourts() {
+  const box = document.getElementById("myCourts"); if (!box) return;
+  const list = upcomingCourts();
+  box.hidden = !list.length;
+  if (!list.length) { box.innerHTML = ""; return; }
+  const now = courtNow().getTime();
+  box.innerHTML = `<div class="row"><h2 class="sec">Mis reservas</h2><span class="tiny">Cancela sin cargo hasta 2 horas antes</span></div>
+    ${list.map(c => { const sp = SPORTS[c.sport] || { court: "Cancha" }, live = courtStart(c).getTime() <= now;
+      return `<div class="mc-row"><span class="mc-ball">${ballArt(c.sport)}</span>
+        <div class="grow" style="min-width:0"><b style="font-size:14px">${esc(sp.court)}</b><span class="tiny" style="display:block">${courtDate(c)} · ${courtHours(c)} · ${money(c.price)}</span></div>
+        ${live ? `<span class="pill ok">En curso</span>` : courtCanCancel(c) ? `<button class="btn ghost sm" type="button" data-court-cancel="${esc(c.id)}"><i data-lucide="calendar-x"></i>Cancelar</button>` : `<span class="pill neutral" title="Faltan menos de 2 horas">Empieza pronto</span>`}</div>`; }).join("")}`;
+  icons();
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-court-cancel]"); if (!b) return;
+  const c = myCourts.find(x => String(x.id) === b.dataset.courtCancel); if (!c) return;
+  const sp = SPORTS[c.sport] || { court: "Cancha" };
+  if (!courtCanCancel(c)) { toast("Ya no se puede cancelar: faltan menos de 2 horas para tu turno."); renderMyCourts(); return; }
+  askConfirm({ icon: "calendar-x", title: "¿Cancelar la reserva?", text: `${sp.court} · ${courtDate(c)} · ${courtHours(c)}. Te devolvemos ${money(c.price)} al mismo método de pago y la hora queda libre para otra persona.`, ok: "Cancelar reserva", cancel: "Volver", danger: true,
+    onOk: async () => {
+      if (sbShared()) {
+        const { error } = await sb.rpc("cancel_court", { p_id: c.id });
+        if (error) { toast(/2 horas/.test(error.message) ? "Ya no se puede cancelar: faltan menos de 2 horas para tu turno." : "No pudimos cancelar la reserva. Revisa tu conexión."); return; }
+      }
+      myCourts = myCourts.filter(x => x.id !== c.id); saveMyCourts();
+      addMovement(`Reserva cancelada · ${sp.court}`, `Canchas · ${courtDate(c)} · ${courtHours(c)}`, "+" + money(c.price), "Reembolsado", "ok", { icon: "rotate-ccw", go: "reserva", goLabel: "Ver canchas →" });
+      toast(`Cancelaste tu reserva. Te devolvemos ${money(c.price)}.`);
+      if (sbShared()) { try { sbCourtRows = sbCourtRows.filter(r => !(r.sport === c.sport && r.day === c.iso && r.slot === c.slot)); sbLoadCourts(); } catch (err) {} }
+      renderReserva();
+    } });
+});
+renderMyCourts();
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();

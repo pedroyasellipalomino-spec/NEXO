@@ -1427,3 +1427,15 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wordmark{--wm-ring:#3DBE85;color:#EEF4F0}}
 :root[data-theme="dark"] .wordmark{--wm-ring:#3DBE85;color:#EEF4F0}
 .mbar .wordmark{font-size:26px}
+
+/* Mis reservas de canchas */
+.my-courts{gap:4px}
+.mc-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.my-courts > .row + .mc-row{border-top:0}
+.mc-ball{flex:none;width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:var(--mint-bg)}
+.mc-ball svg{width:28px;height:28px}
+.mc-row .grow{flex:1}
+.mc-row .btn{width:auto;flex:none}
+.mc-row > .pill{flex:none}
+.my-courts > .row{flex-wrap:wrap;row-gap:2px}
+.my-courts > .row .sec{white-space:nowrap}

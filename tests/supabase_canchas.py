@@ -66,6 +66,28 @@ async def main():
         check("y también la reserva en su Actividad", await pa2.evaluate("moves.some(m => m.icon === 'dribbble')"))
         await pa2.evaluate("vehicle = null; saveVehicle();"); await pa2.wait_for_timeout(3000)
         check("borrar el vehículo también se guarda", sql(f"select vehicle is null n from public.student_state where user_id='{a}'")[0]["n"] is True)
+        # Mis reservas: cancelar sin cargo hasta 2 horas antes
+        await pa.evaluate("go('reserva')"); await pa.wait_for_timeout(1500)
+        check("Mis reservas muestra la reserva real", await pa.evaluate(f"myCourts.some(c => c.iso === '{days[1]}' && c.slot === '18:00')") and "Cancha de fútbol" in await pa.inner_text("#myCourts"))
+        await pa.click("[data-court-cancel]"); await pa.wait_for_timeout(300); await pa.click("[data-cdlg-ok]"); await pa.wait_for_timeout(3000)
+        row = sql(f"select cancelled_at is not null c from public.court_bookings where user_id='{a}' and day='{days[1]}'")
+        pay = sql(f"select status from public.payments where user_id='{a}' and service='canchas'")
+        check("cancelar libera la hora y el pago queda reembolsado", bool(row) and row[0]["c"] is True and [x["status"] for x in pay] == ["Reembolsado"], str(row) + str(pay))
+        check("el reembolso aparece en la Actividad", await pa.evaluate("moves.some(m => m.title.startsWith('Reserva cancelada') && m.pill === 'Reembolsado')"))
+        await pb.wait_for_timeout(1000)
+        check("en vivo: la hora cancelada queda libre para otros", not await pb.evaluate(f"sbCourtBusyFor('futbol', '{days[1]}').includes('18:00')"))
+        # a menos de 2 horas no se puede cancelar (el servidor lo impide aunque la pantalla esté vieja)
+        h = int(sql("select extract(hour from now() at time zone 'America/Caracas')::int h")[0]["h"])
+        if 16 <= h + 1 <= 21:
+            slot = f"{h+1}:00"
+            await pb.evaluate(f"sb.rpc('book_court', {{ p_sport: 'voleibol', p_day: '{days[0]}', p_slot: '{slot}', p_price: 12 }})")
+            bid = sql(f"select id from public.court_bookings where user_id='{bb}' and sport='voleibol' and cancelled_at is null")[0]["id"]
+            late = await pb.evaluate(f"sb.rpc('cancel_court', {{ p_id: '{bid}' }}).then(r => r.error && r.error.message)")
+            check("a menos de 2 horas del turno no se puede cancelar", "2 horas" in (late or ""), str(late))
+        else:
+            print("(se omite la prueba de menos de 2 horas: fuera del horario de canchas)")
+        stolen = await pa.evaluate(f"sb.from('court_bookings').select('id').eq('user_id', '{bb}').is('cancelled_at', null).limit(1).then(r => sb.rpc('cancel_court', {{ p_id: r.data[0].id }})).then(r => r.error && r.error.message)")
+        check("nadie cancela la reserva de otro (con la regla nueva)", "No se encontró" in (stolen or ""), str(stolen))
         own = await pa.evaluate("sb.rpc('owner_extra').then(r => r.error && r.error.message)")
         check("un estudiante no ve el resumen del dueño", "Solo el dueño" in (own or ""), str(own))
         errs = pa.errs + pb.errs + pa2.errs
