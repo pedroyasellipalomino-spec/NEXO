@@ -188,6 +188,14 @@ async def main() -> int:
         # creador: resumen, rol, respuesta y comisiones
         await login("diego.mendez@unimet.edu.ve", "demo-creador-01")
         check(await pg.evaluate("location.hash") == "#creador" and "$11.456" in await pg.inner_text("#crKpis"), "el creador ve el resumen con ingresos")
+        # el personal (sin carnet) en modo usuario puede reservar y pagar una cancha
+        await pg.goto(URL + "#reserva")
+        await pg.wait_for_timeout(300)
+        await pg.click("[data-r-cta]")
+        await pg.wait_for_timeout(300)
+        check(await pg.evaluate("location.hash") == "#revision", "el creador puede llegar a pagar una cancha (no pide carnet)")
+        await pg.goto(URL + "#creador")
+        await pg.wait_for_timeout(300)
         await pg.goto(URL + "#creador-equipo")
         await pg.wait_for_timeout(300)
         await pg.check("#ceInvite input[value=admin]")

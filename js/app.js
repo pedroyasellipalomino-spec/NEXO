@@ -303,7 +303,8 @@ function show(id) {
     const dual = ["owner", "creator", "admin", "mod"].includes(role); // el personal puede usar Nexo como usuario
     const okRole = Array.isArray(need) ? need.includes(role) : need === role;
     if (role === "estudiante" ? need : dual ? (need && !okRole) : !okRole) { id = ROLE_HOME[role]; history.replaceState(null, "", "#" + id); }
-    if (!need && !account?.carnet && ["materias", "caja", "tarjeta", "inscripcion", "revision"].includes(id)) {
+    // solo el estado de cuenta universitario pide carnet ("revision" es el pago de canchas: lo puede usar cualquiera)
+    if (!need && !account?.carnet && ["materias", "caja", "tarjeta", "inscripcion"].includes(id)) {
       id = "inicio"; history.replaceState(null, "", "#inicio");
       setTimeout(() => toast("El estado de cuenta universitario es para cuentas de estudiante con carnet."), 0);
     }
