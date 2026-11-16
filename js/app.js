@@ -3453,7 +3453,30 @@ function renderCeTicket() {
 let mvTab = "tx";
 const AUDIT_ICON = { caja: "badge-check", rol: "users", soporte: "message-circle", reembolso: "rotate-ccw", config: "settings" };
 const AUDIT_TYPE = { caja: ["Caja", "warn"], rol: ["Roles", "ok"], soporte: ["Soporte", "neutral"], reembolso: ["Reembolso", "warn"], config: ["Configuración", "neutral"] };
+/* Movimientos reales: con cuenta real de creador/admin/dueño, las transacciones salen de public.payments
+   (todas las personas, con su nombre de profiles); se pintan con lo guardado y se refrescan al abrir la pantalla. */
+let sbMoves = null, sbMovesBusy = false;
+const PAY_SVC = { comida: "Comida", estacionamiento: "Estacionamiento", materias: "Materias", canchas: "Canchas" };
+const sbMovesOn = () => sbShared() && ["creator", "admin", "owner"].includes(roleOf(account));
+async function sbLoadMoves() {
+  if (sbMovesBusy) return; sbMovesBusy = true;
+  try {
+    const { data, error } = await sb.from("payments").select("id,user_id,service,amount,status,method,detail,created_at").order("created_at", { ascending: false }).limit(300);
+    if (error) throw error;
+    const ids = [...new Set(data.map(r => r.user_id))];
+    const names = {};
+    if (ids.length) { const pr = await sb.from("profiles").select("id,full_name,email").in("id", ids); (pr.data || []).forEach(u => { names[u.id] = u.full_name || u.email; }); }
+    sbMoves = data.map(r => {
+      const ok = ["Pagado", "Acreditada", "Aprobado"].includes(r.status), svc = PAY_SVC[r.service], amt = +r.amount;
+      return { t: new Date(r.created_at).getTime(), who: names[r.user_id] || "Estudiante", concept: r.detail || (svc || "Recarga de wallet"), method: MT_LBL[r.method] || "Otro",
+        amount: r.status === "Reembolsado" ? -amt : amt, fee: ok && svc ? amt * (rates[svc] || 0) / 100 : null, service: r.service, status: r.status };
+    });
+  } catch (err) { console.warn("Nexo: no se cargaron los movimientos reales", err && err.message); }
+  sbMovesBusy = false;
+  if (current === "movimientos") renderMovimientos(true);
+}
 function allTransactions() {
+  if (sbMovesOn()) return sbMoves || [];
   const out = [];
   try {
     Object.keys(localStorage).filter(k => k.startsWith("nexo-orders:")).forEach(k => {
@@ -3468,14 +3491,19 @@ function allTransactions() {
   tickets.forEach(t => (t.actions || []).forEach(a => out.push({ t: a.t, who: t.student.name, concept: `${actionLabel(a)} · ${t.id}`, method: t.purchase ? t.purchase.method : "", amount: -a.amount, fee: null })));
   return out.sort((a, b) => b.t - a.t);
 }
-function renderMovimientos() {
+function renderMovimientos(fromLoad) {
+  if (sbMovesOn() && !fromLoad) sbLoadMoves();
   document.getElementById("mvTabs").innerHTML = [["tx", "Transacciones"], ["audit", "Registro de cambios"]].map(([k, l]) => `<button class="pill ${k === mvTab ? "ok" : "neutral"}" type="button" data-mv-tab="${k}">${l}</button>`).join("");
   const box = document.getElementById("mvList");
   if (mvTab === "tx") {
     const tx = allTransactions();
     box.innerHTML = `<div class="tk-row tk-head mv"><span>Fecha</span><span>Concepto</span><span>Método</span><span>Monto</span><span>Comisión</span></div>`
-      + (tx.map(x => `<div class="tk-row mv"><span class="tiny">${x.t ? fullDate(x.t) : "—"}</span><span class="tk-main row start" style="gap:10px">${x.amount < 0 ? `<span class="svc-chip t-refund" aria-hidden="true"><i data-lucide="rotate-ccw"></i></span>` : svcChip("Comida")}<span style="min-width:0"><b style="font-size:12px">${esc(x.concept)}</b><span class="tiny" style="display:block">${esc(x.who)}</span></span></span><span class="small">${esc(x.method)}</span><b class="${x.amount < 0 ? "neg" : ""}" style="font-size:13px">${x.amount < 0 ? "−" + money(-x.amount) : money(x.amount)}</b><span class="small">${x.fee === null ? "—" : money(x.fee)}</span></div>`).join("")
-        || emptyState("receipt-text", "Aún no hay compras", "Cuando un estudiante pague un pedido de comida, aparecerá aquí. Los totales del Resumen son datos de ejemplo."));
+      + (tx.map(x => `<div class="tk-row mv"><span class="tiny">${x.t ? fullDate(x.t) : "—"}</span><span class="tk-main row start" style="gap:10px">${x.amount < 0 ? `<span class="svc-chip t-refund" aria-hidden="true"><i data-lucide="rotate-ccw"></i></span>` : x.service === "recarga" ? `<span class="svc-chip t-brand" aria-hidden="true"><i data-lucide="wallet"></i></span>` : svcChip(x.service ? PAY_SVC[x.service] : "Comida")}<span style="min-width:0"><b style="font-size:12px">${esc(x.concept)}</b><span class="tiny" style="display:block">${esc(x.who)}</span></span></span><span class="small">${esc(x.method)}</span><span><b class="${x.amount < 0 ? "neg" : ""}" style="font-size:13px">${x.amount < 0 ? "−" + money(-x.amount) : money(x.amount)}</b>${x.status && !["Pagado", "Acreditada", "Aprobado"].includes(x.status) ? `<span class="pill ${x.status === "En revisión" ? "warn" : x.status === "Rechazado" ? "bad" : "neutral"} mv-st">${x.status}</span>` : ""}</span><span class="small">${x.fee === null ? "—" : money(x.fee)}</span></div>`).join("")
+        || (sbMovesOn() && !sbMoves ? `<p class="small" style="padding:18px">Cargando los movimientos reales…</p>` : emptyState("receipt-text", "Aún no hay compras", sbMovesOn() ? "Cuando alguien pague con su cuenta en la app publicada, aparecerá aquí al instante." : "Cuando un estudiante pague un pedido de comida, aparecerá aquí. Los totales del Resumen son datos de ejemplo.")));
+    if (sbMovesOn() && sbMoves) {
+      const ok = tx.filter(x => x.fee !== null), vol = ok.reduce((a, x) => a + x.amount, 0), fee = ok.reduce((a, x) => a + x.fee, 0), rev = tx.filter(x => x.status === "En revisión").length;
+      box.insertAdjacentHTML("afterbegin", `<div class="mv-sum"><span class="pill ok"><i data-lucide="database"></i>&nbsp;Datos reales</span><span class="small">${ok.length} ${ok.length === 1 ? "pago confirmado" : "pagos confirmados"} · <b>${money(vol)}</b> · comisión de Nexo <b>${money(fee)}</b>${rev ? ` · ${rev} en revisión` : ""}</span></div>`);
+    }
   } else {
     box.innerHTML = `<div class="tk-row tk-head au"><span>Cuándo</span><span>Quién</span><span>Cambio</span><span>Tipo</span></div>`
       + (audit.slice().sort((a, b) => b.t - a.t).map(a => `<div class="tk-row au"><span class="tiny">${ago(a.t)}</span><span class="row start" style="gap:10px;align-items:flex-start"><span class="svc-chip au-${AUDIT_TYPE[a.type] ? a.type : "soporte"}" aria-hidden="true"><i data-lucide="${AUDIT_ICON[a.type] || "message-circle"}"></i></span><span><b style="font-size:12px">${esc(a.who)}</b><span class="tiny" style="display:block">${ROLE_LABEL[a.role] || ""}</span></span></span><span style="font-size:12px">${esc(a.text)}</span><span><span class="pill ${(AUDIT_TYPE[a.type] || AUDIT_TYPE.soporte)[1]}">${(AUDIT_TYPE[a.type] || AUDIT_TYPE.soporte)[0]}</span></span></div>`).join(""));

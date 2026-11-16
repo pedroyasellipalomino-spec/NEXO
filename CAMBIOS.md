@@ -3,6 +3,7 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 16 nov 2026
+- Movimientos del creador con pagos reales.
 - Equipo: avatares y etiquetas con color por rol.
 - Movimientos y configuración con íconos por tipo.
 - Comercio: pedidos con dibujo del producto.
