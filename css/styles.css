@@ -1417,3 +1417,13 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .hn-core{background:#0A2A20!important}
 .hn-core svg{width:76%!important;height:auto!important}
 .campus .hn-core svg{width:76%!important;height:auto!important}
+
+/* Palabra de marca: "nex" en Manrope con el eslabón como "o" (propuesta de identidad).
+   Claro: texto verde Nexo #0F3D2E y eslabón esmeralda #1F7A55. Oscuro: niebla #EEF4F0 y verde señal #3DBE85. */
+.wordmark{--wm-ring:#1F7A55;display:inline-block;font-family:"Manrope",system-ui,sans-serif;font-weight:700;font-size:30px;line-height:1;letter-spacing:-.025em;color:#0F3D2E;white-space:nowrap}
+.wm-o{display:inline-block;width:1.125em;height:.725em;margin-left:.01em;vertical-align:-.1125em;overflow:visible}
+.wm-ring{stroke:var(--wm-ring)}
+.side .wordmark,.campus .wordmark{--wm-ring:#3DBE85;color:#EEF4F0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wordmark{--wm-ring:#3DBE85;color:#EEF4F0}}
+:root[data-theme="dark"] .wordmark{--wm-ring:#3DBE85;color:#EEF4F0}
+.mbar .wordmark{font-size:26px}

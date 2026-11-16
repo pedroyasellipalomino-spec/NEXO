@@ -3,6 +3,7 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 16 nov 2026
+- Palabra "nexo" con la O como eslabón.
 - Logo nuevo: la cadena de dos eslabones.
 - Íconos de la app con el logo nuevo.
 - La app siempre carga la versión más reciente.

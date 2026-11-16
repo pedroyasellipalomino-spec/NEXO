@@ -72,7 +72,7 @@ document.querySelectorAll("section.app").forEach(sec => {
   const side = document.createElement("aside");
   side.className = "side";
   side.innerHTML = `
-    <button class="brand" type="button" data-go="${home}" style="color:#fff"><span class="emblem"><svg class="nexo-mark" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" stroke="#3DBE85" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="#EEF4F0" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" stroke="#3DBE85" stroke-width="10"/></svg></span>nexo</button>
+    <button class="brand" type="button" data-go="${home}" style="color:#fff"><span class="wordmark"><span aria-hidden="true">nex</span><svg class="wm-o" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" class="wm-ring" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="currentColor" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" class="wm-ring" stroke-width="10"/></svg><span class="sr-only">nexo</span></span></button>
     <div class="inst"><b>U. Metropolitana</b><span>Campus Central · Caracas</span></div>
     <nav class="nav">${nav.map(n => `<button type="button" data-go="${n[3]}" class="${n[0]===tab?'on':''}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`).join("")}</nav>
     ${staff
@@ -84,7 +84,7 @@ document.querySelectorAll("section.app").forEach(sec => {
   main.className = "main";
   const left = back
     ? `<button class="title" type="button" data-go="${back}" data-back-btn><i data-lucide="arrow-left"></i>${title}</button>`
-    : `<button class="brand" type="button" data-go="${home}"><span class="emblem"><svg class="nexo-mark" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" stroke="#3DBE85" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="#EEF4F0" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" stroke="#3DBE85" stroke-width="10"/></svg></span>nexo</button>`;
+    : `<button class="brand" type="button" data-go="${home}"><span class="wordmark"><span aria-hidden="true">nex</span><svg class="wm-o" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" class="wm-ring" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="currentColor" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" class="wm-ring" stroke-width="10"/></svg><span class="sr-only">nexo</span></span></button>`;
   const macts = staff
     ? `<span class="pill ok">${ROLE_LABEL[staff]}</span><button class="avatarbtn" type="button" aria-label="Menú de usuario" aria-haspopup="menu" data-usermenu><span data-user="initials">AT</span></button>`
     : `<button class="bellbtn" type="button" aria-label="Notificaciones" data-go="notificaciones"><i data-lucide="bell"></i><span class="nbadge" data-notif-badge hidden></span></button><button class="avatarbtn" type="button" aria-label="Menú de usuario" aria-haspopup="menu" data-usermenu><span data-user="initials">AT</span></button>`;
