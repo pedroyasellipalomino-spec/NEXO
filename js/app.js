@@ -3291,12 +3291,46 @@ const signPct = x => (x >= 0 ? "+" : "−") + pctTxt(Math.abs(x));
 const SVC4 = ["Comida", "Estacionamiento", "Materias", "Canchas"];
 const SVC_LABEL = { Comida: "Comida y kioscos", Estacionamiento: "Estacionamiento", Materias: "Materias", Canchas: "Canchas" };
 // Datos de ejemplo por mes (volumen en USD y cantidad de compras por servicio); los ingresos salen de las comisiones de Configuración
-const PERIODS = {
+const PERIODS_DEMO = {
   "2026-08": { label: "01 – 31 ago 2026", name: "Agosto", mau: 6900, users: 10830, newUsers: 780, vol: { Comida: 66000, Estacionamiento: 47000, Materias: 92000, Canchas: 22000 }, buys: { Comida: 6795, Estacionamiento: 4530, Materias: 2265, Canchas: 1510 }, w: [60, 80, 75, 98, 110, 128, 140, 150], days: [1, 5, 9, 13, 17, 21, 25, 31], mon: "ago" },
   "2026-09": { label: "01 – 30 sep 2026", name: "Septiembre", prev: "2026-08", mau: 7331, users: 11670, newUsers: 840, vol: { Comida: 70980, Estacionamiento: 50300, Materias: 98900, Canchas: 23600 }, buys: { Comida: 7590, Estacionamiento: 5060, Materias: 2530, Canchas: 1688 }, w: [70, 89, 83, 112, 128, 150, 164, 178], days: [1, 5, 9, 13, 17, 21, 25, 30], mon: "sep" },
   "2026-10": { label: "01 – 31 oct 2026", name: "Octubre", prev: "2026-09", mau: 8240, users: 12580, newUsers: 910, vol: { Comida: 85920, Estacionamiento: 57280, Materias: 114560, Canchas: 28640 }, buys: { Comida: 8289, Estacionamiento: 5526, Materias: 2763, Canchas: 1842 }, w: [86, 108, 101, 132, 156, 179, 195, 224], days: [1, 5, 9, 13, 17, 21, 25, 31], mon: "oct" },
   "2026-11": { label: "01 – 11 nov 2026 · parcial", name: "Noviembre", prev: "2026-10", partial: 11 / 31, mau: 7960, users: 12840, newUsers: 260, vol: { Comida: 32800, Estacionamiento: 21900, Materias: 41200, Canchas: 10300 }, buys: { Comida: 3141, Estacionamiento: 2094, Materias: 1047, Canchas: 698 }, w: [190, 205, 214], days: [1, 5, 9], mon: "nov" }
 };
+let PERIODS = PERIODS_DEMO, crReal = false;
+const MES_NOMBRE = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+/* Resumen real del creador: con cuenta real de creador/admin/dueño los meses se arman con los pagos de Supabase
+   (sbMoves). Volumen y compras = pagos confirmados de comida, estacionamiento, materias y canchas (las recargas
+   no son compras); "personas que pagaron" = cuentas distintas con algún pago en el mes. El mes en curso se compara
+   con el mismo tramo de días del mes anterior, contado de verdad (no estimado). */
+function realPeriods(rows) {
+  const now = new Date(), out = {}, key = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+  const month = (y, m, capDay) => {
+    const dim = new Date(y, m + 1, 0).getDate(), last = Math.min(capDay || dim, dim);
+    const days = [1, 5, 9, 13, 17, 21, 25, 29].filter(d => d <= last);
+    const p = { y, m, name: MES_NOMBRE[m], mon: MES_CORTO[m], days, mau: 0, vol: { Comida: 0, Estacionamiento: 0, Materias: 0, Canchas: 0 }, buys: { Comida: 0, Estacionamiento: 0, Materias: 0, Canchas: 0 }, w: days.map(() => 0), real: true,
+      label: capDay && capDay < dim ? `01 – ${pad2(last)} ${MES_CORTO[m]} ${y} · parcial` : `01 – ${pad2(dim)} ${MES_CORTO[m]} ${y}` };
+    const payers = new Set();
+    rows.forEach(r => {
+      const d = new Date(r.t); if (d.getFullYear() !== y || d.getMonth() !== m || d.getDate() > last) return;
+      if (r.status !== "Reembolsado" && r.status !== "Rechazado") payers.add(r.uid);
+      const svc = PAY_SVC[r.service]; if (!svc || r.fee === null) return;
+      p.vol[svc] += r.amount; p.buys[svc] += 1;
+      let i = days.length - 1; while (i > 0 && d.getDate() < days[i]) i--;
+      p.w[i] += r.amount * (rates[svc] || 0) / 100;
+    });
+    p.mau = payers.size;
+    return p;
+  };
+  for (let back = 0; back < 3; back++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - back, 1), pd = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+    const cap = back === 0 ? now.getDate() : null, k = key(d);
+    out[k] = month(d.getFullYear(), d.getMonth(), cap);
+    out[k + "~prev"] = month(pd.getFullYear(), pd.getMonth(), cap);
+    out[k].prev = k + "~prev"; if (cap) out[k].partial = 1;
+  }
+  return out;
+}
 const RATES0 = { Comida: 6, Estacionamiento: 4, Materias: 2.25, Canchas: 5 };
 let rates = { ...RATES0 };
 try { const c = JSON.parse(localStorage.getItem("nexo-config") || "null"); if (c && c.rates) rates = { ...RATES0, ...c.rates }; } catch (err) {}
@@ -3317,45 +3351,60 @@ const durTxt = m => m === null ? "—" : m < 60 ? `${m} min` : `${(m / 60).toFix
 let crPeriod = "2026-10", crTable = false;
 function renderCreador() {
   const sel = document.getElementById("crPeriod");
+  const real = sbMovesOn();
+  if (real && !sbMoves) {
+    // con cuenta real nunca se muestran números de ejemplo: se espera a los pagos reales
+    sbLoadMoves();
+    document.getElementById("crKpis").innerHTML = `<p class="small">Cargando los datos reales…</p>`;
+    document.getElementById("crCompare").textContent = "Datos reales";
+    ["crChart", "crMix"].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
+    return;
+  }
+  if (real) {
+    PERIODS = realPeriods(sbMoves);
+    if (!crReal) { crPeriod = Object.keys(PERIODS)[0]; sel.innerHTML = ""; }
+    crReal = true;
+  } else if (crReal) { PERIODS = PERIODS_DEMO; crPeriod = "2026-10"; sel.innerHTML = ""; crReal = false; }
   if (!sel.options.length) sel.innerHTML = Object.keys(PERIODS).filter(k => PERIODS[k].prev).map(k => `<option value="${k}">${PERIODS[k].label}</option>`).join("");
+  if (!PERIODS[crPeriod]) crPeriod = Object.keys(PERIODS)[0];
   sel.value = crPeriod;
-  const cur = periodStats(crPeriod), p = cur.p, prevS = periodStats(p.prev), k = p.partial || 1;
+  const cur = periodStats(crPeriod), p = cur.p, prevS = periodStats(p.prev), k = p.real ? 1 : p.partial || 1, fm = p.real ? money : money0;
   const prev = { mau: prevS.mau, buys: prevS.buys * k, vol: prevS.vol * k, rev: prevS.rev * k };
   const vsTxt = p.partial ? `vs. mismo tramo de ${PERIODS[p.prev].mon}` : `vs. ${PERIODS[p.prev].mon}`;
-  document.getElementById("crCompare").textContent = p.partial ? `Comparado con el 1 al 11 de ${PERIODS[p.prev].mon}` : `Comparado con ${PERIODS[p.prev].name.toLowerCase()} de 2026`;
-  const kpi = (label, val, ch, ic) => `<div class="card kpi static sk"><div class="row"><span class="row start" style="gap:10px">${skIc(ic)}<span class="small">${label}</span></span></div><b class="kv-big">${val}</b><div class="row start" style="gap:8px"><span class="pill ${ch >= 0 ? "ok" : "bad"}">${signPct(ch)}</span><span class="tiny">${vsTxt}</span></div></div>`;
+  document.getElementById("crCompare").textContent = (p.real ? "Datos reales · " : "") + (p.real ? (p.partial ? `comparado con el 1 al ${new Date().getDate()} de ${PERIODS[p.prev].mon}` : `comparado con ${PERIODS[p.prev].name.toLowerCase()} de ${PERIODS[p.prev].y}`) : p.partial ? `Comparado con el 1 al 11 de ${PERIODS[p.prev].mon}` : `Comparado con ${PERIODS[p.prev].name.toLowerCase()} de 2026`);
+  const kpi = (label, val, ch, ic) => `<div class="card kpi static sk"><div class="row"><span class="row start" style="gap:10px">${skIc(ic)}<span class="small">${label}</span></span></div><b class="kv-big">${val}</b><div class="row start" style="gap:8px">${isFinite(ch) ? `<span class="pill ${ch >= 0 ? "ok" : "bad"}">${signPct(ch)}</span>` : `<span class="pill neutral">${ch > 0 ? "Nuevo" : "Sin datos"}</span>`}<span class="tiny">${vsTxt}</span></div></div>`;
   document.getElementById("crKpis").innerHTML =
-    kpi("Usuarios activos mensuales", int0(cur.mau), cur.mau / prev.mau - 1, "users") +
+    kpi(p.real ? "Personas que pagaron" : "Usuarios activos mensuales", int0(cur.mau), cur.mau / prev.mau - 1, "users") +
     kpi("Compras completadas", int0(cur.buys), cur.buys / prev.buys - 1, "shopping-bag") +
-    kpi("Volumen de compras", money0(cur.vol), cur.vol / prev.vol - 1, "banknote") +
-    kpi("Ingresos de Nexo", money0(cur.rev), cur.rev / prev.rev - 1, "trending-up");
+    kpi("Volumen de compras", fm(cur.vol), cur.vol / prev.vol - 1, "banknote") +
+    kpi("Ingresos de Nexo", fm(cur.rev), cur.rev / prev.rev - 1, "trending-up");
   // Gráfico: ingresos por intervalo, período actual vs. anterior
-  const n = p.w.length, sw = sumObj(p.w), pw = PERIODS[p.prev].w.slice(0, n), spw = sumObj(PERIODS[p.prev].w);
+  const n = p.w.length, sw = sumObj(p.w) || 1, pw = PERIODS[p.prev].w.slice(0, n), spw = sumObj(PERIODS[p.prev].w) || 1;
   const curV = p.w.map(x => cur.rev * x / sw), prevV = pw.map(x => prevS.rev * x / spw);
-  const max = Math.max(...curV, ...prevV), step = max > 1500 ? 1000 : 500, top = Math.ceil(max / step) * step;
+  const max = Math.max(...curV, ...prevV), step = p.real ? [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000].find(x => x * 2 >= max) || 10000 : max > 1500 ? 1000 : 500, top = Math.max(step, Math.ceil(max / step) * step);
   const lbl = i => `${String(p.days[i]).padStart(2, "0")} ${p.mon}`, plbl = i => `${String(PERIODS[p.prev].days[i]).padStart(2, "0")} ${PERIODS[p.prev].mon}`;
-  const kTxt = v => v === 0 ? "$0" : `$${String(v / 1000).replace(".", ",")} mil`;
+  const kTxt = v => v === 0 ? "$0" : p.real && top < 2000 ? `$${int0(v)}` : `$${String(v / 1000).replace(".", ",")} mil`;
   document.getElementById("crChart").innerHTML = `
     <div class="row"><h2 class="sec">Ingresos por comisiones</h2><span class="pill neutral">USD</span></div>
     <p class="small" style="font-size:12px">Ingresos brutos de la app · Por intervalo de 4 días</p>
-    <div class="row" style="flex-wrap:wrap"><div class="chips legend"><span class="pill ok"><i class="sw cur"></i>${p.name} · ${money0(cur.rev)}</span><span class="pill neutral"><i class="sw prev"></i>${PERIODS[p.prev].name}${p.partial ? " (mismo tramo)" : ""} · ${money0(sumObj(prevV))}</span></div>
+    <div class="row" style="flex-wrap:wrap"><div class="chips legend"><span class="pill ok"><i class="sw cur"></i>${p.name} · ${fm(cur.rev)}</span><span class="pill neutral"><i class="sw prev"></i>${PERIODS[p.prev].name}${p.partial ? " (mismo tramo)" : ""} · ${fm(sumObj(prevV))}</span></div>
       <button class="link b" type="button" data-cr-table>${crTable ? "Ver gráfico" : "Ver tabla"}</button></div>
-    ${crTable ? `<div class="chart-table"><div class="tk-row tk-head ct"><span>Intervalo</span><span>${p.name}</span><span>${PERIODS[p.prev].name}</span></div>${curV.map((v, i) => `<div class="tk-row ct"><span>${lbl(i)}</span><span>${money0(v)}</span><span>${money0(prevV[i])}</span></div>`).join("")}</div>`
+    ${crTable ? `<div class="chart-table"><div class="tk-row tk-head ct"><span>Intervalo</span><span>${p.name}</span><span>${PERIODS[p.prev].name}</span></div>${curV.map((v, i) => `<div class="tk-row ct"><span>${lbl(i)}</span><span>${fm(v)}</span><span>${fm(prevV[i])}</span></div>`).join("")}</div>`
     : `<div class="chart" role="img" aria-label="Ingresos por intervalo de ${p.name.toLowerCase()} comparados con ${PERIODS[p.prev].name.toLowerCase()}">
       <div class="axis"><span>${kTxt(top)}</span><span>${kTxt(top / 2)}</span><span>$0</span></div>
       <div class="plot"><div class="grid"><i></i><i></i><i></i></div>
-        ${curV.map((v, i) => `<button class="grp" type="button" aria-label="${lbl(i)}: ${money0(v)}; ${plbl(i)}: ${money0(prevV[i])}">
+        ${curV.map((v, i) => `<button class="grp" type="button" aria-label="${lbl(i)}: ${fm(v)}; ${plbl(i)}: ${fm(prevV[i])}">
           <span class="bars"><span class="bar prev" style="height:${prevV[i] / top * 100}%"></span><span class="bar cur" style="height:${v / top * 100}%"></span></span>
           <span class="tick">${lbl(i)}</span>
-          <span class="tip"><b>${lbl(i)}</b><span><i class="sw cur"></i>${money0(v)}</span><span><i class="sw prev"></i>${money0(prevV[i])} · ${plbl(i)}</span></span>
+          <span class="tip"><b>${lbl(i)}</b><span><i class="sw cur"></i>${fm(v)}</span><span><i class="sw prev"></i>${fm(prevV[i])} · ${plbl(i)}</span></span>
         </button>`).join("")}
       </div></div>`}
     <div class="sep"></div>
     <div class="row start" style="gap:30px;align-items:flex-start;flex-wrap:wrap">
-      <div><b class="big brand">${pctTxt(cur.rev / cur.vol, 2)}</b><p class="small">Comisión efectiva sobre el volumen</p></div>
-      <div><b class="big">${money0(cur.vol - cur.rev)}</b><p class="small">${Math.round((1 - cur.rev / cur.vol) * 100)} % destinado a comercios y campus</p></div>
+      <div><b class="big brand">${pctTxt(cur.vol ? cur.rev / cur.vol : 0, 2)}</b><p class="small">Comisión efectiva sobre el volumen</p></div>
+      <div><b class="big">${fm(cur.vol - cur.rev)}</b><p class="small">${cur.vol ? Math.round((1 - cur.rev / cur.vol) * 100) : 0} % destinado a comercios y campus</p></div>
     </div>`;
-  const tb = cur.buys;
+  const tb = cur.buys || 1;
   document.getElementById("crMix").innerHTML = `<h2 class="sec">Compras por servicio</h2><p class="small" style="font-size:12px">Participación del total de ${int0(tb)} compras</p>
     ${SVC4.map(s => `<div class="mix ${svcTone(s)}"><div class="row"><span class="row start" style="gap:8px">${svcChip(s)}${SVC_LABEL[s]}</span><b>${Math.round(p.buys[s] / tb * 100)} %</b></div><div class="track"><i style="width:${p.buys[s] / tb * 100}%"></i></div><span class="tiny">${int0(p.buys[s])} compras · comisión ${String(rates[s]).replace(".", ",")} %</span></div>`).join("")}
     <div class="sep"></div><p class="tiny">Las comisiones varían por servicio. El ${pctTxt(cur.rev / cur.vol, 2)} es la tasa efectiva agregada, no una tarifa única. <button class="link b" type="button" data-go="config" style="font-size:11px">Ajustar comisiones</button></p>`;
@@ -3461,19 +3510,20 @@ const sbMovesOn = () => sbShared() && ["creator", "admin", "owner"].includes(rol
 async function sbLoadMoves() {
   if (sbMovesBusy) return; sbMovesBusy = true;
   try {
-    const { data, error } = await sb.from("payments").select("id,user_id,service,amount,status,method,detail,created_at").order("created_at", { ascending: false }).limit(300);
+    const { data, error } = await sb.from("payments").select("id,user_id,service,amount,status,method,detail,created_at").order("created_at", { ascending: false }).limit(2000);
     if (error) throw error;
     const ids = [...new Set(data.map(r => r.user_id))];
     const names = {};
     if (ids.length) { const pr = await sb.from("profiles").select("id,full_name,email").in("id", ids); (pr.data || []).forEach(u => { names[u.id] = u.full_name || u.email; }); }
     sbMoves = data.map(r => {
       const ok = ["Pagado", "Acreditada", "Aprobado"].includes(r.status), svc = PAY_SVC[r.service], amt = +r.amount;
-      return { t: new Date(r.created_at).getTime(), who: names[r.user_id] || "Estudiante", concept: r.detail || (svc || "Recarga de wallet"), method: MT_LBL[r.method] || "Otro",
+      return { t: new Date(r.created_at).getTime(), uid: r.user_id, who: names[r.user_id] || "Estudiante", concept: r.detail || (svc || "Recarga de wallet"), method: MT_LBL[r.method] || "Otro",
         amount: r.status === "Reembolsado" ? -amt : amt, fee: ok && svc ? amt * (rates[svc] || 0) / 100 : null, service: r.service, status: r.status };
     });
   } catch (err) { console.warn("Nexo: no se cargaron los movimientos reales", err && err.message); }
   sbMovesBusy = false;
   if (current === "movimientos") renderMovimientos(true);
+  if (current === "creador") try { renderCreador(); } catch (err) {}
 }
 function allTransactions() {
   if (sbMovesOn()) return sbMoves || [];
@@ -3539,7 +3589,7 @@ function readRates() {
   return { r, bad };
 }
 function updateCfPreview() {
-  const { r, bad } = readRates(), p = PERIODS["2026-10"], el = document.getElementById("cfPreview");
+  const { r, bad } = readRates(), p = PERIODS_DEMO["2026-10"], el = document.getElementById("cfPreview");
   if (bad) { el.className = "notice warn"; el.innerHTML = `<i data-lucide="info"></i><p>Cada comisión debe estar entre 0 % y 15 %.</p>`; icons(); return; }
   const vol = sumObj(p.vol), rev = SVC4.reduce((a, s) => a + p.vol[s] * r[s] / 100, 0);
   el.className = "notice"; el.innerHTML = `<i data-lucide="percent"></i><p>Con estas comisiones, octubre habría dado <strong>${money0(rev)}</strong> de ingresos · comisión efectiva <strong>${pctTxt(rev / vol, 2)}</strong>.</p>`; icons();

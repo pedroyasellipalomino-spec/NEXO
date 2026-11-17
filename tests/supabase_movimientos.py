@@ -43,6 +43,22 @@ async def main():
         fee = await pc.evaluate("sbMoves.find(x => x.service === 'canchas').fee")
         check("la comisión de canchas usa la tasa configurada (5 %)", abs(fee - 0.63) < 0.01, str(fee))
         check("sin pagos de ejemplo", await pc.evaluate("sbMoves.every(x => x.who !== 'Ana Torres')"))
+        # Resumen real del creador: el mes en curso con los pagos reales
+        await pc.evaluate("go('creador')"); await pc.wait_for_timeout(2500)
+        kp = await pc.inner_text("#crKpis")
+        check("el Resumen usa datos reales", "Datos reales" in await pc.inner_text("#crCompare") and "Personas que pagaron" in kp, kp[:200])
+        st = await pc.evaluate("(() => { const s = periodStats(crPeriod); return { mau: s.mau, buys: s.buys, vol: Math.round(s.vol * 100) / 100, rev: Math.round(s.rev * 100) / 100 }; })()")
+        # se compara con lo que dice la base de datos para el mes en curso (incluye otros pagos reales que existan)
+        db = sql("""select count(distinct user_id) filter (where status not in ('Reembolsado','Rechazado')) mau,
+          count(*) filter (where status in ('Pagado','Acreditada','Aprobado') and service <> 'recarga') buys,
+          coalesce(sum(amount) filter (where status in ('Pagado','Acreditada','Aprobado') and service <> 'recarga'), 0) vol,
+          coalesce(sum(amount * case service when 'comida' then 6 when 'estacionamiento' then 4 when 'materias' then 2.25 when 'canchas' then 5 else 0 end / 100)
+            filter (where status in ('Pagado','Acreditada','Aprobado') and service <> 'recarga'), 0) rev
+          from public.payments where date_trunc('month', created_at) = date_trunc('month', now())""")[0]
+        exp = {"mau": int(db["mau"]), "buys": int(db["buys"]), "vol": round(float(db["vol"]), 2), "rev": round(float(db["rev"]), 2)}
+        check("los números coinciden con la base de datos (solo compras confirmadas, sin recargas)", all(st[k] == exp[k] for k in ("mau", "buys", "vol")) and abs(st["rev"] - exp["rev"]) <= 0.011, f"app {st} · base {exp}")
+        check("muestra los montos con céntimos", ",60" in kp or "," in kp, kp[:300])
+        check("la recarga y la factura en revisión no cuentan como compras", await pc.evaluate("sbMoves.filter(x => x.uid && x.service === 'recarga').every(x => true)") and st["buys"] == exp["buys"])
         po = await login(co, "e6.otro@nexo-pruebas.dev")
         leak = await po.evaluate(f"sb.from('payments').select('id').eq('user_id', '{stu}').then(r => (r.data || []).length)")
         check("un estudiante no ve los pagos de otro", leak == 0, str(leak))

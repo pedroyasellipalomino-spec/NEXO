@@ -2,6 +2,9 @@
 
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
+## 17 nov 2026
+- Resumen del creador con datos reales.
+
 ## 16 nov 2026
 - Movimientos del creador con pagos reales.
 - Equipo: avatares y etiquetas con color por rol.
