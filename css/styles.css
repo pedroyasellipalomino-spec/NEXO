@@ -1476,3 +1476,46 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .mv-sum{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line)}
 .mv-st{display:inline-block;margin-top:4px;font-size:11px}
 .tk-row.mv > span:nth-child(4){display:flex;flex-direction:column;align-items:flex-start}
+
+/* ---------- Verificar carnet por foto (#carnet) y Carnets por verificar (#carnets) ---------- */
+.svc-chip.au-carnet{--tone:#6250d6}
+.ca-who{flex-direction:row;align-items:center;gap:12px}
+.ca-num{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none}
+.ca-num b{font-size:16px;letter-spacing:.04em}
+.ca-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ca-steps li{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted);padding:10px 12px;border-radius:var(--r-sm);background:var(--surface);border:1px solid var(--line);min-width:0}
+.ca-steps li > span{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:12px;background:var(--bg);border:1px solid var(--line)}
+.ca-steps li > span svg{width:14px;height:14px}
+.ca-steps li.now{color:var(--ink);border-color:var(--brand)}
+.ca-steps li.now > span{background:var(--brand);border-color:var(--brand);color:#fff}
+.ca-steps li.done > span{background:var(--mint-bg);border-color:transparent;color:var(--brand)}
+.ca-shot,.ca-pend,.ca-ok{gap:14px}
+.ca-ok{align-items:flex-start}
+.ca-frame{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;aspect-ratio:1.586;width:100%;max-width:460px;border-radius:16px;border:2px dashed var(--line);background:var(--bg);color:var(--muted);overflow:hidden;text-align:center;padding:12px}
+.ca-frame.has{border-style:solid;border-color:var(--brand);padding:0;background:#000}
+.ca-frame img{width:100%;height:100%;object-fit:contain}
+.ca-ph{display:grid;place-items:center;width:64px;height:64px;border-radius:18px;background:var(--mint-bg);color:var(--brand)}
+.ca-ph svg{width:32px;height:32px}
+.ca-pick{flex-wrap:wrap;justify-content:flex-start}
+.ca-pick .btn{width:auto;flex:1 1 180px;cursor:pointer}
+.ca-tips{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.ca-tips li{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.ca-tips svg{width:16px;height:16px;color:var(--brand);flex:none}
+.ca-thumb{width:100%;max-width:320px;aspect-ratio:1.586;border-radius:12px;overflow:hidden;background:var(--bg);display:grid;place-items:center;border:1px solid var(--line)}
+.ca-thumb img{width:100%;height:100%;object-fit:cover}
+.ca-pend .row,.ca-shot > .row:last-child{flex-wrap:wrap;justify-content:flex-start}
+.ca-pend .btn,.ca-shot > .row:last-child .btn{width:auto;flex:1 1 200px}
+.ca-body{display:grid;gap:12px}
+@media (min-width:900px){.ca-body{grid-template-columns:minmax(260px,340px) 1fr;align-items:start}.ca-grid{grid-template-columns:1fr 1fr!important}}
+.ca-photo{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:1.586;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0b1512;cursor:zoom-in}
+.ca-photo img{width:100%;height:100%;object-fit:contain}
+.ca-photo .tiny{color:#cfe0d7}
+.ca-photo.big{cursor:zoom-out;aspect-ratio:auto;max-height:70vh}
+.ca-photo.big img{height:auto;max-height:70vh}
+@media (min-width:900px){.ca-body:has(.ca-photo.big){grid-template-columns:1fr}}
+.ca-zoom{position:absolute;right:8px;bottom:8px;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff}
+.ca-zoom svg{width:16px;height:16px}
+.ca-big{font-size:18px!important;letter-spacing:.05em}
+.ca-check{grid-column:1/-1}
+.ca-check ul{margin:4px 0 0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:2px}
+@media (max-width:520px){.ca-steps li{flex-direction:column;align-items:flex-start;gap:6px;font-size:12px;padding:8px}}

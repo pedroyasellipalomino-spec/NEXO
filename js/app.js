@@ -39,11 +39,11 @@ const NAV = [
 const TABS = NAV.filter(n => n[0] !== "cuenta" && n[0] !== "perfil");
 /* Espacio de gestión: cada sección con data-staff="admin" o "mod" usa su propio menú */
 const STAFF_NAV = {
-  admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"], ["validar","badge-check","Pagos por validar","validar"]],
+  admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"], ["validar","badge-check","Pagos por validar","validar"], ["carnets","id-card","Carnets","carnets"]],
   mod: [["moderacion","inbox","Tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]],
   local: [["local-pedidos","chef-hat","Pedidos","local-pedidos"], ["local-menu","book-open","Menú y horario","local-menu"]],
-  owner: [["dueno","shield-check","Datos reales","dueno"], ["validar","badge-check","Caja","validar"]],
-  creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["validar","badge-check","Pagos por validar","validar"], ["config","settings","Configuración","config"]]
+  owner: [["dueno","shield-check","Datos reales","dueno"], ["validar","badge-check","Caja","validar"], ["carnets","id-card","Carnets","carnets"]],
+  creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["validar","badge-check","Pagos por validar","validar"], ["carnets","id-card","Carnets","carnets"], ["config","settings","Configuración","config"]]
 };
 const ROLE_LABEL = { owner: "Dueño", local: "Comercio", creator: "Creador", admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
 const ROLE_HOME = { owner: "dueno", local: "local-pedidos", creator: "creador", admin: "gestion", mod: "moderacion", estudiante: "inicio" };
@@ -293,7 +293,10 @@ function staffGreet() {
 const DIA_LARGO_G = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const MES_LARGO_G = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 staffGreet();
-const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"] };
+const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"], carnets: ["admin", "creator", "owner"] };
+// Carnet: de 5 a 11 dígitos; con menos de 11 se verifica por foto (módulo "Verificar carnet por foto")
+const CARNET_MIN = 5, CARNET_RE = /^\d{5,11}$/, CARNET_FREE = ["carnet", "perfil", "soporte", "notificaciones"];
+const CA_LABEL = { ok: "Verificado", foto: "Sin foto", pendiente: "En revisión", rechazado: "Rechazado" };
 function show(id) {
   if (/^invitacion-[A-Z0-9]+$/.test(id)) { ivToken = id.slice(11); id = "invitacion"; }
   if (!screens.includes(id)) id = sessionEmail ? "inicio" : "tutorial";
@@ -307,6 +310,10 @@ function show(id) {
     if (!need && !account?.carnet && ["materias", "caja", "tarjeta", "inscripcion"].includes(id)) {
       id = "inicio"; history.replaceState(null, "", "#inicio");
       setTimeout(() => toast("El estado de cuenta universitario es para cuentas de estudiante con carnet."), 0);
+    }
+    if (role === "estudiante" && !need && !CARNET_FREE.includes(id) && carnetSt() !== "ok") {
+      id = "carnet"; history.replaceState(null, "", "#carnet");
+      setTimeout(() => toast("Primero verificamos tu carnet: envía una foto y un administrador te da acceso."), 0);
     }
     if (dual) { try { localStorage.setItem(K("nexo-mode"), need ? "gestion" : "usuario"); } catch (err) {} }
   }
@@ -345,6 +352,8 @@ function show(id) {
   if (id === "movimientos" && typeof renderMovimientos === "function") renderMovimientos();
   if (id === "config" && typeof renderConfig === "function") renderConfig();
   if (id === "validar" && typeof renderValidar === "function") renderValidar();
+  if (id === "carnet") try { renderCarnet(); } catch (err) {}
+  if (id === "carnets") try { renderCarnets(); } catch (err) {}
   if (id === "notificaciones" && typeof renderNotifs === "function") try { renderNotifs(); } catch (err) {}
   if (id === "local-pedidos" && typeof renderLocalPedidos === "function") renderLocalPedidos();
   if (id === "local-menu" && typeof renderLocalMenu === "function") renderLocalMenu();
@@ -439,7 +448,7 @@ document.addEventListener("input", e => {
     const hint = document.querySelector(`[data-hint="${el.id}"]`);
     const n = el.value.length;
     el.closest(".field").classList.remove("bad");
-    if (hint) hint.textContent = n === 11 ? "Carnet completo." : `Escribe los 11 dígitos de tu carnet, seguidos (${n}/11).`;
+    if (hint) hint.textContent = n === 11 ? "Carnet completo." : n >= CARNET_MIN ? `Carnet de ${n} dígitos: después te pediremos una foto del carnet para verificarlo.` : `Escribe tu carnet, solo números (${n} dígitos).`;
   }
 });
 /* ---------- Planes de estacionamiento: resumen según el plan elegido ---------- */
@@ -1037,7 +1046,7 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
   const acc = accounts.find(a => byDigits ? a.carnet === ident : a.email === normEmail(ident));
   if (!acc) {
     idEl.closest(".field").classList.add("bad");
-    loginError("No encontramos esa cuenta.", byDigits ? `No hay ninguna cuenta con el carnet ${ident}. Revisa los 11 dígitos o crea una cuenta.` : !ident.includes("@") ? `"${ident}" no es un correo registrado. Escribe tu correo institucional completo o tu carnet.` : `No hay ninguna cuenta con el correo ${normEmail(ident)}.`, !byDigits && ident.includes("@"));
+    loginError("No encontramos esa cuenta.", byDigits ? `No hay ninguna cuenta con el carnet ${ident}. Revisa los dígitos o crea una cuenta.` : !ident.includes("@") ? `"${ident}" no es un correo registrado. Escribe tu correo institucional completo o tu carnet.` : `No hay ninguna cuenta con el correo ${normEmail(ident)}.`, !byDigits && ident.includes("@"));
     idEl.focus(); return;
   }
   if (acc.pass !== passKey(pass)) {
@@ -1070,9 +1079,9 @@ document.getElementById("registerForm").addEventListener("submit", async e => {
   const nameEl = f.querySelector("#r-name"), carnetEl = f.querySelector("#r-carnet"), mailEl = f.querySelector("#r-mail"), passEl = f.querySelector("#r-pass");
   f.querySelectorAll(".field.bad").forEach(x => x.classList.remove("bad"));
   if (!nameEl.value.trim()) return signupError("Falta tu nombre.", "Escribe tu nombre completo.", nameEl);
-  if (!/^\d{11}$/.test(carnetEl.value)) {
+  if (!CARNET_RE.test(carnetEl.value)) {
     const hint = f.querySelector(`[data-hint="${carnetEl.id}"]`);
-    if (hint) hint.textContent = `El carnet debe tener 11 dígitos seguidos. Llevas ${carnetEl.value.length}.`;
+    if (hint) hint.textContent = `El carnet debe tener entre ${CARNET_MIN} y 11 dígitos, sin guiones. Llevas ${carnetEl.value.length}.`;
     carnetEl.closest(".field").classList.add("bad"); carnetEl.focus(); return;
   }
   const email = normEmail(mailEl.value);
@@ -1086,10 +1095,11 @@ document.getElementById("registerForm").addEventListener("submit", async e => {
   const now = new Date();
   const inv = invites.find(i => i.email === email);
   if (inv) { ivEmail = email; ivToken = null; go("invitacion"); toast("Ese correo tiene una invitación al equipo. Actívala aquí, sin carnet."); return; }
-  accounts.push({ full, carnet: carnetEl.value, email, pass: passKey(passEl.value), created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`, ...(inv ? { role: inv.role } : {}) });
+  const short = carnetEl.value.length < 11;
+  accounts.push({ full, carnet: carnetEl.value, email, pass: passKey(passEl.value), created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`, ...(inv ? { role: inv.role } : {}), ...(short && !inv ? { carnetSt: "foto" } : {}) });
   saveAccounts();
   if (inv) { invites = invites.filter(i => i !== inv); saveInvites(); }
-  enterApp(email, true, inv ? `Cuenta creada. Ya eres parte del equipo de ${inv.role === "admin" ? "administración" : "moderación"}, ${full.split(" ")[0]}.` : `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
+  enterApp(email, true, inv ? `Cuenta creada. Ya eres parte del equipo de ${inv.role === "admin" ? "administración" : "moderación"}, ${full.split(" ")[0]}.` : short ? `Cuenta creada, ${full.split(" ")[0]}. Falta un paso: envía una foto de tu carnet.` : `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
 });
 document.addEventListener("click", e => {
   if (!e.target.closest("[data-logout]")) return;
@@ -1566,6 +1576,7 @@ function openPerfil() {
   document.getElementById("pf-name").value = user.full;
   document.getElementById("pf-mail").value = user.email;
   document.getElementById("pf-carnet").value = user.carnet || "Sin carnet · cuenta del equipo de Nexo";
+  try { const st = carnetSt(), el = document.getElementById("pfCarnetSt"); el.hidden = st === "ok"; el.innerHTML = st === "ok" ? "" : `<span class="pill warn">Carnet ${CA_LABEL[st].toLowerCase()}</span> <button class="link b" type="button" data-go="carnet">${st === "pendiente" ? "Ver la verificación" : "Enviar la foto del carnet"} →</button>`; } catch (err) {}
   document.getElementById("pf-mailpass").value = "";
   document.querySelector('#perfil [data-pf="mailpass"]').hidden = true;
   const ci = acc.ci || "";
@@ -3501,7 +3512,7 @@ function renderCeTicket() {
 
 /* Movimientos: transacciones de este navegador y registro de cambios */
 let mvTab = "tx";
-const AUDIT_ICON = { caja: "badge-check", rol: "users", soporte: "message-circle", reembolso: "rotate-ccw", config: "settings" };
+const AUDIT_ICON = { carnet: "id-card", caja: "badge-check", rol: "users", soporte: "message-circle", reembolso: "rotate-ccw", config: "settings" };
 const AUDIT_TYPE = { caja: ["Caja", "warn"], rol: ["Roles", "ok"], soporte: ["Soporte", "neutral"], reembolso: ["Reembolso", "warn"], config: ["Configuración", "neutral"] };
 /* Movimientos reales: con cuenta real de creador/admin/dueño, las transacciones salen de public.payments
    (todas las personas, con su nombre de profiles); se pintan con lo guardado y se refrescan al abrir la pantalla. */
@@ -4356,16 +4367,16 @@ function renderValidar() {
   }).join("") || `<div class="card" style="align-items:flex-start"><span class="ico lg"><i data-lucide="badge-check"></i></span><h2 class="h2">${vlTab === "done" ? "Aún no hay pagos revisados" : "No hay pagos por validar"}</h2><p class="small" style="font-size:13px">${vlTab === "done" ? "Los pagos que apruebes o rechaces aparecerán aquí." : "Cuando un estudiante registre una transferencia o un Pago Móvil, aparecerá aquí."}</p></div>`;
   icons();
 }
-function relabelForCreator(role = "creator") {
+function relabelForCreator(role = "creator", secId = "validar") {
   // la sección usa el menú de administración; para el creador (o el dueño) se reemplaza por el suyo
-  const sec = document.getElementById("validar");
+  const sec = document.getElementById(secId);
   if (sec.dataset.navFor === role) return;
-  const nav = STAFF_NAV[role], RL = role === "owner" ? "Dueño" : "Creador", mk = n => `<button type="button" data-go="${n[3]}" class="${n[0] === "validar" ? "on" : ""}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`;
+  const nav = STAFF_NAV[role], RL = role === "owner" ? "Dueño" : "Creador", mk = n => `<button type="button" data-go="${n[3]}" class="${n[0] === secId ? "on" : ""}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`;
   const sideNav = sec.querySelector(".side .nav"); if (sideNav) sideNav.innerHTML = nav.map(mk).join("") + `<button type="button" class="mode-nav" data-mode-switch="usuario"><i data-lucide="user-round"></i>Usar Nexo como usuario</button>`;
   const bar = sec.querySelector(".tabbar"); if (bar) bar.innerHTML = nav.map(mk).join("") + `<button type="button" data-logout><i data-lucide="log-out"></i>Salir</button>`;
   sec.querySelectorAll(".side .user span:last-child").forEach(el => el.textContent = RL + " · Menú");
   sec.querySelectorAll(".mbar .pill, .deskbar .acts .pill:not(.modebtn)").forEach(el => el.textContent = el.textContent.includes("Acceso") ? "Acceso: " + RL : RL);
-  const c = sec.querySelector(".deskbar .crumbs span"); if (c) c.innerHTML = `Gestión&nbsp;&nbsp;/&nbsp;&nbsp;${RL}&nbsp;&nbsp;/&nbsp;&nbsp;Pagos por validar`;
+  const c = sec.querySelector(".deskbar .crumbs span"); if (c) c.innerHTML = `Gestión&nbsp;&nbsp;/&nbsp;&nbsp;${RL}&nbsp;&nbsp;/&nbsp;&nbsp;${sec.dataset.title}`;
   sec.dataset.navFor = role;
 }
 function vlUpdateMove(email, match, pill, cls) {
@@ -4795,6 +4806,7 @@ function liveKeys() {
         if (LIVE_ROLE === "mod" && t.mod === me && last && last.from === "student") add(`tkr:${t.id}:${last.t}`, { text: `${firstName(t.student.name)} respondió en ${t.id}`, go: "moderacion", tk: t.id });
       });
     }
+    if (["admin", "creator", "owner"].includes(LIVE_ROLE)) caItems().filter(x => x.st === "pendiente").forEach(x => add(`ca:${x.id}:${x.sent}`, { text: `Carnet por verificar: ${x.who} · ${x.carnet}`, go: "carnets" }));
     if (["admin", "creator", "owner"].includes(LIVE_ROLE)) cajaItems().filter(x => !x.done).forEach(x => add(`cj:${x.kind}:${x.key}:${x.id}`, { text: `Pago por validar: ${x.title} de ${x.who} · ${money(x.usd)}`, go: "validar" }));
     if (LIVE_ROLE === "local" && account.local) allOrders().filter(({ o }) => o.local === account.local && o.paidAt && !o.cancelledAt && !o.pickedAt).forEach(({ o }) => add("lo:" + o.id, { text: `Pedido nuevo ${o.num} · ${money(o.total)}`, go: "local-pedidos" }));
   } catch (err) {}
@@ -4821,7 +4833,7 @@ function liveCheck() {
   toast(fresh.length === 1 ? first.text : `${first.text} y ${fresh.length - 1} más`, { persist: true, action: "Ver", onAction: open });
   liveBeep();
   if (document.hidden) { liveUnseen += fresh.length; document.title = `(${liveUnseen}) ${baseTitle}`; liveNotify(fresh.length === 1 ? first.text : `${first.text} y ${fresh.length - 1} más`, first.go, first.tk); }
-  const r = { moderacion: () => renderModeracion(), gestion: () => renderGestion(), validar: () => renderValidar(), "local-pedidos": () => renderLocalPedidos(), "creador-equipo": () => renderCreadorEquipo() }[current];
+  const r = { moderacion: () => renderModeracion(), gestion: () => renderGestion(), validar: () => renderValidar(), carnets: () => renderCarnets(), "local-pedidos": () => renderLocalPedidos(), "creador-equipo": () => renderCreadorEquipo() }[current];
   if (r) try { r(); } catch (err) {}
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { liveUnseen = 0; document.title = baseTitle; } });
@@ -5021,6 +5033,7 @@ function sbToLocal(p, pass) {
   let acc = accounts.find(a => a.email === p.email);
   if (!acc) { acc = { email: p.email }; accounts.push(acc); }
   Object.assign(acc, { full: p.full_name || p.email.split("@")[0], carnet: p.carnet || "", created: String(p.created_at).slice(0, 10), sb: p.id, disabled: !!p.disabled });
+  sbCarnetCopy(acc, p);
   if (p.role === "estudiante") delete acc.role; else acc.role = p.role;
   if (p.local_id) acc.local = p.local_id; else delete acc.local;
   ["career", "ci", "phone", "birth", "addr"].forEach(k => { if (p[k]) acc[k] = p[k]; });
@@ -5096,7 +5109,7 @@ if (sb) (async () => {
       const p = await sbProfile(account.sb);
       if (p && ((p.role === "estudiante" ? undefined : p.role) !== account.role || !!p.disabled !== !!account.disabled || (p.local_id || undefined) !== account.local)) {
         sbToLocal(p); toast("Tu acceso cambió. Actualizamos la app…"); setTimeout(() => location.reload(), 1200);
-      }
+      } else if (p && (p.carnet_status || "ok") !== (account.carnetSt || "ok")) { sbCarnetCopy(account, p); saveAccounts(); caSync(); }
     }
     return;
   }
@@ -5205,6 +5218,7 @@ async function sbSharedInit() {
   try { await sbCourtsInit(); } catch (err) { console.warn("Nexo: no se cargaron las canchas", err); }
   try { await sbLocalsInit(); sbRefreshScreens(); } catch (err) { console.warn("Nexo: no se cargaron los locales", err); }
   if (sbTeamOn()) try { await sbLoadStaff(); } catch (err) { console.warn("Nexo: no se cargó el equipo", err); }
+  if (sbIsCaja()) try { await sbLoadCarnets(); } catch (err) { console.warn("Nexo: no se cargaron los carnets", err); }
   try { liveSeen = liveKeys(); } catch (err) {}
   sbRefreshScreens();
   sb.channel("nexo-vivo")
@@ -5232,6 +5246,7 @@ async function sbSharedInit() {
       sbRefreshScreens();
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "court_bookings" }, () => { sbLoadCourts(); })
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, ({ new: row }) => { try { sbCarnetRow(row); } catch (err) {} })
     .on("postgres_changes", { event: "*", schema: "public", table: "local_state" }, ({ new: row }) => {
       if (!row || !row.local_id || sbPending("ls" + row.local_id)) return;
       localState[row.local_id] = sbLocalRow(row);
@@ -5507,7 +5522,7 @@ async function renderDueno() {
   acts.innerHTML = `<button class="btn ghost sm" type="button" data-dn-refresh><i data-lucide="refresh-cw"></i>Actualizar</button>`;
   if (!body.querySelector(".dn-kpis")) body.innerHTML = `<p class="small">Cargando datos reales…</p>`;
   icons();
-  const [st, us, ex] = await Promise.all([sb.rpc("owner_stats"), sb.from("profiles").select("id,full_name,email,carnet,role,local_id,disabled,created_at").order("created_at", { ascending: false }), sb.rpc("owner_extra")]).catch(e => [{ error: e }, {}, {}]);
+  const [st, us, ex] = await Promise.all([sb.rpc("owner_stats"), sb.from("profiles").select("id,full_name,email,carnet,carnet_status,role,local_id,disabled,created_at").order("created_at", { ascending: false }), sb.rpc("owner_extra")]).catch(e => [{ error: e }, {}, {}]);
   dnBusy = false;
   const x4 = (ex && ex.data) || null;
   if (st.error || !st.data) { body.innerHTML = `<div class="notice warn"><i data-lucide="wifi-off"></i><p>No pudimos cargar los datos (${esc(sbMsg(st.error)[0])}). Toca Actualizar.</p></div>`; icons(); return; }
@@ -5537,7 +5552,7 @@ function renderDnUsers() {
   const box = document.getElementById("dnUsers"); if (!box) return;
   const f = normTxt(dnFilter), list = dnUsers.filter(u => !f || normTxt(`${u.full_name} ${u.email} ${u.carnet || ""}`).includes(f));
   box.innerHTML = list.length ? list.map(u => `<div class="dn-user${u.disabled ? " off" : ""}"><span class="avatar sm role-${u.role}">${esc(initialsOf(u.full_name || u.email))}</span>
-      <div class="grow" style="min-width:0"><b style="font-size:13px">${esc(u.full_name || "Sin nombre")} <span class="role-tag role-${u.role}">${u.role === "owner" ? "Dueño" : (ROLE_OPTS.find(r => r[0] === u.role) || [0, "Estudiante"])[1]}${u.disabled ? " · desactivada" : ""}</span></b><span class="tiny" style="display:block;overflow:hidden;text-overflow:ellipsis">${esc(u.email)}${u.carnet ? ` · ${esc(u.carnet)}` : ""} · desde ${fmtD(new Date(u.created_at))}</span></div>
+      <div class="grow" style="min-width:0"><b style="font-size:13px">${esc(u.full_name || "Sin nombre")} <span class="role-tag role-${u.role}">${u.role === "owner" ? "Dueño" : (ROLE_OPTS.find(r => r[0] === u.role) || [0, "Estudiante"])[1]}${u.disabled ? " · desactivada" : ""}</span>${u.carnet_status && u.carnet_status !== "ok" ? ` <span class="pill warn" style="font-size:11px">Carnet ${CA_LABEL[u.carnet_status].toLowerCase()}</span>` : ""}</b><span class="tiny" style="display:block;overflow:hidden;text-overflow:ellipsis">${esc(u.email)}${u.carnet ? ` · ${esc(u.carnet)}` : ""} · desde ${fmtD(new Date(u.created_at))}</span></div>
       ${u.role === "owner" ? "" : `<div class="row start" style="gap:6px;flex-wrap:wrap"><div class="input sel sm"><select data-dn-role="${u.id}" aria-label="Rol de ${esc(u.full_name)}">${ROLE_OPTS.map(([v, l]) => `<option value="${v}"${u.role === v ? " selected" : ""}>${l}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div>
         ${u.role === "local" ? `<div class="input sel sm"><select data-dn-local="${u.id}" aria-label="Local de ${esc(u.full_name)}">${LOCALES.map(l => `<option value="${l.id}"${u.local_id === l.id ? " selected" : ""}>${esc(l.name)}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div>` : ""}
         <button class="btn ghost sm" type="button" data-dn-toggle="${u.id}">${u.disabled ? "Reactivar" : "Desactivar"}</button></div>`}</div>`).join("")
@@ -5618,13 +5633,241 @@ document.addEventListener("click", e => {
 });
 renderMyCourts();
 
+/* ---------- Verificar carnet por foto ----------
+   Los carnets de la Unimet pueden tener de 5 a 11 dígitos. Con 11, la cuenta entra directo; con menos, la persona
+   envía una foto de su carnet (#carnet) y administración, el creador o el dueño la aprueban o rechazan con motivo
+   (#carnets). Mientras tanto show() solo le deja ver la verificación, Mi cuenta, Soporte y Notificaciones.
+   Estados: ok · foto (falta la foto) · pendiente (en revisión) · rechazado (con motivo; puede reenviar).
+   Cuenta de prueba (local): las solicitudes viven en localStorage["nexo-carnets"] (global) con la foto reducida en
+   base64, y esa lista manda sobre account.carnetSt. Cuenta real: profiles.carnet_* + depósito privado "carnets"
+   (submit_carnet / decide_carnet, migración 010) y el canal en vivo avisa a las dos partes. */
+var caPicking = false, caDraft = null, caTab = "pend", caReject = null, caBig = null, caLastSt = null, sbCarnets = null, sbCarnetUrl = {};
+const CA_REASONS = ["La foto no se lee bien", "El número no coincide con el de la cuenta", "El nombre no coincide con el de la cuenta", "No es un carnet de la Unimet"];
+function carnetList() { try { const l = JSON.parse(localStorage.getItem("nexo-carnets") || "[]"); return Array.isArray(l) ? l : []; } catch (err) { return []; } }
+function saveCarnetList(l) { try { localStorage.setItem("nexo-carnets", JSON.stringify(l)); return true; } catch (err) { return false; } }
+function carnetSt(acc = account) {
+  if (!acc || acc.role || !acc.carnet) return "ok";
+  if (!acc.sb) { const e = carnetList().find(x => x.email === acc.email); if (e) return e.st; }
+  return acc.carnetSt || "ok";
+}
+function carnetInfo(acc = account) {
+  if (!acc) return {};
+  if (!acc.sb) { const e = carnetList().find(x => x.email === acc.email); if (e) return { reason: e.reason, sent: e.sent, by: e.by, photo: e.photo }; }
+  return { reason: acc.carnetReason, sent: acc.carnetSentAt ? new Date(acc.carnetSentAt).getTime() : 0, by: acc.carnetBy, path: acc.carnetPhoto };
+}
+function sbCarnetCopy(acc, p) {
+  acc.carnetSt = p.carnet_status || "ok";
+  ["carnetReason", "carnetSentAt", "carnetBy", "carnetPhoto"].forEach((k, i) => { const v = p[["carnet_reason", "carnet_sent_at", "carnet_by", "carnet_photo"][i]]; if (v) acc[k] = v; else delete acc[k]; });
+  if (acc.carnetSt === "ok" && !p.carnet_sent_at) delete acc.carnetSt;
+}
+// Avisa al estudiante cuando cambia su estado (aprobado o rechazado) y repinta lo que haga falta
+function caSync() {
+  const st = carnetSt();
+  if (caLastSt && st !== caLastSt && roleOf(account) === "estudiante") {
+    if (st === "ok") toast("¡Tu carnet fue verificado! Ya tienes acceso a todo Nexo.", { persist: true, action: "Ir al inicio", onAction: () => go("inicio") });
+    if (st === "rechazado") toast(`No pudimos verificar tu carnet: ${carnetInfo().reason || "revisa la foto"}. Envía una foto nueva.`, { persist: true, action: "Ver", onAction: () => go("carnet") });
+  }
+  caLastSt = st;
+  if (current === "carnet") renderCarnet();
+  if (current === "perfil") try { openPerfil(); } catch (err) {}
+}
+caLastSt = carnetSt();
+
+/* Reduce la foto (JPEG, lado mayor ≤ max) para subirla rápido y que quepa en el navegador */
+function caShrink(file, max, q) {
+  return new Promise((ok, bad) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement("canvas");
+      c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? ok({ blob: b, dataUrl: c.toDataURL("image/jpeg", q) }) : bad(new Error("sin imagen")), "image/jpeg", q);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); bad(new Error("no es una imagen")); };
+    img.src = url;
+  });
+}
+
+function renderCarnet() {
+  const box = document.getElementById("caBody"); if (!box) return;
+  const st = carnetSt(), info = carnetInfo(), n = (user.carnet || "").length;
+  const who = `<div class="card ca-who"><span class="svc-chip t-uni" aria-hidden="true"><i data-lucide="id-card"></i></span><div class="grow" style="min-width:0"><b class="h3">${esc(user.full)}</b><span class="tiny" style="display:block;overflow:hidden;text-overflow:ellipsis">${esc(user.email)}</span></div><div class="ca-num"><span class="tiny">Carnet</span><b class="mono">${esc(user.carnet || "—")}</b></div></div>`;
+  const steps = ["Envía la foto", "Revisión", "Acceso"], at = st === "ok" ? 3 : st === "pendiente" ? 1 : 0;
+  const stepper = `<ol class="ca-steps">${steps.map((l, i) => `<li class="${i < at ? "done" : i === at ? "now" : ""}"><span>${i < at ? '<i data-lucide="check"></i>' : i + 1}</span>${l}</li>`).join("")}</ol>`;
+  document.getElementById("caLead").textContent = st === "ok" ? "Tu carnet está verificado." : `Tu carnet tiene ${n} dígitos. Para confirmar que eres estudiante de la Unimet, envía una foto de tu carnet: un administrador la revisa y te da acceso.`;
+  if (st === "ok") {
+    box.innerHTML = who + `<div class="card ca-ok">${successMark()}<h2 class="h2">Carnet verificado</h2><p class="small" style="font-size:13px">Ya tienes acceso a comida, estacionamiento, materias y canchas.</p><button class="btn" type="button" data-go="inicio"><i data-lucide="house"></i>Ir al inicio</button></div>`;
+    icons(); return;
+  }
+  const showPicker = st !== "pendiente" || caDraft || caPicking;
+  const pend = st === "pendiente" && !showPicker
+    ? `<div class="card ca-pend"><div class="row start" style="gap:12px;align-items:flex-start"><span class="ico lg"><i data-lucide="hourglass"></i></span><div><h2 class="h2">Tu carnet está en revisión</h2><p class="small" style="font-size:13px">Lo enviaste ${ago(info.sent).toLowerCase()}. Te avisamos aquí apenas un administrador lo revise; suele tardar menos de un día hábil.</p></div></div>
+        <div class="ca-thumb" id="caMine">${info.photo ? `<img src="${info.photo}" alt="Foto de tu carnet enviada">` : `<span class="tiny">Foto enviada</span>`}</div>
+        <div class="row"><button class="btn ghost" type="button" data-ca-change><i data-lucide="refresh-cw"></i>Cambiar la foto</button><button class="btn ghost" type="button" data-go="soporte"><i data-lucide="message-circle"></i>Escribir a soporte</button></div></div>`
+    : "";
+  const rej = st === "rechazado" ? `<div class="notice warn" role="alert"><i data-lucide="circle-alert"></i><div><b>No pudimos verificar tu carnet.</b> <span>${esc(info.reason || "Revisa la foto")}${info.by ? ` · ${esc(info.by)}` : ""}. Toma una foto nueva y envíala otra vez.</span></div></div>` : "";
+  const picker = showPicker ? `<div class="card ca-shot">
+      <h2 class="h2">${st === "pendiente" ? "Nueva foto del carnet" : "Foto de tu carnet"}</h2>
+      <div class="ca-frame${caDraft ? " has" : ""}">${caDraft ? `<img src="${caDraft.dataUrl}" alt="Vista previa de la foto del carnet">` : `<span class="ca-ph" aria-hidden="true"><i data-lucide="id-card"></i></span><span class="small">Tu carnet, de frente y completo</span>`}</div>
+      <div class="row ca-pick"><label class="btn ghost" for="caCam"><i data-lucide="camera"></i>${caDraft ? "Tomar otra" : "Tomar foto"}</label><label class="btn ghost" for="caFile"><i data-lucide="image"></i>Elegir de la galería</label></div>
+      <input type="file" id="caCam" accept="image/*" capture="environment" hidden data-ca-input><input type="file" id="caFile" accept="image/jpeg,image/png,image/webp,image/heic,image/*" hidden data-ca-input>
+      <ul class="ca-tips"><li><i data-lucide="sun"></i>Con buena luz y sin reflejos</li><li><i data-lucide="scan"></i>Que se vean tu nombre, tu foto y el número</li><li><i data-lucide="shield-check"></i>Solo la ve el equipo que verifica las cuentas</li></ul>
+      <div class="row">${st === "pendiente" ? `<button class="btn ghost" type="button" data-ca-cancel>Cancelar</button>` : ""}<button class="btn" type="button" data-ca-send ${caDraft ? "" : "disabled"}><i data-lucide="send"></i>Enviar al administrador</button></div>
+    </div>` : "";
+  box.innerHTML = who + stepper + rej + pend + picker;
+  icons();
+  if (st === "pendiente" && !caDraft && !info.photo && info.path && sbShared()) sb.storage.from("carnets").createSignedUrl(info.path, 600).then(({ data }) => { const el = document.getElementById("caMine"); if (data && el) el.innerHTML = `<img src="${data.signedUrl}" alt="Foto de tu carnet enviada">`; }).catch(() => {});
+}
+document.addEventListener("change", async e => {
+  const inp = e.target.closest && e.target.closest("[data-ca-input]"); if (!inp) return;
+  const f = inp.files && inp.files[0]; inp.value = "";
+  if (!f) return;
+  if (f.size > 20 * 1024 * 1024) { toast("Esa foto pesa más de 20 MB. Toma otra o elige una más liviana."); return; }
+  try { const r = await caShrink(f, sbShared() ? 1600 : 1000, sbShared() ? 0.85 : 0.75); caDraft = r; renderCarnet(); }
+  catch (err) { toast("No pudimos abrir esa imagen. Usa una foto JPG o PNG."); }
+});
+document.addEventListener("click", async e => {
+  if (e.target.closest("[data-ca-change]")) { caPicking = true; caDraft = null; renderCarnet(); return; }
+  if (e.target.closest("[data-ca-cancel]")) { caPicking = false; caDraft = null; renderCarnet(); return; }
+  const send = e.target.closest("[data-ca-send]"); if (!send || !caDraft) return;
+  send.disabled = true; send.classList.add("loading");
+  const done = () => { caDraft = null; caPicking = false; caLastSt = carnetSt(); renderCarnet(); toast("Listo: enviamos tu carnet a revisión. Te avisaremos aquí."); };
+  if (sbShared()) {
+    const path = `${account.sb}/carnet-${Date.now()}.jpg`;
+    const up = await sb.storage.from("carnets").upload(path, caDraft.blob, { contentType: "image/jpeg" }).catch(err => ({ error: err }));
+    const r = up.error ? up : await sb.rpc("submit_carnet", { p_path: path }).then(r => r, err => ({ error: err }));
+    if (r.error) { send.disabled = false; send.classList.remove("loading"); toast(/verificado/.test(r.error.message || "") ? "Tu carnet ya está verificado." : "No pudimos enviar la foto. Revisa tu conexión e inténtalo de nuevo."); return; }
+    Object.assign(account, { carnetSt: "pendiente", carnetPhoto: path, carnetSentAt: new Date().toISOString() }); delete account.carnetReason; delete account.carnetBy;
+    saveAccounts(); done(); return;
+  }
+  const l = carnetList().filter(x => x.email !== account.email);
+  l.push({ email: account.email, full: account.full, carnet: account.carnet, created: account.created, photo: caDraft.dataUrl, st: "pendiente", sent: Date.now() });
+  if (!saveCarnetList(l)) { send.disabled = false; send.classList.remove("loading"); toast("El navegador no tiene espacio para guardar la foto. Prueba con una más pequeña."); return; }
+  account.carnetSt = "pendiente"; saveAccounts(); done();
+});
+
+/* ---------- Gestión · Carnets por verificar ---------- */
+function caItems() {
+  try {
+    if (sbShared()) return (sbCarnets || []).map(u => ({ id: u.id, who: u.full_name || u.email, email: u.email, carnet: u.carnet || "", st: u.carnet_status, reason: u.carnet_reason, sent: u.carnet_sent_at ? new Date(u.carnet_sent_at).getTime() : 0, by: u.carnet_by, decided: u.carnet_decided_at ? new Date(u.carnet_decided_at).getTime() : 0, created: u.created_at, path: u.carnet_photo }));
+    return carnetList().map(x => ({ id: x.email, who: x.full, email: x.email, carnet: x.carnet, st: x.st, reason: x.reason, sent: x.sent, by: x.by, decided: x.decided || 0, created: x.created, photo: x.photo }));
+  } catch (err) { return []; }
+}
+async function sbLoadCarnets() {
+  const { data, error } = await sb.from("profiles").select("id,full_name,email,carnet,carnet_status,carnet_photo,carnet_reason,carnet_sent_at,carnet_by,carnet_decided_at,created_at").not("carnet_sent_at", "is", null).order("carnet_sent_at", { ascending: false }).limit(300);
+  if (error) { console.warn("Nexo: no se cargaron los carnets", error.message); return; }
+  sbCarnets = data || [];
+  if (current === "carnets") renderCarnets();
+}
+function sbCarnetRow(row) {
+  if (!row || !row.id) return;
+  if (account && row.id === account.sb) {
+    const before = account.carnetSt || "ok";
+    sbCarnetCopy(account, row); saveAccounts();
+    if ((account.carnetSt || "ok") !== before) caSync();
+  }
+  if (sbIsCaja() && sbCarnets && row.carnet_sent_at) {
+    const i = sbCarnets.findIndex(u => u.id === row.id), prev = i >= 0 ? sbCarnets[i] : null;
+    const next = { ...(prev || {}), ...row };
+    if (i >= 0) sbCarnets[i] = next; else sbCarnets.unshift(next);
+    sbLive("ca" + row.id);
+    if (current === "carnets") renderCarnets();
+  }
+}
+function caPhotoHTML(x) {
+  const src = x.photo || (x.path && sbCarnetUrl[x.path]);
+  if (!src) return `<div class="ca-photo" data-ca-photo="${esc(x.id)}"><span class="tiny">${x.path ? "Cargando la foto…" : "Sin foto"}</span></div>`;
+  return `<button class="ca-photo${caBig === x.id ? " big" : ""}" type="button" data-ca-zoom="${esc(x.id)}" aria-label="${caBig === x.id ? "Reducir" : "Ampliar"} la foto del carnet de ${esc(x.who)}"><img src="${src}" alt="Carnet de ${esc(x.who)}"><span class="ca-zoom" aria-hidden="true"><i data-lucide="${caBig === x.id ? "minimize-2" : "maximize-2"}"></i></span></button>`;
+}
+function renderCarnets() {
+  const r = roleOf(account); if (["creator", "owner"].includes(r)) relabelForCreator(r, "carnets");
+  const all = caItems().filter(x => x.st !== "foto"), pend = all.filter(x => x.st === "pendiente"), done = all.filter(x => x.st !== "pendiente");
+  const today = day0(new Date()).getTime(), dToday = done.filter(x => x.decided >= today);
+  const k = (label, val, sub, ic) => `<div class="card kpi static sk"><div class="row start" style="gap:10px">${skIc(ic)}<span class="small">${label}</span></div><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
+  document.getElementById("caKpis").innerHTML = k("Por verificar", pend.length, pend.length ? `El más antiguo: ${ago(Math.min(...pend.map(x => x.sent)))}` : "Todo al día", "hourglass")
+    + k("Revisados hoy", dToday.length, `${dToday.filter(x => x.st === "ok").length} aprobados · ${dToday.filter(x => x.st === "rechazado").length} rechazados`, "badge-check")
+    + k("Total revisados", done.length, sbShared() ? "Cuentas reales" : "Cuentas de esta demostración", "id-card");
+  document.getElementById("caTabs").innerHTML = [["pend", `Por verificar · ${pend.length}`], ["done", "Revisados"]].map(([t, l]) => `<button class="pill ${t === caTab ? "ok" : "neutral"}" type="button" data-ca-tab="${t}">${l}</button>`).join("");
+  const list = caTab === "pend" ? pend.slice().sort((a, b) => a.sent - b.sent) : done.slice().sort((a, b) => b.decided - a.decided);
+  if (sbShared() && !sbCarnets) { document.getElementById("caList").innerHTML = `<div class="card"><p class="small">Cargando los carnets…</p></div>`; return; }
+  document.getElementById("caList").innerHTML = list.map(x => {
+    const state = x.st === "pendiente" ? `<span class="pill warn">En revisión</span>` : x.st === "ok" ? `<span class="pill ok">Aprobado</span>` : `<span class="pill bad">Rechazado</span>`;
+    const actions = x.st !== "pendiente"
+      ? `<p class="tiny">${x.st === "ok" ? "Acceso aprobado" : `Rechazado: ${esc(x.reason || "")}`} · por ${esc(x.by || "Administración")}${x.decided ? ` · ${ago(x.decided).toLowerCase()}` : ""}</p>`
+      : caReject === x.id
+        ? `<form class="stack s14 vl-rej" data-ca-reject-form="${esc(x.id)}"><label class="small" style="font-weight:600" for="ca-motivo">Motivo del rechazo</label><div class="input sel"><select id="ca-motivo">${CA_REASONS.map(m => `<option>${m}</option>`).join("")}<option value="otro">Otro motivo…</option></select><i data-lucide="chevron-down"></i></div>
+           <div class="input" id="ca-otro-wrap" hidden><input id="ca-otro" maxlength="160" placeholder="Escribe el motivo" aria-label="Otro motivo"></div>
+           <p class="tiny">La persona verá este motivo y podrá enviar una foto nueva.</p>
+           <div class="row"><button class="btn ghost" type="button" data-ca-no>Volver</button><button class="btn" type="submit" style="background:var(--danger);border-color:var(--danger)">Rechazar</button></div></form>`
+        : `<div class="row"><button class="btn ghost" type="button" data-ca-rej="${esc(x.id)}"><i data-lucide="circle-x"></i>Rechazar</button><button class="btn" type="button" data-ca-ok="${esc(x.id)}"><i data-lucide="badge-check"></i>Dar acceso</button></div>`;
+    return `<div class="card vl-item ca-item t-uni">
+      <div class="row" style="align-items:flex-start"><div class="row start" style="align-items:flex-start;gap:10px"><span class="svc-chip"><i data-lucide="id-card"></i></span><div style="min-width:0"><b class="h3">${esc(x.who)}</b><p class="small" style="overflow-wrap:anywhere">${esc(x.email)}</p></div></div>${state}</div>
+      <div class="ca-body">${caPhotoHTML(x)}
+        <div class="vl-grid ca-grid">
+          <div><span class="tiny">Carnet registrado</span><b class="mono ca-big">${esc(x.carnet)}</b><span class="tiny">${x.carnet.length} dígitos</span></div>
+          <div><span class="tiny">Enviado</span><b>${ago(x.sent)}</b><span class="tiny">${x.created ? `Cuenta del ${fmtD(new Date(String(x.created).slice(0, 10) + "T12:00"))}` : ""}</span></div>
+          ${x.st === "pendiente" ? `<div class="ca-check"><span class="tiny">Revisa que</span><ul><li>el nombre diga <b>${esc(x.who)}</b></li><li>el número sea <b class="mono">${esc(x.carnet)}</b></li><li>sea un carnet de la Unimet y se lea bien</li></ul></div>` : ""}
+        </div>
+      </div>
+      ${actions}
+    </div>`;
+  }).join("") || emptyState("id-card", caTab === "pend" ? "No hay carnets por verificar" : "Aún no hay carnets revisados", caTab === "pend" ? "Cuando alguien con un carnet de menos de 11 dígitos envíe su foto, aparecerá aquí." : "Los carnets que apruebes o rechaces aparecerán aquí.");
+  icons();
+  if (sbShared()) list.filter(x => x.path && !sbCarnetUrl[x.path]).forEach(x => sb.storage.from("carnets").createSignedUrl(x.path, 1800).then(({ data }) => {
+    if (!data) return; sbCarnetUrl[x.path] = data.signedUrl;
+    const el = document.querySelector(`[data-ca-photo="${CSS.escape(x.id)}"]`); if (el) { el.outerHTML = caPhotoHTML(x); icons(); }
+  }).catch(() => {}));
+}
+async function caDecide(id, ok, reason) {
+  const x = caItems().find(i => i.id === id); if (!x || x.st !== "pendiente") return;
+  if (sbShared()) {
+    sbWriteAt["ca" + id] = Date.now();
+    const { error } = await sb.rpc("decide_carnet", { target: id, approve: ok, reason: ok ? null : reason }).then(r => r, err => ({ error: err }));
+    sbWriteAt["ca" + id] = Date.now();
+    if (error) { toast(/Ya revisado/.test(error.message) ? "Otra persona ya revisó este carnet." : /propia/.test(error.message) ? "No puedes verificar tu propia cuenta." : "No pudimos guardar la decisión. Inténtalo de nuevo."); await sbLoadCarnets(); return; }
+    const u = sbCarnets.find(v => v.id === id);
+    if (u) Object.assign(u, { carnet_status: ok ? "ok" : "rechazado", carnet_reason: ok ? null : reason, carnet_by: user.full, carnet_decided_at: new Date().toISOString() });
+  } else {
+    const l = carnetList(), e = l.find(v => v.email === id); if (!e) return;
+    Object.assign(e, { st: ok ? "ok" : "rechazado", reason: ok ? null : reason, by: user.full, decided: Date.now() });
+    saveCarnetList(l);
+  }
+  logAudit("carnet", `${ok ? "Aprobó" : "Rechazó"} el carnet ${x.carnet} de ${x.who}${ok ? "" : ` (${reason})`}.`);
+  try { liveSeen = liveKeys(); } catch (err) {}
+  caReject = null; renderCarnets();
+  toast(ok ? `${x.who} ya tiene acceso a Nexo.` : `Rechazaste el carnet de ${x.who}. Podrá enviar una foto nueva.`);
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-ca-tab]"); if (t) { caTab = t.dataset.caTab; caReject = null; renderCarnets(); return; }
+  const z = e.target.closest("[data-ca-zoom]"); if (z) { caBig = caBig === z.dataset.caZoom ? null : z.dataset.caZoom; renderCarnets(); return; }
+  const okb = e.target.closest("[data-ca-ok]"); if (okb) { const x = caItems().find(i => i.id === okb.dataset.caOk); if (!x) return;
+    askConfirm({ icon: "badge-check", title: "¿Dar acceso?", text: `Confirmas que la foto es el carnet ${x.carnet} de ${x.who}. Tendrá acceso a todo Nexo.`, ok: "Dar acceso", cancel: "Volver", onOk: () => caDecide(x.id, true) }); return; }
+  const rj = e.target.closest("[data-ca-rej]"); if (rj) { caReject = rj.dataset.caRej; renderCarnets(); const s = document.getElementById("ca-motivo"); if (s) s.focus(); return; }
+  if (e.target.closest("[data-ca-no]")) { caReject = null; renderCarnets(); }
+});
+document.addEventListener("change", e => { if (e.target.id === "ca-motivo") { const w = document.getElementById("ca-otro-wrap"); w.hidden = e.target.value !== "otro"; if (!w.hidden) document.getElementById("ca-otro").focus(); } });
+document.addEventListener("submit", e => {
+  const f = e.target.closest("[data-ca-reject-form]"); if (!f) return;
+  e.preventDefault();
+  const sel = document.getElementById("ca-motivo").value, reason = sel === "otro" ? document.getElementById("ca-otro").value.trim() : sel;
+  if (reason.length < 3) { toast("Escribe el motivo del rechazo."); document.getElementById("ca-otro").focus(); return; }
+  caDecide(f.dataset.caRejectForm, false, reason);
+});
+// Otra pestaña (cuentas de prueba): llega una foto nueva o una decisión
+window.addEventListener("storage", e => {
+  if (e.key !== "nexo-carnets") return;
+  caSync();
+  if (current === "carnets") renderCarnets();
+});
+
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();
   const carnet = f.querySelector("[data-digits]");
-  if (carnet && !/^\d{11}$/.test(carnet.value)) {
+  if (carnet && !CARNET_RE.test(carnet.value)) {
     carnet.closest(".field").classList.add("bad");
     const hint = f.querySelector(`[data-hint="${carnet.id}"]`);
-    if (hint) hint.textContent = `El carnet debe tener 11 dígitos seguidos. Llevas ${carnet.value.length}.`;
+    if (hint) hint.textContent = `El carnet debe tener entre ${CARNET_MIN} y 11 dígitos, sin guiones. Llevas ${carnet.value.length}.`;
     carnet.focus();
     return;
   }

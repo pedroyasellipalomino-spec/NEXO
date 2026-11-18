@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 18 nov 2026
+- Carnets cortos: verificación con foto del carnet.
+- Administración aprueba o rechaza carnets con motivo.
 - Avisos del teléfono para el personal.
 - Arreglo: respuestas rápidas ya generan aviso.
 - Gestión y Equipo con personal real, sin ejemplos.

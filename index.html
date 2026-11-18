@@ -156,7 +156,7 @@
       <form class="card" id="registerForm" novalidate>
         <div class="field"><label for="r-name">Nombre completo</label><div class="input"><input id="r-name" name="nombre" type="text" placeholder="Ej.: Ana Torres" autocomplete="name" required><i data-lucide="user"></i></div></div>
         <div class="field"><label for="r-inst">Institución</label><div class="input"><select id="r-inst"><option>U. Metropolitana</option></select><i data-lucide="chevron-down"></i></div></div>
-        <div class="field"><label for="r-carnet">Carnet</label><div class="input"><input id="r-carnet" name="carnet" type="text" inputmode="numeric" maxlength="11" pattern="[0-9]{11}" placeholder="11 dígitos, sin guiones" autocomplete="off" required data-digits><i data-lucide="id-card"></i></div><p class="tiny" data-hint="r-carnet">Escribe los 11 dígitos de tu carnet, seguidos.</p></div>
+        <div class="field"><label for="r-carnet">Carnet</label><div class="input"><input id="r-carnet" name="carnet" type="text" inputmode="numeric" maxlength="11" pattern="[0-9]{5,11}" placeholder="Solo números, sin guiones" autocomplete="off" required data-digits><i data-lucide="id-card"></i></div><p class="tiny" data-hint="r-carnet">Solo números. Si tu carnet tiene menos de 11 dígitos, te pediremos una foto para verificarlo.</p></div>
         <div class="field"><label for="r-mail">Correo institucional</label><div class="input"><input id="r-mail" name="correo" type="email" placeholder="nombre@correo.unimet.edu.ve" autocomplete="email" required><i data-lucide="mail"></i></div></div>
         <div class="field"><label for="r-pass">Contraseña</label><div class="input"><input id="r-pass" name="clave" type="password" minlength="8" placeholder="Crea una contraseña" autocomplete="new-password" required><button class="eye" type="button" data-eye="r-pass" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div>
           <p class="tiny">Mínimo 8 caracteres, con al menos un número.</p></div>
@@ -221,7 +221,7 @@
           <h2 class="h2">Preguntas frecuentes</h2>
           <details><summary>No puedo iniciar sesión<i data-lucide="chevron-down"></i></summary><p>Revisa que uses tu correo institucional y que ya hayas creado tu cuenta en Nexo.</p></details>
           <details><summary>Olvidé mi contraseña<i data-lucide="chevron-down"></i></summary><p>Usa "¿Olvidaste tu contraseña?" en la pantalla de inicio de sesión: te enviamos un código de 6 dígitos a tu correo institucional y creas una contraseña nueva.</p></details>
-          <details><summary>Mi carnet no es aceptado<i data-lucide="chevron-down"></i></summary><p>El carnet debe tener 11 dígitos seguidos, sin guiones ni espacios.</p></details>
+          <details><summary>Mi carnet no es aceptado<i data-lucide="chevron-down"></i></summary><p>Escribe solo los números, sin guiones ni espacios. Si tu carnet tiene menos de 11 dígitos también sirve: al crear la cuenta te pediremos una foto del carnet y un administrador te da acceso.</p></details>
         </div>
 
         <form class="card" id="ayudaForm">
@@ -1375,6 +1375,20 @@
   <div class="stack s14" id="vlList"></div>
 </section>
 
+<!-- Verificar carnet (carnets de menos de 11 dígitos): foto → administración -->
+<section class="screen app" id="carnet" data-title="Verifica tu carnet" data-tab="inicio" data-crumb="Verificar carnet" hidden>
+  <div><h1 class="h1">Verifica tu carnet</h1><p class="lead" id="caLead">Envía una foto de tu carnet y un administrador te da acceso.</p></div>
+  <div class="stack s14" id="caBody"></div>
+</section>
+
+<!-- Gestión · Carnets por verificar (admin, creador, dueño) -->
+<section class="screen app" id="carnets" data-staff="admin" data-title="Carnets por verificar" data-tab="carnets" data-crumb="Gestión  /  Carnets por verificar" hidden>
+  <div><h1 class="h1">Carnets por verificar</h1><p class="lead">Fotos de carnets de menos de 11 dígitos. Revisa que el nombre y el número coincidan con la cuenta.</p></div>
+  <div class="kpis" id="caKpis"></div>
+  <div class="chips" id="caTabs"></div>
+  <div class="stack s14" id="caList"></div>
+</section>
+
 <!-- 21 · Notificaciones -->
 <section class="screen app" id="notificaciones" data-title="Notificaciones" data-back="inicio" data-tab="inicio" data-crumb="Notificaciones" hidden>
   <div class="row" style="flex-wrap:wrap">
@@ -1415,7 +1429,7 @@
         <div class="field"><label for="pf-name">Nombre completo</label><div class="input"><input id="pf-name" autocomplete="name"><i data-lucide="user"></i></div></div>
         <div class="field"><label for="pf-mail">Correo institucional</label><div class="input"><input id="pf-mail" type="email" autocomplete="email"><i data-lucide="mail"></i></div><p class="tiny" data-pf="mailhint">Si lo cambias, usarás el correo nuevo para iniciar sesión.</p></div>
         <div class="field" data-pf="mailpass" hidden><label for="pf-mailpass">Tu contraseña actual</label><div class="input"><input id="pf-mailpass" type="password" autocomplete="current-password" placeholder="Confírmala para cambiar el correo"><button class="eye" type="button" data-eye="pf-mailpass" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div></div>
-        <div class="field"><label for="pf-carnet">Carnet</label><div class="input" style="background:var(--field)"><input id="pf-carnet" readonly aria-readonly="true"><i data-lucide="lock"></i></div><p class="tiny">El carnet lo asigna la universidad y no se puede cambiar.</p></div>
+        <div class="field"><label for="pf-carnet">Carnet</label><div class="input" style="background:var(--field)"><input id="pf-carnet" readonly aria-readonly="true"><i data-lucide="lock"></i></div><p class="tiny">El carnet lo asigna la universidad y no se puede cambiar.</p><p class="tiny" id="pfCarnetSt" hidden></p></div>
         <div class="notice warn" data-pf="err1" role="alert" hidden><i data-lucide="circle-alert"></i><p></p></div>
         <button class="btn" type="submit"><i data-lucide="check"></i>Guardar datos de la cuenta</button>
       </form>
