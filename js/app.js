@@ -4102,6 +4102,7 @@ function userMenuHTML() {
     </div>
     <div class="um-theme"><span class="tiny">Apariencia</span><div data-theme-seg>${themeSeg()}</div></div>
     ${(() => { try { return installable() ? `<div class="um-list">${item(`data-install`, "download", "Instalar la app", "En tu pantalla de inicio")}</div>` : ""; } catch (err) { return ""; } })()}
+    ${(() => { try { const st = pushState(); return st ? `<div class="um-list">${item(`data-push-on`, st === "on" ? "bell-ring" : "bell-plus", st === "on" ? "Avisos del teléfono activos" : "Activar avisos del teléfono", st === "on" ? "Te avisamos aunque la app esté en segundo plano" : st === "off" ? "Están bloqueados: actívalos en los ajustes del navegador" : "Para enterarte aunque la app esté en segundo plano")}</div>` : ""; } catch (err) { return ""; } })()}
     <div class="um-list">${item(`data-logout`, "log-out", "Cerrar sesión")}</div>`;
 }
 let umOpen = null;
@@ -4819,13 +4820,46 @@ function liveCheck() {
   const open = () => { if (first.tk) { try { mdSel = first.tk; } catch (err) {} } go(first.go); };
   toast(fresh.length === 1 ? first.text : `${first.text} y ${fresh.length - 1} más`, { persist: true, action: "Ver", onAction: open });
   liveBeep();
-  if (document.hidden) { liveUnseen += fresh.length; document.title = `(${liveUnseen}) ${baseTitle}`; }
+  if (document.hidden) { liveUnseen += fresh.length; document.title = `(${liveUnseen}) ${baseTitle}`; liveNotify(fresh.length === 1 ? first.text : `${first.text} y ${fresh.length - 1} más`, first.go, first.tk); }
   const r = { moderacion: () => renderModeracion(), gestion: () => renderGestion(), validar: () => renderValidar(), "local-pedidos": () => renderLocalPedidos(), "creador-equipo": () => renderCreadorEquipo() }[current];
   if (r) try { r(); } catch (err) {}
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { liveUnseen = 0; document.title = baseTitle; } });
 window.addEventListener("storage", e => { if (e.key && e.key.startsWith("nexo-")) setTimeout(liveCheck, 50); });
 if (LIVE_ROLE !== "estudiante") setInterval(() => { liveSeen = liveKeys(); }, 10000); // lo que cambia en esta pestaña lo hizo la propia persona: no se avisa
+
+/* Avisos del teléfono (notificaciones del sistema) para el personal: si la app está abierta pero en segundo plano,
+   liveCheck además muestra una notificación; al tocarla se abre la pantalla que corresponde (sw.js → mensaje "go").
+   Necesita permiso (menú de usuario → "Activar avisos del teléfono"). Con la app cerrada no llegan: eso requeriría
+   un servidor de notificaciones push. */
+function pushState() {
+  if (LIVE_ROLE === "estudiante" || !("Notification" in window)) return null;
+  return Notification.permission === "granted" ? "on" : Notification.permission === "denied" ? "off" : "ask";
+}
+function liveNotify(text, goTo, tk) {
+  try {
+    if (pushState() !== "on") return;
+    const opts = { body: text, icon: "icons/icon-192.png", badge: "icons/icon-192.png", tag: "nexo-vivo", renotify: true, data: { go: goTo, tk: tk || null } };
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(reg => reg.showNotification("Nexo", opts)).catch(() => {});
+    else { const n = new Notification("Nexo", opts); n.onclick = () => { window.focus(); if (tk) { try { mdSel = tk; } catch (err) {} } go(goTo); n.close(); }; }
+  } catch (err) {}
+}
+document.addEventListener("click", async e => {
+  if (!e.target.closest("[data-push-on]")) return;
+  try { closeUserMenu(); } catch (err) {}
+  const st = pushState();
+  if (st === "on") { toast("Los avisos del teléfono ya están activos en este dispositivo."); return; }
+  if (st === "off") { toast("Los avisos están bloqueados para Nexo. Actívalos en los ajustes del navegador (Notificaciones) y vuelve a intentarlo.", { persist: true }); return; }
+  let r = "default";
+  try { r = await Notification.requestPermission(); } catch (err) {}
+  if (r === "granted") { toast("Listo: te avisaremos en este teléfono aunque la app esté en segundo plano."); liveNotify("Así se verán tus avisos de Nexo.", ROLE_HOME[LIVE_ROLE] || "inicio"); }
+  else toast("No activamos los avisos. Puedes hacerlo luego desde este mismo menú.");
+});
+if (navigator.serviceWorker) navigator.serviceWorker.addEventListener("message", e => {
+  const d = e.data || {}; if (!d.go) return;
+  if (d.tk) { try { mdSel = d.tk; } catch (err) {} }
+  go(d.go);
+});
 
 /* ---------- Satisfacción: el estudiante califica la atención al resolverse su ticket ----------
    t.rating = { score 1–5, t, by }; la administración ve el promedio por moderador en el equipo. */
@@ -5110,15 +5144,18 @@ function sbShared() { return !!(sb && account && account.sb); }
 function sbMerchant() { return sbShared() && roleOf(account) === "local" && !!account.local; }
 let sbLocalOrders = [], sbSynced = { o: {}, t: {} }, sbLastWrite = 0;
 // lo que cambia esta misma pestaña no se anuncia como "nuevo" (Realtime también avisa los cambios propios)
-const sbLive = () => { try { if (Date.now() - sbLastWrite < 4000) liveSeen = liveKeys(); else liveCheck(); } catch (err) {} };
+const sbWriteAt = {};
+const stableStr = v => JSON.stringify(v, (k, x) => x && typeof x === "object" && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, kk) => (o[kk] = x[kk], o), {}) : x);
+// echo: true = es lo mismo que subió esta pestaña; false = viene de otra persona; null = no se sabe (se usa el tiempo)
+const sbLive = (key, echo = null) => { try { const own = echo === null ? key && Date.now() - (sbWriteAt[key] || 0) < 4000 : echo; if (own) liveSeen = liveKeys(); else liveCheck(); } catch (err) {} };
 // Cola por registro: los cambios de un mismo pedido o ticket se envían de uno en uno y siempre con la versión más
 // reciente (si no, dos cambios seguidos pueden llegar en desorden y el viejo pisa al nuevo).
 const sbQ = {};
 function sbPush(key, send, onError) {
   const q = sbQ[key] || (sbQ[key] = { busy: false, again: false });
   if (q.busy) { q.again = true; return; }
-  q.busy = true; sbLastWrite = Date.now();
-  send().then(({ error }) => { if (error) onError(error); }, onError).finally(() => { q.busy = false; sbLastWrite = Date.now(); if (q.again) { q.again = false; sbPush(key, send, onError); } });
+  q.busy = true; sbLastWrite = sbWriteAt[key] = Date.now();
+  send().then(({ error }) => { if (error) onError(error); }, onError).finally(() => { q.busy = false; sbLastWrite = sbWriteAt[key] = Date.now(); if (q.again) { q.again = false; sbPush(key, send, onError); } });
 }
 const sbPending = key => !!(sbQ[key] && sbQ[key].busy);
 function sbSyncOrders() {
@@ -5176,7 +5213,7 @@ async function sbSharedInit() {
       if (sbMerchant()) {
         const i = sbLocalOrders.findIndex(x => x.id === row.id);
         if (i >= 0) sbLocalOrders[i] = row; else sbLocalOrders.unshift(row);
-        sbLive();
+        sbLive("o" + row.id);
       } else if (row.user_id === account.sb) {
         sbSynced.o[row.id] = JSON.stringify(row.data);
         const i = orders.findIndex(o => o.id === row.id);
@@ -5187,10 +5224,11 @@ async function sbSharedInit() {
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, ({ new: row }) => {
       if (!row || !row.data || sbPending("t" + row.id)) return;
+      let echo = false; try { echo = !!sbSynced.t[row.id] && stableStr(JSON.parse(sbSynced.t[row.id])) === stableStr(row.data); } catch (err) {}
       sbSynced.t[row.id] = JSON.stringify(row.data); sbSynced.t["_" + row.id] = 1;
       const i = tickets.findIndex(t => t.id === row.id);
       if (i >= 0) tickets[i] = row.data; else tickets.push(row.data);
-      sbLive();
+      sbLive("t" + row.id, echo);
       sbRefreshScreens();
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "court_bookings" }, () => { sbLoadCourts(); })
@@ -5204,8 +5242,8 @@ async function sbSharedInit() {
       if (row.user_id === account.sb && sbStateReady && !sbPending("state") && !sbPending("wallet")) sbApplyState(row);
       if (sbIsCaja()) {
         const i = sbCajaRows.findIndex(r => r.user_id === row.user_id), prev = sbCajaRows[i];
-        if (prev) { sbCajaRows[i] = { ...prev, pagos: row.pagos, pendrec: row.pendrec, updated_at: row.updated_at }; sbLive(); if (current === "validar") renderValidar(); }
-        else sbLoadCaja().then(() => { sbLive(); if (current === "validar") renderValidar(); });
+        if (prev) { sbCajaRows[i] = { ...prev, pagos: row.pagos, pendrec: row.pendrec, updated_at: row.updated_at }; sbLive("cj" + row.user_id); if (current === "validar") renderValidar(); }
+        else sbLoadCaja().then(() => { sbLive("cj" + row.user_id); if (current === "validar") renderValidar(); });
       }
     })
     .subscribe();
@@ -5303,9 +5341,9 @@ function sbCajaDecide(key, ok, motivo, quiet) {
   Object.assign(item.p, ok ? { estado: item.kind === "factura" ? "pagada" : "aprobada", validatedAt: now, validatedBy: me } : { estado: "rechazada", motivo, rejectedAt: now, rejectedBy: me });
   const row = sbCajaRows.find(r => r.user_id === uid);
   if (row) { if (item.kind === "factura") row.pagos = { ...row.pagos, [id]: { ...row.pagos[id], ...item.p } }; else row.pendrec = row.pendrec.map(r => r.id === id ? { ...r, estado: item.p.estado, motivo: item.p.motivo, validatedAt: item.p.validatedAt, rejectedAt: item.p.rejectedAt, validatedBy: item.p.validatedBy, rejectedBy: item.p.rejectedBy } : r); }
-  sbLastWrite = now;
+  sbLastWrite = sbWriteAt["cj" + uid] = now;
   sb.rpc("caja_decide", { target: uid, kind: item.kind, item_id: id, ok, motivo: motivo || null, fecha: fmtD(new Date(now)), match: item.kind === "factura" ? `Factura de ${MES_DE(id)}` : "Recarga de wallet" }).then(({ error }) => {
-    sbLastWrite = Date.now();
+    sbLastWrite = sbWriteAt["cj" + uid] = Date.now();
     if (error) { toast(/Ya revisado/.test(error.message) ? `Otra persona de Caja ya revisó el pago de ${item.who}.` : "No pudimos guardar la decisión. Inténtalo de nuevo."); sbLoadCaja().then(() => { if (current === "validar") renderValidar(); }); }
   });
   logAudit("caja", ok ? `Aprobó ${item.title.toLowerCase()} de ${item.who} (${money(item.usd)}, ref. ${item.p.ref}).` : `Rechazó ${item.title.toLowerCase()} de ${item.who}: ${motivo}.`);

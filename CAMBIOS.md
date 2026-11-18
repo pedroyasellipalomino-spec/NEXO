@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 18 nov 2026
+- Avisos del teléfono para el personal.
+- Arreglo: respuestas rápidas ya generan aviso.
 - Gestión y Equipo con personal real, sin ejemplos.
 - Agotados, pausa y horario de locales en vivo.
 

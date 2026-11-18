@@ -33,3 +33,14 @@ self.addEventListener("fetch", e => {
     }).catch(() => caches.match(req, { ignoreSearch: true }).then(hit => hit || (req.mode === "navigate" ? caches.match("./index.html") : undefined)))
   );
 });
+
+// Avisos del personal: al tocar la notificación se enfoca la app y se abre la pantalla del aviso
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const d = e.notification.data || {};
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+    const c = list[0];
+    if (c) { c.postMessage({ go: d.go, tk: d.tk }); return c.focus(); }
+    return self.clients.openWindow("./index.html" + (d.go ? "#" + d.go : ""));
+  }));
+});
