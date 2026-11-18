@@ -2163,7 +2163,7 @@ const localById = id => LOCALES.find(l => l.id === id);
 let localState = {};
 const loadLocalState = () => { try { localState = JSON.parse(localStorage.getItem("nexo-localstate") || "{}") || {}; } catch (err) { localState = {}; } };
 loadLocalState();
-const saveLocalState = () => { try { localStorage.setItem("nexo-localstate", JSON.stringify(localState)); } catch (err) {} };
+const saveLocalState = () => { try { localStorage.setItem("nexo-localstate", JSON.stringify(localState)); } catch (err) {} try { sbSaveLocal(); } catch (err) {} };
 const lstate = id => localState[id] || (localState[id] = { paused: false, soldout: [] });
 const isPaused = id => !!(localState[id] && localState[id].paused);
 const isSoldOut = (lid, iid) => !!(localState[lid] && localState[lid].soldout.includes(iid));
@@ -3967,7 +3967,7 @@ document.addEventListener("input", e => { if (e.target.closest && e.target.close
 /* Entre pestañas: si otra cuenta cambia pedidos o el estado de un local, esta pantalla se actualiza sola */
 window.addEventListener("storage", e => {
   if (!e.key) return;
-  if (e.key === "nexo-localstate") loadLocalState();
+  if (e.key === "nexo-localstate" && !sbShared()) loadLocalState(); // con cuenta real el estado de los locales viene de Supabase
   if (e.key === K("nexo-orders")) { try { orders = JSON.parse(e.newValue || "[]") || []; } catch (err) {} }
   if (e.key === "nexo-tickets") { try { tickets = JSON.parse(e.newValue || "[]") || tickets; } catch (err) {} }
   if (!(e.key.startsWith("nexo-orders:") || e.key === "nexo-localstate" || e.key === "nexo-tickets")) return;
@@ -5137,7 +5137,7 @@ function sbSyncTickets() {
   });
 }
 function sbRefreshScreens() {
-  const r = { inicio: renderHome, comida: () => { renderFoodList(); renderFoodOrders(); renderFoodAgain(); }, pedido: renderPedido, soporte: renderSoporte, "local-pedidos": renderLocalPedidos, gestion: renderGestion, moderacion: renderModeracion, "creador-equipo": renderCreadorEquipo, caso: renderCaso }[current];
+  const r = { inicio: renderHome, comida: () => { renderFoodList(); renderFoodOrders(); renderFoodAgain(); }, local: renderLocal, detalle: renderDetalle, carrito: renderCarrito, "local-menu": renderLocalMenu, pedido: renderPedido, soporte: renderSoporte, "local-pedidos": renderLocalPedidos, gestion: renderGestion, moderacion: renderModeracion, "creador-equipo": renderCreadorEquipo, caso: renderCaso }[current];
   if (r) try { r(); } catch (err) {}
   try { checkOrders(); } catch (err) {}
 }
@@ -5165,6 +5165,7 @@ async function sbSharedInit() {
   try { await sbStateInit(); } catch (err) { console.warn("Nexo: no se cargó el wallet", err); }
   if (sbIsCaja()) try { await sbLoadCaja(); } catch (err) {}
   try { await sbCourtsInit(); } catch (err) { console.warn("Nexo: no se cargaron las canchas", err); }
+  try { await sbLocalsInit(); sbRefreshScreens(); } catch (err) { console.warn("Nexo: no se cargaron los locales", err); }
   try { liveSeen = liveKeys(); } catch (err) {}
   sbRefreshScreens();
   sb.channel("nexo-vivo")
@@ -5191,6 +5192,11 @@ async function sbSharedInit() {
       sbRefreshScreens();
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "court_bookings" }, () => { sbLoadCourts(); })
+    .on("postgres_changes", { event: "*", schema: "public", table: "local_state" }, ({ new: row }) => {
+      if (!row || !row.local_id || sbPending("ls" + row.local_id)) return;
+      localState[row.local_id] = sbLocalRow(row);
+      sbRefreshScreens();
+    })
     .on("postgres_changes", { event: "*", schema: "public", table: "student_state" }, ({ new: row }) => {
       if (!row || !row.user_id) return;
       if (row.user_id === account.sb && sbStateReady && !sbPending("state") && !sbPending("wallet")) sbApplyState(row);
@@ -5372,6 +5378,24 @@ document.addEventListener("click", e => {
     go("qr");
   });
 }, true);
+/* Comercio real · agotados, pausa y horario de cada local en Supabase (tabla local_state, Realtime).
+   Con cuenta real, `localState` sale del servidor (no de este navegador) y cambia en vivo; el comercio real sube
+   lo de su local con `sbSaveLocal` (las reglas solo le dejan tocar el suyo). Las cuentas de prueba siguen locales. */
+function sbLocalRow(r) { return { paused: !!r.paused, soldout: Array.isArray(r.soldout) ? r.soldout : [], ...(Array.isArray(r.week) && r.week.length === 7 ? { week: r.week } : {}) }; }
+async function sbLocalsInit() {
+  const { data, error } = await sb.from("local_state").select("local_id,paused,soldout,week");
+  if (error) { console.warn("Nexo: no se cargó el estado de los locales", error.message); return; }
+  const fresh = {};
+  data.forEach(r => { fresh[r.local_id] = sbLocalRow(r); });
+  localState = fresh;
+}
+function sbSaveLocal() {
+  if (!sbMerchant()) return;
+  const id = account.local;
+  sbPush("ls" + id, () => { const st = localState[id] || { paused: false, soldout: [] };
+    return sb.from("local_state").upsert({ local_id: id, paused: !!st.paused, soldout: st.soldout || [], week: st.week || null }); },
+    err => { console.warn("Nexo: estado del local sin guardar", err && err.message); toast("No pudimos guardar el cambio del local. Revisa tu conexión."); });
+}
 sbSharedInit();
 // Pantalla "Datos reales" del dueño
 const SV_LBL = { comida: ["Comida", "utensils"], estacionamiento: ["Estacionamiento", "car-front"], materias: ["Materias", "graduation-cap"], canchas: ["Canchas", "dribbble"], recarga: ["Recargas de wallet", "wallet"] };

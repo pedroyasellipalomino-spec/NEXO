@@ -2,6 +2,9 @@
 
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
+## 18 nov 2026
+- Agotados, pausa y horario de locales en vivo.
+
 ## 17 nov 2026
 - Resumen del creador con datos reales.
 
