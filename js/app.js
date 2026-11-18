@@ -2802,7 +2802,7 @@ function ago(t) {
   const d = new Date(t); return `${d.getDate()} ${MES_CORTO[d.getMonth()]} · ${hhmm(t)}`;
 }
 const accByEmail = e => accounts.find(a => a.email === e);
-const nameOf = e => (accByEmail(e) || {}).full || e;
+const nameOf = e => (accByEmail(e) || (sbTeamOn() ? sbStaff.find(a => a.email === e) : null) || {}).full || e;
 const firstName = n => String(n).split(" ")[0];
 const initialsOf = n => String(n).split(" ").filter(Boolean).slice(0, 2).map(w => w[0]).join("").toLocaleUpperCase("es");
 
@@ -2866,7 +2866,7 @@ function logAudit(type, text) {
 const tkById = id => tickets.find(t => t.id === id);
 const nextTkId = () => sbShared() ? "TK-" + (Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 4)).toUpperCase() : "TK-" + (Math.max(1000, ...tickets.map(t => +t.id.slice(3) || 0)) + 1);
 const isOpen = t => t.status !== "resuelto";
-const mods = () => accounts.filter(a => a.role === "mod");
+const mods = () => sbTeamOn() ? sbStaff.filter(a => a.role === "mod") : accounts.filter(a => a.role === "mod");
 const lastActivity = t => Math.max(t.created, ...t.messages.map(m => m.t), ...(t.actions || []).map(a => a.t));
 
 /* Movimiento en la Actividad del estudiante (sus datos se guardan por cuenta) */
@@ -2916,6 +2916,7 @@ function inviteCard() {
   </form>`;
 }
 function teamRows() {
+  if (sbTeamOn()) return mods().map(m => ({ name: m.full, email: m.email, kind: m.disabled ? "off" : "on" }));
   return [...mods().map(m => ({ name: m.full, email: m.email, kind: m.disabled ? "off" : "on" })), ...invites.filter(i => i.role === "mod").map(i => ({ name: i.email, email: i.email, kind: "inv" }))];
 }
 function teamCard() {
@@ -2957,7 +2958,7 @@ function renderGestion() {
     </div>`).join("") || emptyState("inbox", "No hay tickets con esos filtros", "Prueba con otro estado o servicio."))
     + `<div class="tk-foot"><span class="small">${list.length} de ${tickets.length} tickets</span></div>`;
   renderGsBulk(list);
-  document.getElementById("gsSide").innerHTML = inviteCard() + teamCard() + ADMIN_NOTE;
+  document.getElementById("gsSide").innerHTML = (sbTeamOn() ? sbTeamNote() : inviteCard()) + teamCard() + ADMIN_NOTE;
   icons();
 }
 function renderEquipo() {
@@ -2971,7 +2972,7 @@ function renderEquipo() {
     return `<div class="tk-row eq"><div class="row start"><span class="avatar sm role-${r.role || "mod"}">${r.kind === "inv" ? `<i data-lucide="mail"></i>` : initialsOf(r.name)}</span><div style="min-width:0"><b style="font-size:13px">${esc(r.name)}</b><p class="tiny" title="${esc(r.email)}">${r.kind === "inv" ? `Invitado como moderador · ${invNote(invByEmail(r.email))}` : esc(r.email)}</p></div></div>
       <div><span class="tk-lbl">Abiertos</span>${r.kind === "inv" ? "—" : open}</div><div><span class="tk-lbl">Resueltos</span>${r.kind === "inv" ? "—" : done}${r.kind === "inv" ? "" : rateSummary(r.email)}</div><div>${st}</div><div>${act}</div></div>`;
   }).join("") || emptyState("users", "Aún no hay moderadores", "Invita al primero para que responda los tickets de los estudiantes."));
-  document.getElementById("eqSide").innerHTML = inviteCard() + `<div class="notice"><i data-lucide="info"></i><p>Al desactivar a un moderador pierde el acceso a la moderación, pero puede seguir usando Nexo como usuario. Sus tickets abiertos quedan sin asignar para que los repartas.</p></div>`;
+  document.getElementById("eqSide").innerHTML = (sbTeamOn() ? sbTeamNote() : inviteCard()) + `<div class="notice"><i data-lucide="info"></i><p>Al desactivar a un moderador pierde el acceso a la moderación, pero puede seguir usando Nexo como usuario. Sus tickets abiertos quedan sin asignar para que los repartas.</p></div>`;
   icons();
 }
 let caseId = null;
@@ -3419,7 +3420,7 @@ function renderCreador() {
 
 /* Equipo y tickets */
 let ceTab = "open", ceSel = null, ceMenu = null, ceConfirm = null, ceFull = false, ceRole = "admin";
-const staffRows = () => [
+const staffRows = () => sbTeamOn() ? sbStaff.filter(a => a.role === "admin" || a.role === "mod").map(a => ({ name: a.full, email: a.email, role: a.role, kind: a.disabled ? "off" : "on" })) : [
   ...accounts.filter(a => a.role === "admin" || a.role === "mod").map(a => ({ name: a.full, email: a.email, role: a.role, kind: a.disabled ? "off" : "on" })),
   ...invites.map(i => ({ name: i.email, email: i.email, role: i.role, kind: "inv" }))
 ];
@@ -3455,7 +3456,7 @@ function renderCreadorEquipo() {
         <span class="role-tag role-${r.role}">${ROLE_LABEL[r.role]}</span>${st}
         <button class="dots" type="button" aria-label="Opciones de ${esc(r.name)}" aria-expanded="${ceMenu === r.email}" data-ce-menu="${r.email}"><i data-lucide="ellipsis"></i></button></div>${menu}`;
     }).join("") || `<p class="small">Aún no hay equipo de gestión. Invita a la primera persona.</p>`);
-  document.getElementById("ceInvite").innerHTML = creatorInvite();
+  document.getElementById("ceInvite").innerHTML = sbTeamOn() ? sbTeamNote() : creatorInvite();
   const all = tickets.length, nOpen = tickets.filter(isOpen).length;
   document.getElementById("ceChips").innerHTML = [["open", `Abiertos · ${nOpen}`], ["done", `Resueltos · ${all - nOpen}`], ["all", `Todos · ${all}`]]
     .map(([k, l]) => `<button class="pill ${k === ceTab ? "ok" : "neutral"}" type="button" data-ce-tab="${k}">${l}</button>`).join("");
@@ -5166,6 +5167,7 @@ async function sbSharedInit() {
   if (sbIsCaja()) try { await sbLoadCaja(); } catch (err) {}
   try { await sbCourtsInit(); } catch (err) { console.warn("Nexo: no se cargaron las canchas", err); }
   try { await sbLocalsInit(); sbRefreshScreens(); } catch (err) { console.warn("Nexo: no se cargaron los locales", err); }
+  if (sbTeamOn()) try { await sbLoadStaff(); } catch (err) { console.warn("Nexo: no se cargó el equipo", err); }
   try { liveSeen = liveKeys(); } catch (err) {}
   sbRefreshScreens();
   sb.channel("nexo-vivo")
@@ -5396,6 +5398,49 @@ function sbSaveLocal() {
     return sb.from("local_state").upsert({ local_id: id, paused: !!st.paused, soldout: st.soldout || [], week: st.week || null }); },
     err => { console.warn("Nexo: estado del local sin guardar", err && err.message); toast("No pudimos guardar el cambio del local. Revisa tu conexión."); });
 }
+/* Equipo real: con cuenta real de personal, moderadores y administradores salen de profiles (sin Lucía ni Carlos
+   de ejemplo). Desactivar/reactivar usa set_staff_active; cambiar admin↔mod, set_user_role (creador o dueño).
+   Las invitaciones son de prueba: con cuenta real se explica cómo sumar a alguien. */
+var sbStaff = [];
+function sbTeamOn() { try { return sbShared() && ["mod", "admin", "creator", "owner"].includes(roleOf(account)); } catch (err) { return false; } }
+async function sbLoadStaff() {
+  const { data, error } = await sb.from("profiles").select("id,full_name,email,role,disabled").in("role", ["mod", "admin", "creator"]);
+  if (error) { console.warn("Nexo: no se cargó el equipo", error.message); return; }
+  sbStaff = data.map(u => ({ sb: u.id, full: u.full_name || u.email, email: u.email, role: u.role, disabled: !!u.disabled }));
+  sbRefreshScreens();
+  try { if (current === "equipo") renderEquipo(); } catch (err) {}
+}
+const sbTeamNote = () => `<div class="card"><h3 class="sec">Sumar a alguien al equipo</h3><p class="small" style="font-size:13px">La persona crea su cuenta en Nexo con su correo y ${roleOf(account) === "admin" ? "el creador o el dueño" : "tú"} le ${roleOf(account) === "admin" ? "asigna" : "asignas"} el rol desde ${roleOf(account) === "owner" ? "Datos reales → Usuarios" : roleOf(account) === "admin" ? "su panel" : "el panel del dueño"}. Las invitaciones por enlace son solo de la demostración.</p></div>`;
+// Acciones del equipo con cuenta real: se capturan antes de las de la demostración
+document.addEventListener("click", async e => {
+  if (!sbTeamOn()) return;
+  const off = e.target.closest("[data-mod-off]"), on = e.target.closest("[data-mod-on]"), cr = e.target.closest("[data-ce-role]");
+  if (!off && !on && !cr) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const a = sbStaff.find(x => x.email === (off || on || cr).dataset[off ? "modOff" : on ? "modOn" : "ceRole"]); if (!a) return;
+  const redraw = () => { try { current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); } catch (err) {} };
+  if (cr) {
+    const to = a.role === "admin" ? "mod" : "admin";
+    const { error } = await sb.rpc("set_user_role", { target: a.sb, new_role: to, new_local: null, new_disabled: a.disabled });
+    if (error) { toast(error.message === "Sin permiso" ? "Solo el creador o el dueño pueden cambiar ese rol." : "No pudimos cambiar el rol. Inténtalo de nuevo."); return; }
+    let freed = 0;
+    if (to === "admin") tickets.forEach(t => { if (t.mod === a.email && isOpen(t)) { t.mod = null; freed++; } });
+    if (freed) saveTickets();
+    a.role = to; ceMenu = null;
+    logAudit("rol", `Cambió a ${a.full} a ${to === "admin" ? "administrador" : "moderador"}.`);
+    toast(`${a.full} ahora es ${to === "admin" ? "administrador" : "moderador"}${freed ? `; ${freed} ${freed === 1 ? "ticket quedó" : "tickets quedaron"} sin asignar` : ""}.`);
+    redraw(); return;
+  }
+  const active = !!on;
+  const { error } = await sb.rpc("set_staff_active", { target: a.sb, active });
+  if (error) { toast(error.message === "Sin permiso" ? "No tienes permiso para cambiar a esa persona." : error.message === "No puedes cambiar tu propia cuenta" ? "No puedes desactivar tu propia cuenta." : "No pudimos guardar el cambio. Inténtalo de nuevo."); return; }
+  a.disabled = !active; ceMenu = null;
+  let freed = 0;
+  if (!active) { tickets.forEach(t => { if (t.mod === a.email && isOpen(t)) { t.mod = null; freed++; } }); if (freed) saveTickets(); }
+  logAudit("rol", `${active ? "Reactivó" : "Desactivó"} a ${a.full}.`);
+  toast(active ? `${a.full} recuperó su acceso de ${ROLE_LABEL[a.role].toLowerCase()}.` : `${a.full} ya no tiene acceso de gestión; puede seguir usando Nexo como usuario${freed ? `. ${freed} ${freed === 1 ? "ticket quedó" : "tickets quedaron"} sin asignar` : ""}.`);
+  redraw();
+}, true);
 sbSharedInit();
 // Pantalla "Datos reales" del dueño
 const SV_LBL = { comida: ["Comida", "utensils"], estacionamiento: ["Estacionamiento", "car-front"], materias: ["Materias", "graduation-cap"], canchas: ["Canchas", "dribbble"], recarga: ["Recargas de wallet", "wallet"] };
