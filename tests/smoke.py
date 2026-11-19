@@ -575,9 +575,20 @@ async def main() -> int:
         check(await pg.evaluate("document.querySelector('.tslide.on').dataset.ts") == "3" and await pg.locator("#tutorial .tf").count() == 4, "el tutorial muestra el recorrido por pasos y los servicios")
         await pg.goto(URL + "#login")
         await pg.wait_for_timeout(300)
-        await pg.click(".demo-accts summary")
-        await pg.click("[data-demo-fill^='lucia.rojas']")
-        check(await pg.input_value("#l-mail") == "lucia.rojas@unimet.edu.ve" and await pg.input_value("#l-pass") == "demo-mod-01", "las cuentas de prueba llenan el formulario de inicio de sesión")
+        check(await pg.locator(".demo-accts, [data-demo-fill]").count() == 0 and "demo-" not in await pg.inner_text("#login"), "el inicio de sesión ya no muestra las cuentas de prueba")
+        # el dueño las tiene en su panel: entra a una y vuelve a su cuenta
+        await pg.evaluate("""(() => { const a = JSON.parse(localStorage.getItem('nexo-accounts') || '[]'); a.push({ full: 'Dueño Prueba', carnet: '', email: 'dueno@nexo-local.dev', role: 'owner', pass: 'x', created: '2026-11-01' }); localStorage.setItem('nexo-accounts', JSON.stringify(a)); localStorage.setItem('nexo-session', 'dueno@nexo-local.dev'); })()""")
+        await pg.goto(URL + "#pruebas"); await pg.reload(); await pg.wait_for_timeout(500)
+        check(await pg.evaluate("current") == "pruebas" and await pg.locator("#tpList [data-tp-enter]").count() == 18 and "demo-mod-01" not in await pg.inner_text("#tpList"), "el dueño ve las 18 cuentas de prueba con la contraseña oculta")
+        await pg.click("[data-tp-pw='lucia.rojas@unimet.edu.ve']"); await pg.wait_for_timeout(200)
+        check("demo-mod-01" in await pg.inner_text("#tpList"), "puede mostrar la contraseña")
+        await pg.click("[data-tp-enter='lucia.rojas@unimet.edu.ve']"); await pg.wait_for_timeout(200); await pg.click("[data-cdlg-ok]"); await pg.wait_for_timeout(1200)
+        check(await pg.evaluate("account.email") == "lucia.rojas@unimet.edu.ve" and await pg.evaluate("current") != "pruebas", "Entrar abre la cuenta de prueba")  # Lucía puede estar desactivada por pasos anteriores
+        await pg.click("[data-usermenu] >> visible=true"); await pg.wait_for_timeout(300)
+        await pg.click("[data-owner-back]"); await pg.wait_for_timeout(1200)
+        check(await pg.evaluate("account.email") == "dueno@nexo-local.dev", "Volver a mi cuenta de dueño desde el menú de usuario")
+        await pg.evaluate("localStorage.setItem('nexo-session', 'ana.torres@correo.unimet.edu.ve')"); await pg.goto(URL + "#pruebas"); await pg.reload(); await pg.wait_for_timeout(500)
+        check(await pg.evaluate("current") != "pruebas", "un estudiante no entra a las cuentas de prueba")
 
         # carnet de menos de 11 dígitos: foto → la administración rechaza o da acceso
         await pg.evaluate("localStorage.removeItem('nexo-session'); sessionStorage.removeItem('nexo-session')")

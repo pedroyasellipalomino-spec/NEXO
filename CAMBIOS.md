@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 19 nov 2026
+- Cuentas de prueba fuera del inicio de sesión.
+- Dueño entra a las cuentas de prueba y vuelve.
 - Servidor bloquea estado de cuenta sin carnet verificado.
 - Historial del wallet: entradas, pagos y devoluciones.
 - Todos los estudiantes verifican su carnet por foto.

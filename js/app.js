@@ -42,7 +42,7 @@ const STAFF_NAV = {
   admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"], ["validar","badge-check","Pagos por validar","validar"], ["carnets","id-card","Carnets","carnets"]],
   mod: [["moderacion","inbox","Tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]],
   local: [["local-pedidos","chef-hat","Pedidos","local-pedidos"], ["local-menu","book-open","Menú y horario","local-menu"]],
-  owner: [["dueno","shield-check","Datos reales","dueno"], ["validar","badge-check","Caja","validar"], ["carnets","id-card","Carnets","carnets"]],
+  owner: [["dueno","shield-check","Datos reales","dueno"], ["validar","badge-check","Caja","validar"], ["carnets","id-card","Carnets","carnets"], ["pruebas","flask-conical","Cuentas de prueba","pruebas"]],
   creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["validar","badge-check","Pagos por validar","validar"], ["carnets","id-card","Carnets","carnets"], ["config","settings","Configuración","config"]]
 };
 const ROLE_LABEL = { owner: "Dueño", local: "Comercio", creator: "Creador", admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
@@ -293,7 +293,7 @@ function staffGreet() {
 const DIA_LARGO_G = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const MES_LARGO_G = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 staffGreet();
-const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"], carnets: ["admin", "creator", "owner"] };
+const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"], carnets: ["admin", "creator", "owner"], pruebas: "owner" };
 // Carnet: de 5 a 11 dígitos. Todo estudiante lo verifica por foto cada trimestre (módulo "Verificar carnet por foto")
 const CARNET_MIN = 5, CARNET_RE = /^\d{5,11}$/, CARNET_LOCK = ["materias", "caja", "tarjeta", "inscripcion", "estacionamiento", "vehiculo", "pagoplan", "planes", "acceso"];
 const CARNET_LOCK_TXT = "El estado de cuenta y el estacionamiento se activan cuando verifiquemos tu carnet.";
@@ -356,6 +356,7 @@ function show(id) {
   if (id === "validar" && typeof renderValidar === "function") renderValidar();
   if (id === "carnet") try { renderCarnet(); } catch (err) {}
   if (id === "revision") try { renderCourtPay(); } catch (err) {}
+  if (id === "pruebas") try { renderPruebas(); } catch (err) {}
   if (id === "recarga") try { renderWalletHist(); } catch (err) {}
   if (id === "carnets") try { renderCarnets(); } catch (err) {}
   if (id === "notificaciones" && typeof renderNotifs === "function") try { renderNotifs(); } catch (err) {}
@@ -1128,6 +1129,7 @@ document.addEventListener("click", e => {
   doLogout();
 });
 function doLogout() {
+  try { localStorage.removeItem("nexo-ownerback"); } catch (err) {}
   if (sb && !doLogout.done) { doLogout.done = true; sb.auth.signOut({ scope: "local" }).catch(() => {}).finally(doLogout); return; }
   clearSession();
   try { sessionStorage.setItem("nexo-flash", "Cerraste sesión."); } catch (err) {}
@@ -4129,6 +4131,7 @@ function userMenuHTML() {
       ${role === "estudiante" || (DUAL && !staffNow) ? item(`data-um-go="soporte"`, "message-circle", "Ayuda y soporte") : ""}
     </div>
     <div class="um-theme"><span class="tiny">Apariencia</span><div data-theme-seg>${themeSeg()}</div></div>
+    ${(() => { try { return ownerBack() ? `<div class="um-list">${item(`data-owner-back`, "shield-check", "Volver a mi cuenta de dueño", "Estás dentro de una cuenta de prueba")}</div>` : ""; } catch (err) { return ""; } })()}
     ${(() => { try { return installable() ? `<div class="um-list">${item(`data-install`, "download", "Instalar la app", "En tu pantalla de inicio")}</div>` : ""; } catch (err) { return ""; } })()}
     ${(() => { try { const st = pushState(); return st ? `<div class="um-list">${item(`data-push-on`, st === "on" ? "bell-ring" : "bell-plus", st === "on" ? "Avisos del teléfono activos" : "Activar avisos del teléfono", st === "on" ? "Te avisamos aunque la app esté en segundo plano" : st === "off" ? "Están bloqueados: actívalos en los ajustes del navegador" : "Para enterarte aunque la app esté en segundo plano")}</div>` : ""; } catch (err) { return ""; } })()}
     <div class="um-list">${item(`data-logout`, "log-out", "Cerrar sesión")}</div>`;
@@ -5019,16 +5022,6 @@ function tourArm() {
   window.addEventListener("hashchange", () => { if (current === "tutorial") tourGo(0); else tourArm(); });
   tourGo(0);
 })();
-/* Login: las cuentas de prueba llenan el formulario al tocarlas */
-document.addEventListener("click", e => {
-  const d = e.target.closest("[data-demo-fill]"); if (!d) return;
-  const [m, pw] = d.dataset.demoFill.split("|");
-  const mail = document.getElementById("l-mail"), pass = document.getElementById("l-pass");
-  if (!mail || !pass) return;
-  mail.value = m; pass.value = pw; mail.dispatchEvent(new Event("input", { bubbles: true }));
-  const btn = document.querySelector('#loginForm button[type="submit"]'); if (btn) btn.focus();
-  toast("Listo: toca Iniciar sesión.");
-});
 
 /* ---------- Cuentas reales (Supabase), dueño y datos reales ----------
    Con la app servida por http(s) (SB_ON), las cuentas que no son de prueba viven en Supabase: registro con
@@ -6007,6 +6000,56 @@ function renderWalletHist() {
 document.addEventListener("click", e => {
   const f = e.target.closest("[data-wl-filter]"); if (f) { wlFilter = f.dataset.wlFilter; wlMore = false; renderWalletHist(); return; }
   if (e.target.closest("[data-wl-more]")) { wlMore = !wlMore; renderWalletHist(); }
+});
+
+
+/* ---------- Dueño · Cuentas de prueba ----------
+   Ya no aparecen en el inicio de sesión: el dueño las ve en #pruebas (solo su rol entra) con correo y contraseña
+   para copiar y "Entrar". Entrar abre la cuenta de prueba (local) sin cerrar la sesión de Supabase del dueño y guarda
+   su correo en localStorage["nexo-ownerback"]; desde el menú de usuario, "Volver a mi cuenta de dueño" lo regresa.
+   Cerrar sesión normal borra esa marca. Ojo: las contraseñas de prueba están en el código (STAFF0); son de demostración. */
+const TEST_ACCTS = () => [
+  { group: "Estudiante", list: [{ full: DEFAULT_USER.full, email: DEMO_EMAIL, pw: "demo-nexo-01", icon: "graduation-cap", role: "estudiante" }] },
+  { group: "Gestión", list: STAFF0.filter(a => a.role !== "local").map(a => ({ ...a, icon: { creator: "sparkles", admin: "shield-check", mod: "messages-square" }[a.role] || "user" })) },
+  { group: "Comercios", list: STAFF0.filter(a => a.role === "local").map(a => ({ ...a, icon: "store" })) }
+];
+function ownerBack() {
+  let e = null; try { e = localStorage.getItem("nexo-ownerback"); } catch (err) {}
+  return e && account && isTestAccount(account.email) && accounts.some(a => a.email === e && a.role === "owner") ? e : null;
+}
+var tpShow = {};
+function renderPruebas() {
+  const box = document.getElementById("tpList"); if (!box) return;
+  box.innerHTML = TEST_ACCTS().map(g => `<div class="card tp-group"><div class="row"><h2 class="h2">${g.group}</h2><span class="tiny">${plural(g.list.length, "cuenta", "cuentas")}</span></div>
+    ${g.list.map(a => `<div class="tp-row"><span class="avatar sm role-${a.role === "estudiante" ? "estudiante" : a.role}" aria-hidden="true"><i data-lucide="${a.icon}"></i></span>
+      <div class="grow" style="min-width:0"><b style="font-size:14px">${esc(a.full)}</b> <span class="role-tag role-${a.role}">${ROLE_LABEL[a.role] || "Estudiante"}</span>
+        <div class="tp-cred"><button class="link" type="button" data-copy="${esc(a.email)}" title="Copiar correo"><span class="mono">${esc(a.email)}</span> <i data-lucide="copy"></i></button>
+        <button class="link" type="button" data-tp-pw="${esc(a.email)}" title="${tpShow[a.email] ? "Ocultar" : "Mostrar"} contraseña"><span class="mono">${tpShow[a.email] ? esc(a.pw) : "••••••••••"}</span> <i data-lucide="${tpShow[a.email] ? "eye-off" : "eye"}"></i></button>
+        ${tpShow[a.email] ? `<button class="link" type="button" data-copy="${esc(a.pw)}" title="Copiar contraseña"><i data-lucide="copy"></i></button>` : ""}</div></div>
+      <button class="btn ghost sm" type="button" data-tp-enter="${esc(a.email)}"><i data-lucide="log-in"></i>Entrar</button></div>`).join("")}</div>`).join("")
+    + `<p class="tiny">Las cuentas de prueba guardan sus datos solo en este navegador y no aparecen en los datos reales. Cualquier otra persona necesitaría la contraseña para entrar, y ya no se muestran en el inicio de sesión.</p>`;
+  icons();
+}
+document.addEventListener("click", e => {
+  const pw = e.target.closest("[data-tp-pw]"); if (pw) { tpShow[pw.dataset.tpPw] = !tpShow[pw.dataset.tpPw]; renderPruebas(); return; }
+  const en = e.target.closest("[data-tp-enter]");
+  if (en) {
+    if (roleOf(account) !== "owner") return;
+    const a = TEST_ACCTS().flatMap(g => g.list).find(x => x.email === en.dataset.tpEnter); if (!a) return;
+    askConfirm({ icon: "log-in", title: `¿Entrar como ${esc(a.full)}?`, text: "Tu sesión de dueño queda guardada. Para volver, abre el menú de usuario (tu avatar) y toca \"Volver a mi cuenta de dueño\".", ok: "Entrar", cancel: "Cancelar",
+      onOk: () => {
+        try { localStorage.setItem("nexo-ownerback", account.email); } catch (err) {}
+        if (!accounts.some(x => x.email === a.email)) { accounts.push({ full: a.full, carnet: a.role === "estudiante" ? DEFAULT_USER.carnet : "", email: a.email, pass: passKey(a.pw), ...(a.role !== "estudiante" ? { role: a.role } : {}), ...(a.local ? { local: a.local } : {}) }); saveAccounts(); }
+        enterApp(a.email, false, `Entraste como ${a.full}. Vuelve a tu cuenta de dueño desde tu avatar.`);
+      } });
+    return;
+  }
+  if (e.target.closest("[data-owner-back]")) {
+    const back = ownerBack(); if (!back) return;
+    try { closeUserMenu(); } catch (err) {}
+    try { localStorage.removeItem("nexo-ownerback"); } catch (err) {}
+    enterApp(back, true, "Volviste a tu cuenta de dueño.");
+  }
 });
 
 

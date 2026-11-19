@@ -1103,22 +1103,6 @@ html.standalone .mbar{padding-top:max(10px,env(safe-area-inset-top,0px))}
   .auth-wrap{gap:20px;padding-top:12px}
 }
 
-/* Cuentas de prueba plegables */
-.demo-accts{border:1px dashed color-mix(in srgb,var(--brand) 35%,var(--line));border-radius:14px;background:color-mix(in srgb,var(--mint-bg) 55%,transparent)}
-.demo-accts summary{list-style:none;display:flex;align-items:center;gap:8px;padding:11px 14px;font-size:13px;font-weight:600;color:var(--brand);cursor:pointer}
-.demo-accts summary::-webkit-details-marker{display:none}
-.demo-accts summary svg{width:16px;height:16px}
-.da-chev{margin-left:auto;transition:transform .2s}
-.demo-accts[open] .da-chev{transform:rotate(180deg)}
-.demo-list{display:flex;flex-direction:column;gap:6px;padding:0 10px 8px}
-.demo-list button{display:flex;align-items:center;gap:10px;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font:inherit;color:inherit;cursor:pointer;transition:border-color .15s,transform .15s}
-.demo-list button:hover{border-color:var(--brand);transform:translateX(2px)}
-.demo-list button > svg{width:16px;height:16px;color:var(--muted)}
-.demo-list b{display:block;font-size:12px;font-weight:600}
-.demo-list .grow span{display:block;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.da-ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--mint-bg);color:var(--brand);flex-shrink:0}
-.da-ic svg{width:16px;height:16px}
-.demo-accts > .tiny{padding:0 14px 12px}
 
 /* Tutorial */
 .t-badge{display:inline-flex;align-items:center;gap:8px;width:fit-content;padding:6px 12px 6px 10px;border-radius:100px;font-size:12px;font-weight:600;color:var(--brand);background:var(--surface);border:1px solid var(--line);box-shadow:0 4px 14px -8px rgba(16,63,60,.25)}
@@ -1526,3 +1510,14 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .wl-sum > div{display:flex;flex-direction:column;gap:2px;min-width:0}
 .wl-sum b{font-size:15px}
 .wl-list .move{padding:10px 0}
+
+/* Dueño · Cuentas de prueba (#pruebas) */
+.tp-group{gap:4px}
+.tp-row{display:flex;align-items:center;gap:12px;padding:12px 0}
+.tp-row+.tp-row{border-top:1px solid var(--line)}
+.tp-row .avatar svg{width:16px;height:16px}
+.tp-row .btn{width:auto;flex:none}
+.tp-cred{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:4px}
+.tp-cred .link{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;overflow-wrap:anywhere}
+.tp-cred .link svg{width:13px;height:13px;flex:none}
+.tp-row > .grow{flex:1}
