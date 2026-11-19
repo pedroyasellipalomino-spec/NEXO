@@ -1519,3 +1519,10 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .ca-check{grid-column:1/-1}
 .ca-check ul{margin:4px 0 0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:2px}
 @media (max-width:520px){.ca-steps li{flex-direction:column;align-items:flex-start;gap:6px;font-size:12px;padding:8px}}
+
+/* Historial del wallet (#wlHist) */
+.wl-hist{gap:12px}
+.wl-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;border-radius:var(--r-sm);background:var(--bg)}
+.wl-sum > div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.wl-sum b{font-size:15px}
+.wl-list .move{padding:10px 0}

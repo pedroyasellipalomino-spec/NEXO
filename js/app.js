@@ -356,6 +356,7 @@ function show(id) {
   if (id === "validar" && typeof renderValidar === "function") renderValidar();
   if (id === "carnet") try { renderCarnet(); } catch (err) {}
   if (id === "revision") try { renderCourtPay(); } catch (err) {}
+  if (id === "recarga") try { renderWalletHist(); } catch (err) {}
   if (id === "carnets") try { renderCarnets(); } catch (err) {}
   if (id === "notificaciones" && typeof renderNotifs === "function") try { renderNotifs(); } catch (err) {}
   if (id === "local-pedidos" && typeof renderLocalPedidos === "function") renderLocalPedidos();
@@ -477,6 +478,7 @@ function renderWallet() {
   const sel = document.querySelector("#planList .opt.plan.on");
   if (sel) try { updatePlan(sel); } catch (err) { /* el plan aún no se ha cargado */ }
   try { renderWalletPay(); } catch (err) {}
+  try { renderWalletHist(); } catch (err) {}
 }
 renderWallet();
 /* ---------- Plan de estacionamiento del estudiante ---------- */
@@ -786,6 +788,7 @@ function addMovement(title, detail, amount, pill, pillCls, extra = {}) {
   try { sbSaveState(); } catch (err) {}
   drawMovement(m);
   refreshActivity();
+  try { renderWalletHist(); } catch (err) {}
 }
 function refreshActivity() {
   const card = document.getElementById("mvCount").closest(".card");
@@ -5975,6 +5978,37 @@ document.addEventListener("click", e => {
       go("materias");
     } });
 });
+
+/* Historial del wallet (#recarga, tarjeta #wlHist): lo que entró (recargas, devoluciones) y salió (pagos con wallet).
+   Sale de `moves`: recargas ("Recarga de wallet"), movimientos con "wallet Nexo" en el detalle (planes, canchas,
+   facturas, devoluciones) y pedidos de comida pagados con wallet (`orders`, method "wallet"). Solo suman al total
+   los que ya se aplicaron (Pagado, Acreditada, Reembolsado); recargas en revisión o rechazadas se ven con su estado. */
+var wlFilter = "all", wlMore = false;
+const WL_DONE = ["Pagado", "Acreditada", "Reembolsado", "Aprobado"];
+function walletMoves() {
+  let ords = {}; try { (orders || []).forEach(o => { ords[o.id] = o.method; }); } catch (err) {}
+  return (moves || []).filter(m => m && (m.title === "Recarga de wallet" || /wallet Nexo/i.test(m.detail || "") || (m.order && ords[m.order] === "wallet"))).slice().reverse();
+}
+const wlAmt = m => parseFloat(String(m.amount || "").replace(/[^\d,]/g, "").replace(",", ".")) || 0;
+function renderWalletHist() {
+  const box = document.getElementById("wlHist"); if (!box) return;
+  const all = walletMoves(), done = all.filter(m => WL_DONE.includes(m.pill));
+  const inn = done.filter(m => String(m.amount).startsWith("+")).reduce((a, m) => a + wlAmt(m), 0), out = done.filter(m => !String(m.amount).startsWith("+")).reduce((a, m) => a + wlAmt(m), 0);
+  const list = all.filter(m => wlFilter === "all" || (wlFilter === "in") === String(m.amount).startsWith("+")), shown = wlMore ? list : list.slice(0, 6);
+  box.innerHTML = `<div class="row"><h3 class="h2">Movimientos del wallet</h3><span class="tiny">${plural(all.length, "movimiento", "movimientos")}</span></div>
+    ${all.length ? `<div class="wl-sum"><div><span class="tiny">Entró</span><b class="pos">+${money(inn)}</b></div><div><span class="tiny">Salió</span><b>−${money(out)}</b></div><div><span class="tiny">Saldo</span><b>${money(WALLET)}</b></div></div>
+    <div class="chips">${[["all", "Todo"], ["in", "Entradas"], ["out", "Pagos"]].map(([k, l]) => `<button class="pill ${wlFilter === k ? "ok" : "neutral"}" type="button" data-wl-filter="${k}">${l}</button>`).join("")}</div>` : ""}
+    <div class="stack s14 wl-list" style="gap:0">${shown.map(m => `<div class="move"><span class="ico"><i data-lucide="${m.icon || "wallet"}"></i></span><div class="info"><b>${esc(m.title)}</b><span>${esc(m.detail || "")}</span><br><span>${esc(m.date || "")}</span></div>
+      <div class="mv-actions"><span class="amt${String(m.amount).startsWith("+") ? " pos" : ""}">${esc(m.amount)}</span>${m.pill && m.pill !== "Pagado" ? `<span class="pill ${m.pillCls || "neutral"}">${esc(m.pill)}</span>` : ""}</div></div>`).join("")
+      || emptyState("wallet", all.length ? "Nada en este filtro" : "Aún no hay movimientos", all.length ? "Prueba con otro filtro." : "Aquí verás tus recargas, lo que pagues con el wallet y las devoluciones.")}</div>
+    ${list.length > 6 ? `<button class="link b" type="button" data-wl-more>${wlMore ? "Ver menos" : `Ver los ${list.length}`} →</button>` : ""}`;
+  icons();
+}
+document.addEventListener("click", e => {
+  const f = e.target.closest("[data-wl-filter]"); if (f) { wlFilter = f.dataset.wlFilter; wlMore = false; renderWalletHist(); return; }
+  if (e.target.closest("[data-wl-more]")) { wlMore = !wlMore; renderWalletHist(); }
+});
+
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
   e.preventDefault();
