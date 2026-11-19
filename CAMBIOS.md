@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 19 nov 2026
+- Wallet general: paga comida, canchas y facturas.
+- Reembolsos de compras con wallet vuelven al saldo.
 - Sin carnet verificado: comida y canchas sí funcionan.
 - Estado de cuenta y estacionamiento esperan la verificación.
 

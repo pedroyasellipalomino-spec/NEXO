@@ -77,11 +77,13 @@ async def main():
         await pb.wait_for_timeout(1000)
         check("en vivo: la hora cancelada queda libre para otros", not await pb.evaluate(f"sbCourtBusyFor('futbol', '{days[1]}').includes('18:00')"))
         # a menos de 2 horas no se puede cancelar (el servidor lo impide aunque la pantalla esté vieja)
-        h = int(sql("select extract(hour from now() at time zone 'America/Caracas')::int h")[0]["h"])
+        cq = sql("select extract(hour from now() at time zone 'America/Caracas')::int h, (now() at time zone 'America/Caracas')::date::text d")[0]
+        h, hoy = int(cq["h"]), cq["d"]  # la fecha de Caracas (el navegador de la prueba puede ir en UTC)
         if 16 <= h + 1 <= 21:
             slot = f"{h+1}:00"
-            await pb.evaluate(f"sb.rpc('book_court', {{ p_sport: 'voleibol', p_day: '{days[0]}', p_slot: '{slot}', p_price: 12 }})")
-            bid = sql(f"select id from public.court_bookings where user_id='{bb}' and sport='voleibol' and cancelled_at is null")[0]["id"]
+            bk = await pb.evaluate(f"sb.rpc('book_court', {{ p_sport: 'voleibol', p_day: '{hoy}', p_slot: '{slot}', p_price: 12 }}).then(r => r.error ? r.error.message : 'ok')")
+            print("   reserva a menos de 2 horas:", bk, slot)
+            bid = sql(f"select id from public.court_bookings where user_id='{bb}' and sport='voleibol' and day='{hoy}' and slot='{slot}' and cancelled_at is null")[0]["id"]
             late = await pb.evaluate(f"sb.rpc('cancel_court', {{ p_id: '{bid}' }}).then(r => r.error && r.error.message)")
             check("a menos de 2 horas del turno no se puede cancelar", "2 horas" in (late or ""), str(late))
         else:

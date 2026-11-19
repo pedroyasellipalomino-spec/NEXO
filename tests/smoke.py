@@ -586,6 +586,9 @@ async def main() -> int:
         check(await pg.evaluate("current") == "comida", "sin verificar ya puede pedir comida")
         await pg.evaluate("go('estacionamiento')"); await pg.wait_for_timeout(300)
         check(await pg.evaluate("current") == "carnet", "sin verificar no entra al estacionamiento")
+        await pg.evaluate("go('recarga')"); await pg.wait_for_timeout(300)
+        check(await pg.evaluate("current") == "recarga", "sin verificar sí puede recargar su wallet (es general)")
+        await pg.evaluate("go('carnet')"); await pg.wait_for_timeout(300)
         png = await pg.evaluate("(() => { const c = document.createElement('canvas'); c.width = 400; c.height = 250; const g = c.getContext('2d'); g.fillStyle = '#1F7A55'; g.fillRect(0, 0, 400, 250); return c.toDataURL('image/png').split(',')[1]; })()")
         await pg.set_input_files("#caFile", files=[{"name": "carnet.png", "mimeType": "image/png", "buffer": __import__("base64").b64decode(png)}])
         await pg.wait_for_timeout(600)
@@ -608,6 +611,22 @@ async def main() -> int:
         await pg.evaluate("(() => { const l = carnetList(); l.find(x => x.email === 'luis.corto@correo.unimet.edu.ve').st = 'ok'; saveCarnetList(l); })()")
         await pg.evaluate("go('estacionamiento')"); await pg.wait_for_timeout(300)
         check(await pg.evaluate("current") == "estacionamiento", "con el carnet aprobado entra a todo")
+
+        # wallet general: pagar una cancha con el saldo y recuperarlo al cancelar
+        await pg.evaluate("WALLET = 50; saveWallet(); renderWallet(); go('reserva')"); await pg.wait_for_timeout(300)
+        await pg.evaluate("go('revision')"); await pg.wait_for_timeout(300)
+        check(await pg.evaluate("courtMethodNow()") == "wallet" and await pg.locator("#courtPayBox [data-court-method]").count() == 2, "la cancha ofrece pagar con el wallet")
+        ct = await pg.evaluate("courtTotal()")
+        await pg.click("#revision [data-court-pay]"); await pg.wait_for_timeout(400)
+        check(abs(await pg.evaluate("WALLET") - (50 - ct)) < 0.01 and await pg.inner_text("#qr [data-court-method]") == "Wallet Nexo", "pagar la cancha descuenta del wallet")
+        cid = await pg.evaluate("myCourts[myCourts.length - 1].id")
+        await pg.evaluate("go('reserva')"); await pg.wait_for_timeout(300)
+        await pg.click(f"[data-court-cancel='{cid}']"); await pg.wait_for_timeout(200); await pg.click("[data-cdlg-ok]"); await pg.wait_for_timeout(300)
+        check(abs(await pg.evaluate("WALLET") - 50) < 0.01, "cancelar devuelve el dinero al wallet")
+        await pg.evaluate("WALLET = 1; saveWallet(); go('revision')"); await pg.wait_for_timeout(300)
+        await pg.click("[data-court-method=wallet]"); await pg.wait_for_timeout(200)
+        check(await pg.evaluate("document.querySelector('#revision [data-court-pay]').disabled"), "sin saldo suficiente no deja pagar con wallet")
+
 
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()

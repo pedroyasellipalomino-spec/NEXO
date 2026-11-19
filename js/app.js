@@ -295,7 +295,7 @@ const MES_LARGO_G = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "jul
 staffGreet();
 const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"], carnets: ["admin", "creator", "owner"] };
 // Carnet: de 5 a 11 dígitos; con menos de 11 se verifica por foto (módulo "Verificar carnet por foto")
-const CARNET_MIN = 5, CARNET_RE = /^\d{5,11}$/, CARNET_LOCK = ["materias", "caja", "tarjeta", "inscripcion", "estacionamiento", "vehiculo", "pagoplan", "planes", "recarga", "afiliar", "pagomovil", "acceso"];
+const CARNET_MIN = 5, CARNET_RE = /^\d{5,11}$/, CARNET_LOCK = ["materias", "caja", "tarjeta", "inscripcion", "estacionamiento", "vehiculo", "pagoplan", "planes", "acceso"];
 const CARNET_LOCK_TXT = "El estado de cuenta y el estacionamiento se activan cuando verifiquemos tu carnet.";
 const CA_LABEL = { ok: "Verificado", foto: "Sin foto", pendiente: "En revisión", rechazado: "Rechazado" };
 function show(id) {
@@ -355,6 +355,7 @@ function show(id) {
   if (id === "config" && typeof renderConfig === "function") renderConfig();
   if (id === "validar" && typeof renderValidar === "function") renderValidar();
   if (id === "carnet") try { renderCarnet(); } catch (err) {}
+  if (id === "revision") try { renderCourtPay(); } catch (err) {}
   if (id === "carnets") try { renderCarnets(); } catch (err) {}
   if (id === "notificaciones" && typeof renderNotifs === "function") try { renderNotifs(); } catch (err) {}
   if (id === "local-pedidos" && typeof renderLocalPedidos === "function") renderLocalPedidos();
@@ -475,6 +476,7 @@ function renderWallet() {
   document.querySelectorAll("[data-wallet]").forEach(el => el.textContent = money(WALLET));
   const sel = document.querySelector("#planList .opt.plan.on");
   if (sel) try { updatePlan(sel); } catch (err) { /* el plan aún no se ha cargado */ }
+  try { renderWalletPay(); } catch (err) {}
 }
 renderWallet();
 /* ---------- Plan de estacionamiento del estudiante ---------- */
@@ -752,6 +754,7 @@ function renderDebt() {
   document.querySelectorAll('[data-pay="cta"]').forEach(el => el.textContent = `Pagar ${money(total)}`);
   document.querySelectorAll('[data-pay="lead"]').forEach(el => el.textContent = sel.length ? sel.map(iv => `Factura de ${iv.mes}`).join(" + ") + ` · ${money(total)}` : "No hay facturas por pagar");
   document.querySelectorAll("[data-pay-gate], [data-pay-card]").forEach(b => { b.disabled = !sel.length; b.style.opacity = sel.length ? "" : ".5"; });
+  try { renderWalletPay(sel.length ? total : 0); } catch (err) {}
   try { utRefresh(); } catch (err) {} // formulario de transferencia (se define más abajo)
   if (typeof renderNotifs === "function" && document.getElementById("notifList")) try { renderNotifs(); } catch (err) {}
   try { lucide.createIcons(); } catch (err) {}
@@ -1215,7 +1218,7 @@ document.getElementById("recarga").addEventListener("click", e => {
     const card = cards.find(x => x.id === rcCardId);
     if (!card) { afReturn = "recarga"; go("afiliar"); return; }
     WALLET = Math.round((WALLET + rcAmount) * 100) / 100; saveWallet(); renderWallet();
-    addMovement("Recarga de wallet", `Estacionamiento · ${cardLabel(card)}`, "+" + money(rcAmount), "Pagado", "ok", { icon: "wallet", go: "estacionamiento", goLabel: "Ver wallet →" });
+    addMovement("Recarga de wallet", `Recarga · ${cardLabel(card)}`, "+" + money(rcAmount), "Pagado", "ok", { icon: "wallet", go: "recarga", goLabel: "Ver wallet →" });
     toast(`Recargaste ${money(rcAmount)} con ${cardLabel(card)}. Tu saldo ahora es ${money(WALLET)}.`);
     renderRecarga(); go("estacionamiento");
   }
@@ -2542,6 +2545,7 @@ function renderCarrito() {
       </div>
       <div class="card">
         <div><h3 class="h2">¿Cómo quieres pagar?</h3><p class="small" style="font-size:13px">Elige un método para continuar.</p></div>
+        ${walletOpt(payMethod === "wallet", total, `data-pay-method="wallet"`)}
         <button class="card${payMethod === "card" ? " sel" : ""}" type="button" data-pay-method="card" style="text-align:left;${payMethod === "card" ? "border-color:var(--brand)" : ""}">
           <div class="row start"><span class="opt${payMethod === "card" ? " on" : ""}" style="padding:0;border:0;background:none;width:auto"><span class="dot"></span></span><i data-lucide="credit-card" style="color:var(--brand)"></i><b>Tarjeta</b></div>
           <p style="font-size:13px">${esc(defCard)}</p><p class="small">Pago simulado: no se hará ningún cobro real.</p>
@@ -2563,8 +2567,8 @@ function renderCarrito() {
       <div class="kv"><span>En bolívares · tasa BCV ${bcvDateTxt()}</span><b>${bsOf(total)}</b></div>
       <p class="small">Precios finales · Sin cargos extra</p>
       ${blocked ? `<div class="notice warn"><i data-lucide="circle-pause"></i><p>${isPaused(l.id) ? `${esc(l.name)} pausó los pedidos por ahora. Inténtalo más tarde.` : `Se agotó: ${soldNames.join(", ")}. Quítalo del carrito para continuar.`}</p></div>` : ""}
-      <button class="btn" type="button" id="cartPay"${blocked ? " disabled" : ""}><i data-lucide="${pk.mode === "sched" ? "calendar-clock" : "arrow-right"}"></i>${pk.mode === "sched" ? (payMethod === "card" ? "Programar y pagar" : "Programar y transferir") : payMethod === "card" ? "Pagar con tarjeta" : "Continuar con transferencia"} · ${money(total)}</button>
-      <p class="tiny center"><i data-lucide="lock-keyhole"></i> ${payMethod === "card" ? "Prototipo: el cobro es simulado." : "Aún no se realizará ningún cobro."}</p>
+      <button class="btn" type="button" id="cartPay"${blocked || (payMethod === "wallet" && WALLET < total) ? " disabled" : ""}><i data-lucide="${pk.mode === "sched" ? "calendar-clock" : payMethod === "wallet" ? "wallet" : "arrow-right"}"></i>${pk.mode === "sched" ? (payMethod === "transfer" ? "Programar y transferir" : "Programar y pagar") : payMethod === "wallet" ? "Pagar con wallet" : payMethod === "card" ? "Pagar con tarjeta" : "Continuar con transferencia"} · ${money(total)}</button>
+      <p class="tiny center"><i data-lucide="lock-keyhole"></i> ${payMethod === "wallet" ? "Se descuenta de tu wallet Nexo al confirmar." : payMethod === "card" ? "Prototipo: el cobro es simulado." : "Aún no se realizará ningún cobro."}</p>
     </div>`;
   icons();
 }
@@ -2579,7 +2583,7 @@ function newOrder(method) {
   const num = `${l.pref}-${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(orders.length + 1).padStart(4, "0")}`;
   return { id: "o" + now.getTime(), num, local: l.id, method, date: fmtD(d), time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
     lines: cart.lines.map(x => { const li = lineInfo(l, x); return { item: x.item, sel: x.sel.slice(), name: li.it.name, icon: li.it.icon, opts: li.opts, note: x.note, qty: x.qty, total: li.total }; }).filter(Boolean),
-    total: cartTotal(), card: method === "card" ? (cards.length ? cardLabel(cards[0]) : "Tarjeta") : null };
+    total: cartTotal(), card: method === "card" ? (cards.length ? cardLabel(cards[0]) : "Tarjeta") : method === "wallet" ? "Wallet Nexo" : null };
 }
 let draftOrder = null;
 function confirmOrder(o) {
@@ -2684,7 +2688,12 @@ document.addEventListener("click", e => {
   const pkm = e.target.closest("[data-pk-mode]");
   if (pkm && !pkm.disabled) { cart.pickup = { ...(cart.pickup || {}), mode: pkm.dataset.pkMode }; saveCart(); renderCarrito(); return; }
   if (e.target.closest("#cartPay")) {
-    if (payMethod === "card") confirmOrder(newOrder("card"));
+    if (payMethod === "wallet") {
+      const tot = cartTotal();
+      if (WALLET < tot) { toast(`Tu wallet tiene ${money(WALLET)} y el pedido cuesta ${money(tot)}.`, { action: "Recargar", onAction: () => go("recarga") }); return; }
+      WALLET = Math.round((WALLET - tot) * 100) / 100; saveWallet(); renderWallet();
+      confirmOrder(newOrder("wallet"));
+    } else if (payMethod === "card") confirmOrder(newOrder("card"));
     else { draftOrder = newOrder("transfer"); go("comprobante"); }
     return;
   }
@@ -2889,6 +2898,8 @@ function pushStudentMove(email, m) {
   if (/^[0-9a-f-]{36}$/.test(email)) return;
   const key = "nexo-moves:" + email;
   try { const list = JSON.parse(localStorage.getItem(key) || "[]") || []; list.push({ id: "m" + Date.now(), ...m }); localStorage.setItem(key, JSON.stringify(list)); } catch (err) {}
+  // pagado con wallet: el dinero vuelve al saldo del estudiante
+  if (m.wallet > 0) try { const wk = "nexo-wallet:" + email, w = +localStorage.getItem(wk) || 0; localStorage.setItem(wk, String(Math.round((w + m.wallet) * 100) / 100)); } catch (err) {}
 }
 
 /* Conversación (compartida por moderación, administración y estudiante) */
@@ -3137,11 +3148,12 @@ function ticketAction(t, type) {
   const p = t.purchase, now = Date.now(), me = user.full;
   t.actions = [...(t.actions || []), { type, amount: p.amount, by: me, t: now }];
   t.messages.push({ from: "mod", name: me, t: now, role: roleOf(account), text: type === "refund"
-    ? `Confirmamos el cargo duplicado. Reembolsamos ${money(p.amount)} a tu ${p.method}; llega en 3 a 5 días hábiles.`
+    ? `Confirmamos el cargo duplicado. Reembolsamos ${money(p.amount)} a tu ${p.method}${/Wallet/.test(p.method || "") ? "; ya está en tu saldo." : "; llega en 3 a 5 días hábiles."}`
     : `Cancelamos tu compra ${p.num} y devolvimos ${money(p.amount)} a tu ${p.method}.` });
   if (t.status === "abierto") t.status = "revision";
   saveTickets();
-  pushStudentMove(t.student.email, { title: type === "refund" ? `Reembolso · ${t.id}` : `Compra cancelada · ${t.id}`, detail: p.place, amount: "+" + money(p.amount), pill: "Reembolsado", pillCls: "ok", date: fmtD(new Date(now)), icon: "rotate-ccw", go: "soporte", goLabel: "Ver solicitud →" });
+  const toWallet = /Wallet/.test(p.method || "");
+  pushStudentMove(t.student.email, { title: type === "refund" ? `Reembolso · ${t.id}` : `Compra cancelada · ${t.id}`, detail: toWallet ? `${p.place} · Devuelto a tu wallet Nexo` : p.place, amount: "+" + money(p.amount), ...(toWallet ? { wallet: p.amount } : {}), pill: "Reembolsado", pillCls: "ok", date: fmtD(new Date(now)), icon: "rotate-ccw", go: "soporte", goLabel: "Ver solicitud →" });
   logAudit("reembolso", type === "refund" ? `Reembolsó ${money(p.amount)} en ${t.id} (${t.student.name}).` : `Canceló la compra ${p.num} en ${t.id} (${t.student.name}).`);
   toast(type === "refund" ? `Reembolso de ${money(p.amount)} registrado.` : "Compra cancelada y reembolsada.");
 }
@@ -3943,7 +3955,7 @@ document.addEventListener("click", e => {
     const { email, id } = lpFind(cy.dataset.lpCancelYes), l = myLocal();
     const o = updateOrder(email, id, o => { o.cancelledAt = Date.now(); });
     if (o) {
-      pushStudentMove(email, { title: `Pedido cancelado · ${o.num}`, detail: `${l.name} · ${l.place}`, amount: "+" + money(o.total), pill: "Reembolsado", pillCls: "ok", date: fmtD(new Date()), icon: "rotate-ccw", go: "pedido", goLabel: "Ver pedido →", order: o.id });
+      pushStudentMove(email, { title: `Pedido cancelado · ${o.num}`, detail: o.method === "wallet" ? `${l.name} · Devuelto a tu wallet Nexo` : `${l.name} · ${l.place}`, amount: "+" + money(o.total), ...(o.method === "wallet" ? { wallet: o.total } : {}), pill: "Reembolsado", pillCls: "ok", date: fmtD(new Date()), icon: "rotate-ccw", go: "pedido", goLabel: "Ver pedido →", order: o.id });
       toast(`Cancelaste ${o.num} y devolvimos ${money(o.total)}.`);
     }
     lpConfirm = null; renderLocalPedidos(); return;
@@ -4620,7 +4632,7 @@ function renderHomeStats() {
       tiles.push(`<button class="hh-tile${late ? " alert" : ""}" type="button" data-go="materias"><span class="hh-ic"><i data-lucide="graduation-cap"></i></span><span class="hh-lbl">Cuenta universitaria</span><b>${debt ? money(debt) : "Al día"}</b><span class="hh-sub">${debt ? (late ? "Tienes una factura vencida" : `Vence el ${fmtDW(pay[0].due)}`) : "No debes nada este mes"}</span></button>`);
     }
   } catch (err) {}
-  try { tiles.push(`<button class="hh-tile" type="button" data-go="estacionamiento"><span class="hh-ic"><i data-lucide="wallet"></i></span><span class="hh-lbl">Wallet Nexo</span><b>${money(WALLET)}</b><span class="hh-sub">Saldo para estacionamiento</span></button>`); } catch (err) {}
+  try { tiles.push(`<button class="hh-tile" type="button" data-go="recarga"><span class="hh-ic"><i data-lucide="wallet"></i></span><span class="hh-lbl">Wallet Nexo</span><b>${money(WALLET)}</b><span class="hh-sub">Para comida, canchas, facturas y más</span></button>`); } catch (err) {}
   try {
     if (planActive()) {
       const left = Math.max(0, Math.round((dOf(plan.end) - todayNoon()) / 864e5)), pct = Math.min(100, Math.round(left / 30 * 100));
@@ -5139,15 +5151,17 @@ function trackMove(title, detail, amount, pill, extra) {
   const service = title === "Recarga de wallet" ? "recarga" : d.startsWith("Universidad") ? "materias" : extra.icon === "car-front" ? "estacionamiento" : extra.icon === "dribbble" ? "canchas" : extra.order || extra.icon === "utensils" ? "comida" : null;
   if (!service || !["Pagado", "En revisión", "Acreditada", "Aprobado"].includes(pill)) return;
   const o = extra.order ? (orders || []).find(x => x.id === extra.order) : null;
-  const method = /Pago Móvil/.test(d) ? "pago-movil" : /Wallet/.test(d) ? "wallet" : /Transferencia/.test(d) || (o && o.method === "transfer") ? "transferencia" : (o && o.method === "card") || /Visa|Mastercard|····/.test(d) || service === "canchas" ? "tarjeta" : "otro";
+  const method = /Pago Móvil/.test(d) ? "pago-movil" : /Wallet/.test(d) || (o && o.method === "wallet") ? "wallet" : /Transferencia/.test(d) || (o && o.method === "transfer") ? "transferencia" : (o && o.method === "card") || /Visa|Mastercard|····/.test(d) || service === "canchas" ? "tarjeta" : "otro";
   sb.from("payments").insert({ service, amount: v, status: pill, method, detail: String(title).slice(0, 120) }).then(({ error }) => { if (error) console.warn("Nexo: no se anotó el pago", error.message); });
 }
 // Pago de canchas: antes no quedaba en Actividad ni en los gastos del mes
 document.addEventListener("click", e => {
   if (!e.target.closest("[data-court-pay]")) return;
-  const sp = SPORTS[res.sport], fee = Math.round(sp.price * 5) / 100, end = pad2(parseInt(res.slot) + 1) + ":00";
-  addMovement(sp.court, `Canchas · ${res.dname} ${res.day} ${resMes()} · ${res.slot}–${end}`, "−" + money(sp.price + fee), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
-  rememberCourt({ id: "c" + Date.now(), sport: res.sport, iso: courtIso(), slot: res.slot, price: Math.round((sp.price + fee) * 100) / 100 });
+  const sp = SPORTS[res.sport], fee = Math.round(sp.price * 5) / 100, end = pad2(parseInt(res.slot) + 1) + ":00", total = Math.round((sp.price + fee) * 100) / 100, w = courtMethodNow() === "wallet";
+  if (w) { WALLET = Math.round((WALLET - total) * 100) / 100; saveWallet(); renderWallet(); }
+  courtPaidLabel(w);
+  addMovement(sp.court, `Canchas · ${res.dname} ${res.day} ${resMes()} · ${res.slot}–${end}${w ? " · Wallet Nexo" : ""}`, "−" + money(total), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
+  rememberCourt({ id: "c" + Date.now(), sport: res.sport, iso: courtIso(), slot: res.slot, price: total, ...(w ? { wallet: true } : {}) });
 });
 // Mi cuenta: los cambios de una cuenta real se guardan también en Supabase
 function sbSaveProfile(changes) {
@@ -5415,8 +5429,8 @@ function sbCourtDays() {
 async function sbLoadCourts() {
   const { data, error } = await sb.from("court_bookings").select("sport,day,slot").is("cancelled_at", null).gte("day", isoDay(new Date()));
   if (!error && data) sbCourtRows = data;
-  const mine = await sb.from("court_bookings").select("id,sport,day,slot,price").eq("user_id", account.sb).is("cancelled_at", null).gte("day", isoDay(new Date()));
-  if (!mine.error && mine.data) { myCourts = mine.data.map(r => ({ id: r.id, sport: r.sport, iso: r.day, slot: r.slot, price: +r.price })); saveMyCourts(); }
+  const mine = await sb.from("court_bookings").select("id,sport,day,slot,price,paid_with").eq("user_id", account.sb).is("cancelled_at", null).gte("day", isoDay(new Date()));
+  if (!mine.error && mine.data) { myCourts = mine.data.map(r => ({ id: r.id, sport: r.sport, iso: r.day, slot: r.slot, price: +r.price, ...(r.paid_with === "wallet" ? { wallet: true } : {}) })); saveMyCourts(); }
   if (["reserva", "revision"].includes(current)) renderReserva();
 }
 async function sbCourtsInit() {
@@ -5431,13 +5445,17 @@ document.addEventListener("click", e => {
   e.preventDefault(); e.stopPropagation();
   if (btn.classList.contains("loading")) return;
   const sp = SPORTS[res.sport], fee = Math.round(sp.price * 5) / 100, end = pad2(parseInt(res.slot) + 1) + ":00", total = r2(sp.price + fee);
+  const w = courtMethodNow() === "wallet";
   btn.classList.add("loading"); btn.disabled = true;
-  sb.rpc("book_court", { p_sport: res.sport, p_day: res.iso, p_slot: res.slot, p_price: total }).then(({ data, error }) => {
+  sb.rpc("book_court", { p_sport: res.sport, p_day: res.iso, p_slot: res.slot, p_price: total, p_method: w ? "wallet" : "tarjeta" }).then(({ data, error }) => {
     btn.classList.remove("loading"); btn.disabled = false;
+    if (error && /insuficiente/i.test(error.message)) { toast("Tu wallet no alcanza para esta reserva. Recarga o paga con tarjeta.", { action: "Recargar", onAction: () => go("recarga") }); return; }
     if (error) { toast(/reservado|pasó|Máximo|14 días/.test(error.message) ? error.message + "." : "No pudimos reservar. Revisa tu conexión."); sbLoadCourts(); go("reserva"); return; }
+    if (w) { WALLET = r2(WALLET - total); sbWalletKnown = r2(sbWalletKnown - total); sbWalletLocal(); }
+    courtPaidLabel(w);
     sbCourtRows.push({ sport: res.sport, day: res.iso, slot: res.slot });
-    if (data && data.id) rememberCourt({ id: data.id, sport: res.sport, iso: res.iso, slot: res.slot, price: total });
-    addMovement(sp.court, `Canchas · ${res.dname} ${res.day} ${resMes()} · ${res.slot}–${end}`, "−" + money(total), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
+    if (data && data.id) rememberCourt({ id: data.id, sport: res.sport, iso: res.iso, slot: res.slot, price: total, ...(w ? { wallet: true } : {}) });
+    addMovement(sp.court, `Canchas · ${res.dname} ${res.day} ${resMes()} · ${res.slot}–${end}${w ? " · Wallet Nexo" : ""}`, "−" + money(total), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
     go("qr");
   });
 }, true);
@@ -5633,8 +5651,12 @@ document.addEventListener("click", e => {
         if (error) { toast(/2 horas/.test(error.message) ? "Ya no se puede cancelar: faltan menos de 2 horas para tu turno." : "No pudimos cancelar la reserva. Revisa tu conexión."); return; }
       }
       myCourts = myCourts.filter(x => x.id !== c.id); saveMyCourts();
-      addMovement(`Reserva cancelada · ${sp.court}`, `Canchas · ${courtDate(c)} · ${courtHours(c)}`, "+" + money(c.price), "Reembolsado", "ok", { icon: "rotate-ccw", go: "reserva", goLabel: "Ver canchas →" });
-      toast(`Cancelaste tu reserva. Te devolvemos ${money(c.price)}.`);
+      if (c.wallet) { // el servidor ya lo devolvió al saldo (cancel_court); aquí se refleja
+        WALLET = Math.round((WALLET + c.price) * 100) / 100;
+        if (sbShared()) { sbWalletKnown = r2(sbWalletKnown + c.price); sbWalletLocal(); } else { saveWallet(); renderWallet(); }
+      }
+      addMovement(`Reserva cancelada · ${sp.court}`, `Canchas · ${courtDate(c)} · ${courtHours(c)}${c.wallet ? " · Devuelto a tu wallet Nexo" : ""}`, "+" + money(c.price), "Reembolsado", "ok", { icon: "rotate-ccw", go: "reserva", goLabel: "Ver canchas →" });
+      toast(c.wallet ? `Cancelaste tu reserva. Devolvimos ${money(c.price)} a tu wallet.` : `Cancelaste tu reserva. Te devolvemos ${money(c.price)}.`);
       if (sbShared()) { try { sbCourtRows = sbCourtRows.filter(r => !(r.sport === c.sport && r.day === c.iso && r.slot === c.slot)); sbLoadCourts(); } catch (err) {} }
       renderReserva();
     } });
@@ -5644,7 +5666,7 @@ renderMyCourts();
 /* ---------- Verificar carnet por foto ----------
    Los carnets de la Unimet pueden tener de 5 a 11 dígitos. Con 11, la cuenta entra directo; con menos, la persona
    envía una foto de su carnet (#carnet) y administración, el creador o el dueño la aprueban o rechazan con motivo
-   (#carnets). Mientras tanto show() solo le deja ver la verificación, Mi cuenta, Soporte y Notificaciones.
+   (#carnets). Mientras tanto show() no le deja entrar al estado de cuenta ni al estacionamiento (CARNET_LOCK).
    Estados: ok · foto (falta la foto) · pendiente (en revisión) · rechazado (con motivo; puede reenviar).
    Cuenta de prueba (local): las solicitudes viven en localStorage["nexo-carnets"] (global) con la foto reducida en
    base64, y esa lista manda sobre account.carnetSt. Cuenta real: profiles.carnet_* + depósito privado "carnets"
@@ -5867,6 +5889,81 @@ window.addEventListener("storage", e => {
   if (e.key !== "nexo-carnets") return;
   caSync();
   if (current === "carnets") renderCarnets();
+});
+
+/* ---------- Wallet general ----------
+   El saldo del wallet Nexo sirve para todo: comida (carrito), canchas (#revision), facturas de la universidad (#caja)
+   y planes de estacionamiento. Lo que se paga con wallet y luego se reembolsa (cancelar cancha, pedido cancelado por
+   el local, reembolso de moderación) vuelve al saldo. Con cuenta real, book_court cobra y cancel_court devuelve en el
+   servidor (paid_with), push_move suma el reembolso ("wallet") y el resto pasa por wallet_add (migración 011). */
+// Opción "Wallet Nexo" en una lista de métodos de pago (comida y canchas)
+function walletOpt(on, total, attrs) {
+  const short = WALLET < total;
+  return `<button class="card wallet-opt${on ? " sel" : ""}" type="button" ${attrs} style="text-align:left;${on ? "border-color:var(--brand)" : ""}">
+    <div class="row"><div class="row start"><span class="opt${on ? " on" : ""}" style="padding:0;border:0;background:none;width:auto"><span class="dot"></span></span><i data-lucide="wallet" style="color:var(--brand)"></i><b>Wallet Nexo</b></div><b class="mono">${money(WALLET)}</b></div>
+    <p class="small">${short ? `Te faltan ${money(total - WALLET)} para este pago.` : `Te quedan ${money(WALLET - total)} después de pagar.`}</p>
+  </button>${on && short ? `<p class="small" style="margin-top:-4px">Recarga tu wallet o elige otro método. <button class="link b" type="button" data-go="recarga" style="font-size:13px">Recargar →</button></p>` : ""}`;
+}
+// Canchas: método elegido (si no eligió, wallet cuando alcanza)
+var courtMethod = null;
+function courtTotal() { try { const sp = SPORTS[res.sport]; return Math.round((sp.price + Math.round(sp.price * 5) / 100) * 100) / 100; } catch (err) { return 0; } }
+function courtMethodNow() { return courtMethod || (WALLET >= courtTotal() && WALLET > 0 ? "wallet" : "card"); }
+function renderCourtPay() {
+  const box = document.getElementById("courtPayBox"); if (!box) return;
+  const m = courtMethodNow(), total = courtTotal(), card = cards.length ? cardLabel(cards[0]) : "Tarjeta de crédito o débito";
+  box.innerHTML = walletOpt(m === "wallet", total, `data-court-method="wallet"`)
+    + `<button class="card${m === "card" ? " sel" : ""}" type="button" data-court-method="card" style="text-align:left;${m === "card" ? "border-color:var(--brand)" : ""}">
+        <div class="row start"><span class="opt${m === "card" ? " on" : ""}" style="padding:0;border:0;background:none;width:auto"><span class="dot"></span></span><i data-lucide="credit-card" style="color:var(--brand)"></i><b>Tarjeta</b></div>
+        <p style="font-size:13px">${esc(card)}</p><p class="small">Pago simulado: no se hará ningún cobro real.</p></button>`;
+  const short = m === "wallet" && WALLET < total;
+  document.querySelectorAll("#revision [data-court-pay]").forEach(b => { if (short) { b.disabled = true; b.dataset.walletOff = "1"; } else if (b.dataset.walletOff) { b.disabled = false; delete b.dataset.walletOff; } });
+  icons();
+}
+function courtPaidLabel(w) { document.querySelectorAll("#qr [data-court-method]").forEach(el => { el.textContent = w ? "Wallet Nexo" : (cards.length ? cardLabel(cards[0]) : "Tarjeta"); }); }
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-court-method]"); if (!b || b.closest("#qr")) return;
+  courtMethod = b.dataset.courtMethod; renderCourtPay();
+});
+// Antes de apartar la hora: si eligió wallet y no alcanza, no se cobra ni se reserva
+window.addEventListener("click", e => {
+  if (!e.target.closest("[data-court-pay]")) return;
+  if (courtMethodNow() === "wallet" && WALLET < courtTotal()) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    toast(`Tu wallet tiene ${money(WALLET)} y la reserva cuesta ${money(courtTotal())}.`, { action: "Recargar", onAction: () => go("recarga") });
+  }
+}, true);
+
+// Facturas de la universidad: pagar las seleccionadas con el saldo
+var wpTotal; // sin valor inicial: renderDebt puede llamar antes de que corra este módulo
+function renderWalletPay(total = wpTotal || 0) {
+  wpTotal = total;
+  const btn = document.querySelector("[data-pay-wallet]"), hint = document.getElementById("wpHint"), cta = document.getElementById("wpCta");
+  if (!btn || !hint) return;
+  const short = total > 0 && WALLET < total;
+  btn.disabled = !total || short; btn.style.opacity = btn.disabled ? ".5" : "";
+  cta.textContent = total ? `Pagar ${money(total)} con wallet` : "Pagar con wallet";
+  hint.innerHTML = !total ? "Elige una factura para pagarla con tu saldo." : short
+    ? `Tienes ${money(WALLET)}; te faltan ${money(total - WALLET)}. <button class="link b" type="button" data-go="recarga" style="font-size:13px">Recargar →</button>`
+    : `Se descuenta de tu saldo al instante. Te quedan ${money(WALLET - total)}.`;
+  document.querySelectorAll("#walletPayCard [data-wallet]").forEach(el => el.textContent = money(WALLET));
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest("[data-pay-wallet]")) return;
+  const sel = activeInvoices().filter(iv => paySel.includes(iv.id) && payableInv().includes(iv)); if (!sel.length) return;
+  const total = Math.round(sel.reduce((a, iv) => a + amountOf(iv), 0) * 100) / 100;
+  if (WALLET < total) { toast(`Tu wallet tiene ${money(WALLET)} y las facturas suman ${money(total)}.`, { action: "Recargar", onAction: () => go("recarga") }); return; }
+  const names = sel.map(iv => `Factura de ${iv.mes}`).join(" + ");
+  askConfirm({ icon: "wallet", title: "¿Pagar con tu wallet?", text: `${names} por ${money(total)}. Te quedan ${money(WALLET - total)} de saldo.`, ok: `Pagar ${money(total)}`, cancel: "Volver",
+    onOk: () => {
+      const t = day0(simDate);
+      sel.forEach(iv => { pagos[iv.id] = { estado: "pagada", monto: amountOf(iv), fecha: fmtD(t), via: "Wallet Nexo", pp: statusOf(iv) === "pronto" }; });
+      savePagos();
+      WALLET = Math.round((WALLET - total) * 100) / 100; saveWallet(); renderWallet();
+      addMovement(names, "Universidad · Wallet Nexo", "−" + money(total), "Pagado", "ok");
+      defaultSel(); renderDebt();
+      showDebtNotice("Pago confirmado.", `Pagaste ${money(total)} con tu wallet Nexo. Te quedan ${money(WALLET)} de saldo.`);
+      go("materias");
+    } });
 });
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {

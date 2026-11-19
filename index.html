@@ -743,12 +743,12 @@
 
 
 <!-- 13 · Recarga de wallet -->
-<section class="screen app" id="recarga" data-title="Recargar wallet" data-back="estacionamiento" data-tab="servicios" data-crumb="Estacionamiento  /  Recargar wallet" hidden>
-  <div><h1 class="h1">Recarga tu wallet</h1><p class="lead">Agrega saldo para pagar tus planes de estacionamiento.</p></div>
+<section class="screen app" id="recarga" data-title="Wallet Nexo" data-back="inicio" data-tab="inicio" data-crumb="Wallet Nexo  /  Recargar" hidden>
+  <div><h1 class="h1">Recarga tu wallet</h1><p class="lead">Un solo saldo para pagar comida, canchas, facturas de la universidad y estacionamiento.</p></div>
   <div class="notice warn" id="rcPending" hidden><i data-lucide="clock"></i><div><b>Recarga en revisión</b><span data-rc="pendtext"></span></div></div>
   <div class="cols">
     <div class="stack">
-      <div class="card dark"><p class="muted" style="font-size:13px">Saldo de tu wallet Nexo</p><p class="big" style="font-weight:600" data-wallet>$0,00</p><p class="muted small">Sirve para pagar tus planes de estacionamiento.</p></div>
+      <div class="card dark"><p class="muted" style="font-size:13px">Saldo de tu wallet Nexo</p><p class="big" style="font-weight:600" data-wallet>$0,00</p><p class="muted small">Sirve para pagar en todo Nexo: comida, canchas, facturas y estacionamiento.</p></div>
 
       <div class="card">
         <h2 class="h2">¿Cuánto quieres recargar?</h2>
@@ -1005,7 +1005,12 @@
         <p class="small" data-debt-show="paidall" hidden data-debt="idle">No tienes facturas por pagar hoy.</p>
       </div>
       <div class="card">
-        <div><h2 class="h2">Elige cómo pagar</h2><p class="small" style="font-size:13px">Con tarjeta el saldo se actualiza al instante.</p></div>
+        <div><h2 class="h2">Elige cómo pagar</h2><p class="small" style="font-size:13px">Con wallet o tarjeta el pago queda listo al instante.</p></div>
+        <div class="card wallet-pay" id="walletPayCard">
+          <div class="row"><div class="row start"><i data-lucide="wallet" style="color:var(--brand)"></i><b style="font-size:15px">Wallet Nexo</b></div><b data-wallet>$0,00</b></div>
+          <p class="small" id="wpHint" style="font-size:13px">Se descuenta de tu saldo al instante.</p>
+          <button class="btn ghost" type="button" data-pay-wallet data-pay-gate><i data-lucide="wallet"></i><span id="wpCta">Pagar con wallet</span></button>
+        </div>
         <div class="card sel" style="border-color:var(--brand)">
           <div class="row start"><i data-lucide="credit-card" style="color:var(--brand)"></i><b style="font-size:15px">Tarjeta de crédito o débito</b></div>
           <div class="brands"><span class="brand-chip visa">VISA</span><span class="brand-chip mc">Mastercard</span><span class="brand-chip amex">AMEX</span></div>
@@ -1165,8 +1170,7 @@
       </div>
       <div class="stack s14">
         <h2 class="sec">¿Cómo quieres pagar?</h2>
-        <div class="card sel" style="flex-direction:row;align-items:center;border-color:var(--brand)"><i data-lucide="credit-card" style="color:var(--brand);font-size:20px"></i><div style="flex:1"><b><span data-defcard>Visa ···· 4242</span></b><p class="tiny" data-demo><span data-user="full">Ana Torres</span> · Vence 08/28</p></div><i data-lucide="circle-dot" style="color:var(--brand);font-size:20px"></i></div>
-        <button class="btn ghost" type="button" data-toast="Agregar métodos de pago no está incluido en el prototipo."><i data-lucide="plus"></i>Agregar otro método</button>
+        <div class="stack s14" id="courtPayBox" style="gap:10px"></div>
       </div>
     </div>
     <div class="stack">
@@ -1199,7 +1203,7 @@
       <div class="sep"></div>
       <b style="font-size:17px;font-weight:600" data-r="court">Cancha de tenis 02</b>
       <div class="kv"><span>Campus</span><b>Central · Zona deportiva</b></div><div class="kv"><span>Fecha</span><b data-r="datelong">Jue, 12 nov 2026</b></div>
-      <div class="kv"><span>Horario</span><b data-r="time">18:00 – 19:00</b></div><div class="kv"><span>Titular</span><b><span data-user="full">Ana Torres</span></b></div><div class="kv"><span>Método</span><b><span data-defcard>Visa ···· 4242</span></b></div>
+      <div class="kv"><span>Horario</span><b data-r="time">18:00 – 19:00</b></div><div class="kv"><span>Titular</span><b><span data-user="full">Ana Torres</span></b></div><div class="kv"><span>Método</span><b data-court-method><span data-defcard>Visa ···· 4242</span></b></div>
       <div class="sep"></div><div class="kv total"><span>Total pagado</span><b data-r="total">$12,60</b></div>
     </div>
     <button class="btn" type="button" data-toast="La descarga no está disponible en el prototipo."><i data-lucide="download"></i>Descargar comprobante</button>
