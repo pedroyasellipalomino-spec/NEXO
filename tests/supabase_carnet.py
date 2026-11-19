@@ -49,6 +49,13 @@ async def main():
         check("no puede enviar una foto de otra carpeta", "no válida" in (r2 or ""), str(r2))
         r3 = await ps.evaluate(f"sb.storage.from('carnets').upload('{lng}/intruso.jpg', new Blob(['x'], {{ type: 'image/jpeg' }})).then(r => r.error && r.error.message)")
         check("no puede subir a la carpeta de otra persona", bool(r3), str(r3))
+        # bloqueo en el servidor: sin carnet verificado no cambia el estado de cuenta ni el estacionamiento
+        await pl.evaluate("sb.rpc('save_my_state', { p_pagos: { '2026-nov': { estado: 'pagada', via: 'truco' } }, p_pendrec: [], p_moves: [], p_materias: { trim: 'x', list: [{ code: 'FAKE' }] }, p_park: { plan: { key: 'semanal', end: '2099-01-01' }, vehicle: { plate: 'XX000XX' } } })")
+        stt = sql(f"select pagos, materias, plan, vehicle from public.student_state where user_id = '{lng}'")
+        check("el servidor no deja pagar facturas, inscribir materias ni comprar plan sin carnet verificado", stt and not (stt[0]["pagos"] or {}).get("2026-nov") and stt[0]["plan"] is None and stt[0]["vehicle"] is None and "FAKE" not in json.dumps(stt[0]["materias"]), str(stt))
+        r7 = await pl.evaluate("sb.from('payments').insert({ service: 'materias', amount: 150, status: 'Pagado', method: 'tarjeta', detail: 'truco' }).then(r => r.error ? 'bloqueado' : 'ok')")
+        r8 = await pl.evaluate("sb.from('payments').insert({ service: 'comida', amount: 5, status: 'Pagado', method: 'tarjeta', detail: 'prueba' }).then(r => r.error ? r.error.message : 'ok')")
+        check("sin carnet verificado no anota pagos de materias, pero sí de comida", r7 == "bloqueado" and r8 == "ok", f"{r7} {r8}")
         # el estudiante envía la foto desde la app
         PNG = await ps.evaluate("(() => { const c = document.createElement('canvas'); c.width = 600; c.height = 380; const g = c.getContext('2d'); g.fillStyle = '#1F7A55'; g.fillRect(0, 0, 600, 380); g.fillStyle = '#fff'; g.font = 'bold 40px sans-serif'; g.fillText('9810234', 30, 200); return c.toDataURL('image/png').split(',')[1]; })()")
         await ps.set_input_files("#caFile", files=[{"name": "carnet.png", "mimeType": "image/png", "buffer": base64.b64decode(PNG)}])
@@ -78,6 +85,9 @@ async def main():
         check("la administración recibe la foto nueva en vivo", await pa.locator(f"[data-ca-ok='{stu}']").count() == 1)
         await pa.click(f"[data-ca-ok='{stu}']"); await pa.wait_for_timeout(300); await pa.click("[data-cdlg-ok]"); await pa.wait_for_timeout(3000)
         row = sql(f"select carnet_status, carnet_trim, public.current_trim() t from public.profiles where id = '{stu}'")[0]
+        await ps.evaluate("sb.rpc('save_my_state', { p_pagos: {}, p_pendrec: [], p_moves: [], p_park: { plan: { key: 'semanal', end: '2099-01-01' } } })")
+        check("ya verificado, el servidor sí guarda su plan", (sql(f"select plan->>'key' k from public.student_state where user_id = '{stu}'") or [{}])[0].get("k") == "semanal")
+        await ps.evaluate("sb.rpc('save_my_state', { p_pagos: {}, p_pendrec: [], p_moves: [], p_park: { plan: null } })")  # el plan de prueba no es uno real de la app
         check("aprobar deja el carnet verificado para el trimestre en curso", row["carnet_status"] == "ok" and row["carnet_trim"] == row["t"], str(row))
         await ps.wait_for_timeout(2000)
         await ps.evaluate("go('estacionamiento')"); await ps.wait_for_timeout(500)
