@@ -42,6 +42,9 @@ async def main() -> int:
         await pg.click("#registerForm button[type=submit]")
         await pg.wait_for_timeout(800)
         check(await pg.evaluate("location.hash") == "#inicio", "registro lleva a inicio")
+        check(await pg.evaluate("carnetSt()") == "foto", "toda cuenta nueva verifica su carnet por foto (aunque tenga 11 dígitos)")
+        # la administración aprobó su carnet de este trimestre (el flujo completo se prueba más abajo)
+        await pg.evaluate("(() => { const l = carnetList(); l.push({ email: account.email, full: account.full, carnet: account.carnet, st: 'ok', trim: currentTrim(), sent: Date.now(), decided: Date.now() }); saveCarnetList(l); })()")
 
         # una cuenta nueva sin materias es enviada al formulario previo
         await pg.goto(URL + "#materias")
@@ -608,9 +611,11 @@ async def main() -> int:
         check("La foto no se lee bien" in await pg.inner_text("#caBody"), "el estudiante ve el motivo y puede reenviar")
         await pg.set_input_files("#caCam", files=[{"name": "carnet.png", "mimeType": "image/png", "buffer": __import__("base64").b64decode(png)}])
         await pg.wait_for_timeout(600); await pg.click("[data-ca-send]"); await pg.wait_for_timeout(400)
-        await pg.evaluate("(() => { const l = carnetList(); l.find(x => x.email === 'luis.corto@correo.unimet.edu.ve').st = 'ok'; saveCarnetList(l); })()")
+        await pg.evaluate("(() => { const l = carnetList(); const e = l.find(x => x.email === 'luis.corto@correo.unimet.edu.ve'); e.st = 'ok'; e.trim = currentTrim(); saveCarnetList(l); })()")
         await pg.evaluate("go('estacionamiento')"); await pg.wait_for_timeout(300)
         check(await pg.evaluate("current") == "estacionamiento", "con el carnet aprobado entra a todo")
+        check(await pg.evaluate("carnetSt() === 'ok' && (() => { const l = carnetList(); l.find(x => x.email === account.email).trim = '2026-abr-jul'; saveCarnetList(l); return carnetSt() === 'foto' && carnetRenew(); })()"), "la verificación vence al cambiar de trimestre")
+        await pg.evaluate("(() => { const l = carnetList(); l.find(x => x.email === account.email).trim = currentTrim(); saveCarnetList(l); })()")
 
         # wallet general: pagar una cancha con el saldo y recuperarlo al cancelar
         await pg.evaluate("WALLET = 50; saveWallet(); renderWallet(); go('reserva')"); await pg.wait_for_timeout(300)

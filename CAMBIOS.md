@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 19 nov 2026
+- Todos los estudiantes verifican su carnet por foto.
+- La verificación se renueva cada trimestre.
 - Wallet general: paga comida, canchas y facturas.
 - Reembolsos de compras con wallet vuelven al saldo.
 - Sin carnet verificado: comida y canchas sí funcionan.

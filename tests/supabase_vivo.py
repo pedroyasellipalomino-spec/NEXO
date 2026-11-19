@@ -10,8 +10,11 @@ def admin(method, path, body=None):
 def sql(q):
     r=subprocess.run(['curl','-sS','-X','POST',f'https://api.supabase.com/v1/projects/{R}/database/query','-H','content-type: application/json','-d',json.dumps({"query":q})],capture_output=True,text=True); return json.loads(r.stdout)
 created=[]
+def verify(uid): sql(f"select set_config('nexo.role_change','on',false); update public.profiles set carnet_status='ok', carnet_trim=public.current_trim() where id='{uid}'")
 def mk(email, name, carnet=None):
-    u=admin("POST","users",{"email":email,"password":"Prueba12345","email_confirm":True,"user_metadata":{"full_name":name, **({"carnet":carnet} if carnet else {})}}); created.append(u["id"]); return u["id"]
+    u = admin("POST","users",{"email":email,"password":"Prueba12345","email_confirm":True,"user_metadata":{"full_name":name, **({"carnet":carnet} if carnet else {})}}); created.append(u["id"])
+    if carnet: verify(u["id"])  # carnet de este trimestre ya verificado (el flujo de la foto se prueba en supabase_carnet.py)
+    return u["id"]
 async def login(ctx, email):
     pg=await ctx.new_page(); pg.errs=[]; pg.on("pageerror",lambda e: pg.errs.append(str(e)))
     await pg.goto(U+"#login"); await pg.wait_for_timeout(1000)

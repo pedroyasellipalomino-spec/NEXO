@@ -13,8 +13,11 @@ def admin(method, path, body=None): return call(method, f"https://{R}.supabase.c
 def sql(q):
     r = subprocess.run(['curl', '-sS', '-X', 'POST', f'https://api.supabase.com/v1/projects/{R}/database/query', '-H', 'content-type: application/json', '-d', json.dumps({"query": q})], capture_output=True, text=True); return json.loads(r.stdout)
 created = []; results = []
+def verify(uid): sql(f"select set_config('nexo.role_change','on',false); update public.profiles set carnet_status='ok', carnet_trim=public.current_trim() where id='{uid}'")
 def mk(email, name, carnet=None):
-    u = admin("POST", "users", {"email": email, "password": "Prueba12345", "email_confirm": True, "user_metadata": {"full_name": name, **({"carnet": carnet} if carnet else {})}}); created.append(u["id"]); return u["id"]
+    u = admin("POST", "users", {"email": email, "password": "Prueba12345", "email_confirm": True, "user_metadata": {"full_name": name, **({"carnet": carnet} if carnet else {})}}); created.append(u["id"])
+    if carnet: verify(u["id"])  # carnet de este trimestre ya verificado (el flujo de la foto se prueba en supabase_carnet.py)
+    return u["id"]
 def check(label, ok, extra=""):
     results.append(ok); print(("OK   " if ok else "FALLA") + " " + label + (f"  [{extra}]" if extra and not ok else ""))
 def wallet(uid): r = sql(f"select wallet from public.student_state where user_id = '{uid}'"); return float(r[0]["wallet"]) if r else 0.0

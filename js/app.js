@@ -294,7 +294,7 @@ const DIA_LARGO_G = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Vier
 const MES_LARGO_G = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 staffGreet();
 const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"], carnets: ["admin", "creator", "owner"] };
-// Carnet: de 5 a 11 dígitos; con menos de 11 se verifica por foto (módulo "Verificar carnet por foto")
+// Carnet: de 5 a 11 dígitos. Todo estudiante lo verifica por foto cada trimestre (módulo "Verificar carnet por foto")
 const CARNET_MIN = 5, CARNET_RE = /^\d{5,11}$/, CARNET_LOCK = ["materias", "caja", "tarjeta", "inscripcion", "estacionamiento", "vehiculo", "pagoplan", "planes", "acceso"];
 const CARNET_LOCK_TXT = "El estado de cuenta y el estacionamiento se activan cuando verifiquemos tu carnet.";
 const CA_LABEL = { ok: "Verificado", foto: "Sin foto", pendiente: "En revisión", rechazado: "Rechazado" };
@@ -451,7 +451,7 @@ document.addEventListener("input", e => {
     const hint = document.querySelector(`[data-hint="${el.id}"]`);
     const n = el.value.length;
     el.closest(".field").classList.remove("bad");
-    if (hint) hint.textContent = n === 11 ? "Carnet completo." : n >= CARNET_MIN ? `Carnet de ${n} dígitos: después te pediremos una foto del carnet para verificarlo.` : `Escribe tu carnet, solo números (${n} dígitos).`;
+    if (hint) hint.textContent = n >= CARNET_MIN ? `Carnet de ${n} dígitos. Después te pediremos una foto para verificar tu inscripción.` : `Escribe tu carnet, solo números (${n} dígitos).`;
   }
 });
 /* ---------- Planes de estacionamiento: resumen según el plan elegido ---------- */
@@ -1100,11 +1100,11 @@ document.getElementById("registerForm").addEventListener("submit", async e => {
   const now = new Date();
   const inv = invites.find(i => i.email === email);
   if (inv) { ivEmail = email; ivToken = null; go("invitacion"); toast("Ese correo tiene una invitación al equipo. Actívala aquí, sin carnet."); return; }
-  const short = carnetEl.value.length < 11;
+  const short = true; // todo estudiante verifica su carnet por foto
   accounts.push({ full, carnet: carnetEl.value, email, pass: passKey(passEl.value), created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`, ...(inv ? { role: inv.role } : {}), ...(short && !inv ? { carnetSt: "foto" } : {}) });
   saveAccounts();
   if (inv) { invites = invites.filter(i => i !== inv); saveInvites(); }
-  enterApp(email, true, inv ? `Cuenta creada. Ya eres parte del equipo de ${inv.role === "admin" ? "administración" : "moderación"}, ${full.split(" ")[0]}.` : short ? `Cuenta creada, ${full.split(" ")[0]}. Envía una foto de tu carnet para activar el estado de cuenta y el estacionamiento.` : `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
+  enterApp(email, true, inv ? `Cuenta creada. Ya eres parte del equipo de ${inv.role === "admin" ? "administración" : "moderación"}, ${full.split(" ")[0]}.` : short ? `Cuenta creada, ${full.split(" ")[0]}. Envía una foto de tu carnet para verificar tu inscripción.` : `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
 });
 document.addEventListener("click", e => {
   if (!e.target.closest("[data-logout]")) return;
@@ -4584,7 +4584,7 @@ function homeItems() {
     const cs = carnetSt();
     if (cs !== "ok" && roleOf(account) === "estudiante") out.push(cs === "pendiente"
       ? { pr: 3, icon: "id-card", title: "Tu carnet está en revisión", body: "Mientras tanto puedes pedir comida y reservar canchas. El estado de cuenta y el estacionamiento se activan al verificarlo.", cta: "Ver", go: "carnet" }
-      : { pr: 0, tone: cs === "rechazado" ? "bad" : "warn", icon: "id-card", title: cs === "rechazado" ? "Rechazamos la foto de tu carnet" : "Verifica tu carnet", body: cs === "rechazado" ? `${carnetInfo().reason || "Revisa la foto"}. Envía una foto nueva.` : "Envía una foto de tu carnet para activar el estado de cuenta y el estacionamiento.", cta: cs === "rechazado" ? "Enviar otra" : "Enviar foto", go: "carnet" });
+      : { pr: 0, tone: cs === "rechazado" ? "bad" : "warn", icon: "id-card", title: cs === "rechazado" ? "Rechazamos la foto de tu carnet" : "Verifica tu carnet", body: cs === "rechazado" ? `${carnetInfo().reason || "Revisa la foto"}. Envía una foto nueva.` : carnetRenew() ? `Empezó el trimestre ${trimLabel(currentTrim())}: envía la foto de tu carnet para seguir usando el estado de cuenta y el estacionamiento.` : "Envía una foto de tu carnet para confirmar tu inscripción del trimestre y activar el estado de cuenta y el estacionamiento.", cta: cs === "rechazado" ? "Enviar otra" : "Enviar foto", go: "carnet" });
   } catch (err) {}
   try {
     activeOrders().forEach(o => {
@@ -5129,7 +5129,7 @@ if (sb) (async () => {
       const p = await sbProfile(account.sb);
       if (p && ((p.role === "estudiante" ? undefined : p.role) !== account.role || !!p.disabled !== !!account.disabled || (p.local_id || undefined) !== account.local)) {
         sbToLocal(p); toast("Tu acceso cambió. Actualizamos la app…"); setTimeout(() => location.reload(), 1200);
-      } else if (p && (p.carnet_status || "ok") !== (account.carnetSt || "ok")) { sbCarnetCopy(account, p); saveAccounts(); caSync(); }
+      } else if (p && ((p.carnet_status || "ok") !== (account.carnetSt || "ok") || (p.carnet_trim || null) !== (account.carnetTrim || null))) { sbCarnetCopy(account, p); saveAccounts(); caSync(); }
     }
     return;
   }
@@ -5664,8 +5664,8 @@ document.addEventListener("click", e => {
 renderMyCourts();
 
 /* ---------- Verificar carnet por foto ----------
-   Los carnets de la Unimet pueden tener de 5 a 11 dígitos. Con 11, la cuenta entra directo; con menos, la persona
-   envía una foto de su carnet (#carnet) y administración, el creador o el dueño la aprueban o rechazan con motivo
+   Todo estudiante (carnet de 5 a 11 dígitos) envía una foto de su carnet cada trimestre (vale para currentTrim());
+   la persona envía una foto de su carnet (#carnet) y administración, el creador o el dueño la aprueban o rechazan con motivo
    (#carnets). Mientras tanto show() no le deja entrar al estado de cuenta ni al estacionamiento (CARNET_LOCK).
    Estados: ok · foto (falta la foto) · pendiente (en revisión) · rechazado (con motivo; puede reenviar).
    Cuenta de prueba (local): las solicitudes viven en localStorage["nexo-carnets"] (global) con la foto reducida en
@@ -5675,10 +5675,21 @@ var caPicking = false, caDraft = null, caTab = "pend", caReject = null, caBig = 
 const CA_REASONS = ["La foto no se lee bien", "El número no coincide con el de la cuenta", "El nombre no coincide con el de la cuenta", "No es un carnet de la Unimet"];
 function carnetList() { try { const l = JSON.parse(localStorage.getItem("nexo-carnets") || "[]"); return Array.isArray(l) ? l : []; } catch (err) { return []; } }
 function saveCarnetList(l) { try { localStorage.setItem("nexo-carnets", JSON.stringify(l)); return true; } catch (err) { return false; } }
+// Trimestre en curso (fecha real): ene–mar, abr–jul, sep–nov (diciembre cuenta como sep–nov). Igual que current_trim() en Supabase.
+function currentTrim(d = new Date()) { const m = d.getMonth() + 1; return d.getFullYear() + (m >= 9 ? "-sep-nov" : m <= 3 ? "-ene-mar" : "-abr-jul"); }
+const trimLabel = id => { const [y, a, b] = String(id || "").split("-"); return a ? `${a}–${b} ${y}` : ""; };
+// La aprobación vale para un trimestre: si es de otro, vuelve a pedir la foto. La cuenta demo (Ana) se da por verificada.
 function carnetSt(acc = account) {
-  if (!acc || acc.role || !acc.carnet) return "ok";
-  if (!acc.sb) { const e = carnetList().find(x => x.email === acc.email); if (e) return e.st; }
-  return acc.carnetSt || "ok";
+  if (!acc || acc.role || !acc.carnet || acc.email === DEMO_EMAIL) return "ok";
+  let st = acc.carnetSt || "foto", tr = acc.carnetTrim;
+  if (!acc.sb) { const e = carnetList().find(x => x.email === acc.email); if (e) { st = e.st; tr = e.trim; } }
+  return st === "ok" && tr !== currentTrim() ? "foto" : st;
+}
+// Ya estuvo verificado en un trimestre anterior (para explicar por qué se pide otra vez)
+function carnetRenew(acc = account) {
+  if (!acc) return false;
+  let tr = acc.carnetTrim; if (!acc.sb) { const e = carnetList().find(x => x.email === acc.email); if (e) tr = e.trim; }
+  return !!tr && tr !== currentTrim();
 }
 function carnetInfo(acc = account) {
   if (!acc) return {};
@@ -5687,8 +5698,7 @@ function carnetInfo(acc = account) {
 }
 function sbCarnetCopy(acc, p) {
   acc.carnetSt = p.carnet_status || "ok";
-  ["carnetReason", "carnetSentAt", "carnetBy", "carnetPhoto"].forEach((k, i) => { const v = p[["carnet_reason", "carnet_sent_at", "carnet_by", "carnet_photo"][i]]; if (v) acc[k] = v; else delete acc[k]; });
-  if (acc.carnetSt === "ok" && !p.carnet_sent_at) delete acc.carnetSt;
+  ["carnetReason", "carnetSentAt", "carnetBy", "carnetPhoto", "carnetTrim"].forEach((k, i) => { const v = p[["carnet_reason", "carnet_sent_at", "carnet_by", "carnet_photo", "carnet_trim"][i]]; if (v) acc[k] = v; else delete acc[k]; });
 }
 // Avisa al estudiante cuando cambia su estado (aprobado o rechazado) y repinta lo que haga falta
 function caSync() {
@@ -5725,9 +5735,9 @@ function renderCarnet() {
   const who = `<div class="card ca-who"><span class="svc-chip t-uni" aria-hidden="true"><i data-lucide="id-card"></i></span><div class="grow" style="min-width:0"><b class="h3">${esc(user.full)}</b><span class="tiny" style="display:block;overflow:hidden;text-overflow:ellipsis">${esc(user.email)}</span></div><div class="ca-num"><span class="tiny">Carnet</span><b class="mono">${esc(user.carnet || "—")}</b></div></div>`;
   const steps = ["Envía la foto", "Revisión", "Acceso completo"], at = st === "ok" ? 3 : st === "pendiente" ? 1 : 0;
   const stepper = `<ol class="ca-steps">${steps.map((l, i) => `<li class="${i < at ? "done" : i === at ? "now" : ""}"><span>${i < at ? '<i data-lucide="check"></i>' : i + 1}</span>${l}</li>`).join("")}</ol>`;
-  document.getElementById("caLead").textContent = st === "ok" ? "Tu carnet está verificado." : `Tu carnet tiene ${n} dígitos. Envía una foto para confirmar que eres estudiante de la Unimet. Mientras la revisan puedes pedir comida, reservar canchas y escribir a soporte; el estado de cuenta y el estacionamiento se activan al verificarlo.`;
+  document.getElementById("caLead").textContent = st === "ok" ? "Tu carnet está verificado." : `${carnetRenew() ? `Empezó el trimestre ${trimLabel(currentTrim())}: verifica tu carnet otra vez. ` : ""}Cada trimestre confirmamos que estés inscrito en la Unimet: envía una foto de tu carnet. Mientras la revisan puedes pedir comida, reservar canchas y escribir a soporte; el estado de cuenta y el estacionamiento se activan al verificarlo.`;
   if (st === "ok") {
-    box.innerHTML = who + `<div class="card ca-ok">${successMark()}<h2 class="h2">Carnet verificado</h2><p class="small" style="font-size:13px">Ya tienes acceso completo: estado de cuenta y estacionamiento incluidos.</p><button class="btn" type="button" data-go="inicio"><i data-lucide="house"></i>Ir al inicio</button></div>`;
+    box.innerHTML = who + `<div class="card ca-ok">${successMark()}<h2 class="h2">Carnet verificado</h2><p class="small" style="font-size:13px">Inscripción confirmada para el trimestre ${trimLabel(currentTrim())}. Ya tienes acceso completo: estado de cuenta y estacionamiento incluidos.</p><button class="btn" type="button" data-go="inicio"><i data-lucide="house"></i>Ir al inicio</button></div>`;
     icons(); return;
   }
   const showPicker = st !== "pendiente" || caDraft || caPicking;
@@ -5780,12 +5790,12 @@ document.addEventListener("click", async e => {
 /* ---------- Gestión · Carnets por verificar ---------- */
 function caItems() {
   try {
-    if (sbShared()) return (sbCarnets || []).map(u => ({ id: u.id, who: u.full_name || u.email, email: u.email, carnet: u.carnet || "", st: u.carnet_status, reason: u.carnet_reason, sent: u.carnet_sent_at ? new Date(u.carnet_sent_at).getTime() : 0, by: u.carnet_by, decided: u.carnet_decided_at ? new Date(u.carnet_decided_at).getTime() : 0, created: u.created_at, path: u.carnet_photo }));
-    return carnetList().map(x => ({ id: x.email, who: x.full, email: x.email, carnet: x.carnet, st: x.st, reason: x.reason, sent: x.sent, by: x.by, decided: x.decided || 0, created: x.created, photo: x.photo }));
+    if (sbShared()) return (sbCarnets || []).map(u => ({ id: u.id, who: u.full_name || u.email, email: u.email, carnet: u.carnet || "", st: u.carnet_status, reason: u.carnet_reason, sent: u.carnet_sent_at ? new Date(u.carnet_sent_at).getTime() : 0, by: u.carnet_by, decided: u.carnet_decided_at ? new Date(u.carnet_decided_at).getTime() : 0, created: u.created_at, path: u.carnet_photo, trim: u.carnet_trim }));
+    return carnetList().map(x => ({ id: x.email, who: x.full, email: x.email, carnet: x.carnet, st: x.st, reason: x.reason, sent: x.sent, by: x.by, decided: x.decided || 0, created: x.created, photo: x.photo, trim: x.trim }));
   } catch (err) { return []; }
 }
 async function sbLoadCarnets() {
-  const { data, error } = await sb.from("profiles").select("id,full_name,email,carnet,carnet_status,carnet_photo,carnet_reason,carnet_sent_at,carnet_by,carnet_decided_at,created_at").not("carnet_sent_at", "is", null).order("carnet_sent_at", { ascending: false }).limit(300);
+  const { data, error } = await sb.from("profiles").select("id,full_name,email,carnet,carnet_status,carnet_photo,carnet_reason,carnet_sent_at,carnet_by,carnet_decided_at,carnet_trim,created_at").not("carnet_sent_at", "is", null).order("carnet_sent_at", { ascending: false }).limit(300);
   if (error) { console.warn("Nexo: no se cargaron los carnets", error.message); return; }
   sbCarnets = data || [];
   if (current === "carnets") renderCarnets();
@@ -5793,9 +5803,9 @@ async function sbLoadCarnets() {
 function sbCarnetRow(row) {
   if (!row || !row.id) return;
   if (account && row.id === account.sb) {
-    const before = account.carnetSt || "ok";
+    const before = carnetSt();
     sbCarnetCopy(account, row); saveAccounts();
-    if ((account.carnetSt || "ok") !== before) caSync();
+    if (carnetSt() !== before) caSync();
   }
   if (sbIsCaja() && sbCarnets && row.carnet_sent_at) {
     const i = sbCarnets.findIndex(u => u.id === row.id), prev = i >= 0 ? sbCarnets[i] : null;
@@ -5824,7 +5834,7 @@ function renderCarnets() {
   document.getElementById("caList").innerHTML = list.map(x => {
     const state = x.st === "pendiente" ? `<span class="pill warn">En revisión</span>` : x.st === "ok" ? `<span class="pill ok">Aprobado</span>` : `<span class="pill bad">Rechazado</span>`;
     const actions = x.st !== "pendiente"
-      ? `<p class="tiny">${x.st === "ok" ? "Acceso aprobado" : `Rechazado: ${esc(x.reason || "")}`} · por ${esc(x.by || "Administración")}${x.decided ? ` · ${ago(x.decided).toLowerCase()}` : ""}</p>`
+      ? `<p class="tiny">${x.st === "ok" ? `Inscripción confirmada${x.trim ? ` · ${trimLabel(x.trim)}` : ""}` : `Rechazado: ${esc(x.reason || "")}`} · por ${esc(x.by || "Administración")}${x.decided ? ` · ${ago(x.decided).toLowerCase()}` : ""}</p>`
       : caReject === x.id
         ? `<form class="stack s14 vl-rej" data-ca-reject-form="${esc(x.id)}"><label class="small" style="font-weight:600" for="ca-motivo">Motivo del rechazo</label><div class="input sel"><select id="ca-motivo">${CA_REASONS.map(m => `<option>${m}</option>`).join("")}<option value="otro">Otro motivo…</option></select><i data-lucide="chevron-down"></i></div>
            <div class="input" id="ca-otro-wrap" hidden><input id="ca-otro" maxlength="160" placeholder="Escribe el motivo" aria-label="Otro motivo"></div>
@@ -5837,12 +5847,12 @@ function renderCarnets() {
         <div class="vl-grid ca-grid">
           <div><span class="tiny">Carnet registrado</span><b class="mono ca-big">${esc(x.carnet)}</b><span class="tiny">${x.carnet.length} dígitos</span></div>
           <div><span class="tiny">Enviado</span><b>${ago(x.sent)}</b><span class="tiny">${x.created ? `Cuenta del ${fmtD(new Date(String(x.created).slice(0, 10) + "T12:00"))}` : ""}</span></div>
-          ${x.st === "pendiente" ? `<div class="ca-check"><span class="tiny">Revisa que</span><ul><li>el nombre diga <b>${esc(x.who)}</b></li><li>el número sea <b class="mono">${esc(x.carnet)}</b></li><li>sea un carnet de la Unimet y se lea bien</li></ul></div>` : ""}
+          ${x.st === "pendiente" ? `<div class="ca-check"><span class="tiny">Revisa que</span><ul><li>el nombre diga <b>${esc(x.who)}</b></li><li>el número sea <b class="mono">${esc(x.carnet)}</b></li><li>sea un carnet de la Unimet y se lea bien</li><li>esté inscrito en el trimestre <b>${trimLabel(currentTrim())}</b> (revísalo en el sistema de la universidad)</li></ul></div>` : ""}
         </div>
       </div>
       ${actions}
     </div>`;
-  }).join("") || emptyState("id-card", caTab === "pend" ? "No hay carnets por verificar" : "Aún no hay carnets revisados", caTab === "pend" ? "Cuando alguien con un carnet de menos de 11 dígitos envíe su foto, aparecerá aquí." : "Los carnets que apruebes o rechaces aparecerán aquí.");
+  }).join("") || emptyState("id-card", caTab === "pend" ? "No hay carnets por verificar" : "Aún no hay carnets revisados", caTab === "pend" ? "Cuando un estudiante envíe la foto de su carnet, aparecerá aquí." : "Los carnets que apruebes o rechaces aparecerán aquí.");
   icons();
   if (sbShared()) list.filter(x => x.path && !sbCarnetUrl[x.path]).forEach(x => sb.storage.from("carnets").createSignedUrl(x.path, 1800).then(({ data }) => {
     if (!data) return; sbCarnetUrl[x.path] = data.signedUrl;
@@ -5857,10 +5867,10 @@ async function caDecide(id, ok, reason) {
     sbWriteAt["ca" + id] = Date.now();
     if (error) { toast(/Ya revisado/.test(error.message) ? "Otra persona ya revisó este carnet." : /propia/.test(error.message) ? "No puedes verificar tu propia cuenta." : "No pudimos guardar la decisión. Inténtalo de nuevo."); await sbLoadCarnets(); return; }
     const u = sbCarnets.find(v => v.id === id);
-    if (u) Object.assign(u, { carnet_status: ok ? "ok" : "rechazado", carnet_reason: ok ? null : reason, carnet_by: user.full, carnet_decided_at: new Date().toISOString() });
+    if (u) Object.assign(u, { carnet_status: ok ? "ok" : "rechazado", carnet_reason: ok ? null : reason, carnet_by: user.full, carnet_decided_at: new Date().toISOString(), ...(ok ? { carnet_trim: currentTrim() } : {}) });
   } else {
     const l = carnetList(), e = l.find(v => v.email === id); if (!e) return;
-    Object.assign(e, { st: ok ? "ok" : "rechazado", reason: ok ? null : reason, by: user.full, decided: Date.now() });
+    Object.assign(e, { st: ok ? "ok" : "rechazado", reason: ok ? null : reason, by: user.full, decided: Date.now(), ...(ok ? { trim: currentTrim() } : {}) });
     saveCarnetList(l);
   }
   logAudit("carnet", `${ok ? "Aprobó" : "Rechazó"} el carnet ${x.carnet} de ${x.who}${ok ? "" : ` (${reason})`}.`);
@@ -5872,7 +5882,7 @@ document.addEventListener("click", e => {
   const t = e.target.closest("[data-ca-tab]"); if (t) { caTab = t.dataset.caTab; caReject = null; renderCarnets(); return; }
   const z = e.target.closest("[data-ca-zoom]"); if (z) { caBig = caBig === z.dataset.caZoom ? null : z.dataset.caZoom; renderCarnets(); return; }
   const okb = e.target.closest("[data-ca-ok]"); if (okb) { const x = caItems().find(i => i.id === okb.dataset.caOk); if (!x) return;
-    askConfirm({ icon: "badge-check", title: "¿Dar acceso?", text: `Confirmas que la foto es el carnet ${x.carnet} de ${x.who}. Se le activan el estado de cuenta y el estacionamiento.`, ok: "Dar acceso", cancel: "Volver", onOk: () => caDecide(x.id, true) }); return; }
+    askConfirm({ icon: "badge-check", title: "¿Dar acceso?", text: `Confirmas que la foto es el carnet ${x.carnet} de ${x.who} y que está inscrito en el trimestre ${trimLabel(currentTrim())}. Se le activan el estado de cuenta y el estacionamiento.`, ok: "Dar acceso", cancel: "Volver", onOk: () => caDecide(x.id, true) }); return; }
   const rj = e.target.closest("[data-ca-rej]"); if (rj) { caReject = rj.dataset.caRej; renderCarnets(); const s = document.getElementById("ca-motivo"); if (s) s.focus(); return; }
   if (e.target.closest("[data-ca-no]")) { caReject = null; renderCarnets(); }
 });

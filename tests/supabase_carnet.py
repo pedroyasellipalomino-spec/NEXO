@@ -30,7 +30,7 @@ async def main():
     lng = mk("e9.largo@nexo-pruebas.dev", "Estudiante Largo", "20259990091")
     sql(f"select set_config('nexo.role_change','on',false); update public.profiles set role='admin' where id='{adm}';")
     st = {r["id"]: r["carnet_status"] for r in sql(f"select id, carnet_status from public.profiles where id in ('{stu}','{lng}')")}
-    check("carnet de 7 dígitos pide foto y uno de 11 entra directo", st.get(stu) == "foto" and st.get(lng) == "ok", str(st))
+    check("todo estudiante empieza enviando la foto (7 u 11 dígitos)", st.get(stu) == "foto" and st.get(lng) == "foto", str(st))
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=os.environ.get("CHROME_PATH", "/opt/pw-browsers/chromium"))
         cs, ca, cl = [await b.new_context(viewport={"width": 1280, "height": 900}) for _ in range(3)]
@@ -41,7 +41,7 @@ async def main():
         await ps.evaluate("go('caja')"); await ps.wait_for_timeout(400)
         check("sin verificar no entra al estado de cuenta", await ps.evaluate("current") == "carnet")
         pl = await login(cl, "e9.largo@nexo-pruebas.dev")
-        check("el carnet de 11 dígitos entra al inicio", await pl.evaluate("current") == "inicio", await pl.evaluate("current"))
+        check("el carnet de 11 dígitos también entra al inicio y espera la verificación", await pl.evaluate("current") == "inicio" and await pl.evaluate("carnetSt()") == "foto", await pl.evaluate("current"))
         # seguridad antes de enviar
         r1 = await ps.evaluate("sb.from('profiles').update({ carnet_status: 'ok' }).eq('id', account.sb).then(r => r.error && r.error.message)")
         check("el estudiante no puede marcarse verificado", "No puedes cambiar" in (r1 or ""), str(r1))
@@ -77,10 +77,19 @@ async def main():
         await ps.wait_for_timeout(800); await ps.click("[data-ca-send]"); await ps.wait_for_timeout(3500)
         check("la administración recibe la foto nueva en vivo", await pa.locator(f"[data-ca-ok='{stu}']").count() == 1)
         await pa.click(f"[data-ca-ok='{stu}']"); await pa.wait_for_timeout(300); await pa.click("[data-cdlg-ok]"); await pa.wait_for_timeout(3000)
-        check("aprobar deja el carnet verificado", sql(f"select carnet_status from public.profiles where id = '{stu}'")[0]["carnet_status"] == "ok")
+        row = sql(f"select carnet_status, carnet_trim, public.current_trim() t from public.profiles where id = '{stu}'")[0]
+        check("aprobar deja el carnet verificado para el trimestre en curso", row["carnet_status"] == "ok" and row["carnet_trim"] == row["t"], str(row))
         await ps.wait_for_timeout(2000)
         await ps.evaluate("go('estacionamiento')"); await ps.wait_for_timeout(500)
         check("el estudiante recibe el acceso en vivo y entra al estacionamiento", await ps.evaluate("current") == "estacionamiento", await ps.evaluate("current"))
+        # al empezar otro trimestre la verificación vence y se puede volver a enviar
+        sql(f"select set_config('nexo.role_change','on',false); update public.profiles set carnet_trim = '2026-abr-jul' where id = '{stu}'")
+        await ps.reload(); await ps.wait_for_timeout(5000)
+        await ps.evaluate("go('caja')"); await ps.wait_for_timeout(500)
+        check("con la verificación de un trimestre anterior vuelve a pedir la foto", await ps.evaluate("current") == "carnet" and "verifica tu carnet otra vez" in await ps.inner_text("#caLead"), await ps.inner_text("#caLead"))
+        await ps.set_input_files("#caFile", files=[{"name": "carnet3.png", "mimeType": "image/png", "buffer": base64.b64decode(PNG)}])
+        await ps.wait_for_timeout(800); await ps.click("[data-ca-send]"); await ps.wait_for_timeout(3500)
+        check("y la foto nueva queda en revisión", sql(f"select carnet_status from public.profiles where id = '{stu}'")[0]["carnet_status"] == "pendiente")
         errs = ps.errs + pa.errs + pl.errs
         check("sin errores de JavaScript", not errs, "; ".join(errs[:3]))
         await b.close()
