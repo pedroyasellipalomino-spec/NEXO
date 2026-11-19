@@ -2,6 +2,10 @@
 
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
+## 19 nov 2026
+- Sin carnet verificado: comida y canchas sí funcionan.
+- Estado de cuenta y estacionamiento esperan la verificación.
+
 ## 18 nov 2026
 - Carnets cortos: verificación con foto del carnet.
 - Administración aprueba o rechaza carnets con motivo.

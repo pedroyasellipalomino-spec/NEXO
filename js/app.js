@@ -295,7 +295,8 @@ const MES_LARGO_G = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "jul
 staffGreet();
 const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"], carnets: ["admin", "creator", "owner"] };
 // Carnet: de 5 a 11 dígitos; con menos de 11 se verifica por foto (módulo "Verificar carnet por foto")
-const CARNET_MIN = 5, CARNET_RE = /^\d{5,11}$/, CARNET_FREE = ["carnet", "perfil", "soporte", "notificaciones"];
+const CARNET_MIN = 5, CARNET_RE = /^\d{5,11}$/, CARNET_LOCK = ["materias", "caja", "tarjeta", "inscripcion", "estacionamiento", "vehiculo", "pagoplan", "planes", "recarga", "afiliar", "pagomovil", "acceso"];
+const CARNET_LOCK_TXT = "El estado de cuenta y el estacionamiento se activan cuando verifiquemos tu carnet.";
 const CA_LABEL = { ok: "Verificado", foto: "Sin foto", pendiente: "En revisión", rechazado: "Rechazado" };
 function show(id) {
   if (/^invitacion-[A-Z0-9]+$/.test(id)) { ivToken = id.slice(11); id = "invitacion"; }
@@ -311,9 +312,10 @@ function show(id) {
       id = "inicio"; history.replaceState(null, "", "#inicio");
       setTimeout(() => toast("El estado de cuenta universitario es para cuentas de estudiante con carnet."), 0);
     }
-    if (role === "estudiante" && !need && !CARNET_FREE.includes(id) && carnetSt() !== "ok") {
+    // carnet por verificar: puede pedir comida, reservar canchas y usar soporte; el estado de cuenta y el estacionamiento esperan
+    if (role === "estudiante" && !need && CARNET_LOCK.includes(id) && carnetSt() !== "ok") {
       id = "carnet"; history.replaceState(null, "", "#carnet");
-      setTimeout(() => toast("Primero verificamos tu carnet: envía una foto y un administrador te da acceso."), 0);
+      setTimeout(() => toast(CARNET_LOCK_TXT), 0);
     }
     if (dual) { try { localStorage.setItem(K("nexo-mode"), need ? "gestion" : "usuario"); } catch (err) {} }
   }
@@ -1099,7 +1101,7 @@ document.getElementById("registerForm").addEventListener("submit", async e => {
   accounts.push({ full, carnet: carnetEl.value, email, pass: passKey(passEl.value), created: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`, ...(inv ? { role: inv.role } : {}), ...(short && !inv ? { carnetSt: "foto" } : {}) });
   saveAccounts();
   if (inv) { invites = invites.filter(i => i !== inv); saveInvites(); }
-  enterApp(email, true, inv ? `Cuenta creada. Ya eres parte del equipo de ${inv.role === "admin" ? "administración" : "moderación"}, ${full.split(" ")[0]}.` : short ? `Cuenta creada, ${full.split(" ")[0]}. Falta un paso: envía una foto de tu carnet.` : `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
+  enterApp(email, true, inv ? `Cuenta creada. Ya eres parte del equipo de ${inv.role === "admin" ? "administración" : "moderación"}, ${full.split(" ")[0]}.` : short ? `Cuenta creada, ${full.split(" ")[0]}. Envía una foto de tu carnet para activar el estado de cuenta y el estacionamiento.` : `Cuenta creada. Te damos la bienvenida a Nexo, ${full.split(" ")[0]}.`);
 });
 document.addEventListener("click", e => {
   if (!e.target.closest("[data-logout]")) return;
@@ -4567,6 +4569,12 @@ document.addEventListener("submit", async e => {
 function homeItems() {
   const out = [], t = day0(simDate);
   try {
+    const cs = carnetSt();
+    if (cs !== "ok" && roleOf(account) === "estudiante") out.push(cs === "pendiente"
+      ? { pr: 3, icon: "id-card", title: "Tu carnet está en revisión", body: "Mientras tanto puedes pedir comida y reservar canchas. El estado de cuenta y el estacionamiento se activan al verificarlo.", cta: "Ver", go: "carnet" }
+      : { pr: 0, tone: cs === "rechazado" ? "bad" : "warn", icon: "id-card", title: cs === "rechazado" ? "Rechazamos la foto de tu carnet" : "Verifica tu carnet", body: cs === "rechazado" ? `${carnetInfo().reason || "Revisa la foto"}. Envía una foto nueva.` : "Envía una foto de tu carnet para activar el estado de cuenta y el estacionamiento.", cta: cs === "rechazado" ? "Enviar otra" : "Enviar foto", go: "carnet" });
+  } catch (err) {}
+  try {
     activeOrders().forEach(o => {
       const s = orderStatus(o), l = localById(o.local), ln = l ? l.name : "el local";
       out.push(s === "listo"
@@ -5664,7 +5672,7 @@ function sbCarnetCopy(acc, p) {
 function caSync() {
   const st = carnetSt();
   if (caLastSt && st !== caLastSt && roleOf(account) === "estudiante") {
-    if (st === "ok") toast("¡Tu carnet fue verificado! Ya tienes acceso a todo Nexo.", { persist: true, action: "Ir al inicio", onAction: () => go("inicio") });
+    if (st === "ok") toast("¡Tu carnet fue verificado! Ya tienes el estado de cuenta y el estacionamiento.", { persist: true, action: "Ir al inicio", onAction: () => go("inicio") });
     if (st === "rechazado") toast(`No pudimos verificar tu carnet: ${carnetInfo().reason || "revisa la foto"}. Envía una foto nueva.`, { persist: true, action: "Ver", onAction: () => go("carnet") });
   }
   caLastSt = st;
@@ -5693,18 +5701,18 @@ function renderCarnet() {
   const box = document.getElementById("caBody"); if (!box) return;
   const st = carnetSt(), info = carnetInfo(), n = (user.carnet || "").length;
   const who = `<div class="card ca-who"><span class="svc-chip t-uni" aria-hidden="true"><i data-lucide="id-card"></i></span><div class="grow" style="min-width:0"><b class="h3">${esc(user.full)}</b><span class="tiny" style="display:block;overflow:hidden;text-overflow:ellipsis">${esc(user.email)}</span></div><div class="ca-num"><span class="tiny">Carnet</span><b class="mono">${esc(user.carnet || "—")}</b></div></div>`;
-  const steps = ["Envía la foto", "Revisión", "Acceso"], at = st === "ok" ? 3 : st === "pendiente" ? 1 : 0;
+  const steps = ["Envía la foto", "Revisión", "Acceso completo"], at = st === "ok" ? 3 : st === "pendiente" ? 1 : 0;
   const stepper = `<ol class="ca-steps">${steps.map((l, i) => `<li class="${i < at ? "done" : i === at ? "now" : ""}"><span>${i < at ? '<i data-lucide="check"></i>' : i + 1}</span>${l}</li>`).join("")}</ol>`;
-  document.getElementById("caLead").textContent = st === "ok" ? "Tu carnet está verificado." : `Tu carnet tiene ${n} dígitos. Para confirmar que eres estudiante de la Unimet, envía una foto de tu carnet: un administrador la revisa y te da acceso.`;
+  document.getElementById("caLead").textContent = st === "ok" ? "Tu carnet está verificado." : `Tu carnet tiene ${n} dígitos. Envía una foto para confirmar que eres estudiante de la Unimet. Mientras la revisan puedes pedir comida, reservar canchas y escribir a soporte; el estado de cuenta y el estacionamiento se activan al verificarlo.`;
   if (st === "ok") {
-    box.innerHTML = who + `<div class="card ca-ok">${successMark()}<h2 class="h2">Carnet verificado</h2><p class="small" style="font-size:13px">Ya tienes acceso a comida, estacionamiento, materias y canchas.</p><button class="btn" type="button" data-go="inicio"><i data-lucide="house"></i>Ir al inicio</button></div>`;
+    box.innerHTML = who + `<div class="card ca-ok">${successMark()}<h2 class="h2">Carnet verificado</h2><p class="small" style="font-size:13px">Ya tienes acceso completo: estado de cuenta y estacionamiento incluidos.</p><button class="btn" type="button" data-go="inicio"><i data-lucide="house"></i>Ir al inicio</button></div>`;
     icons(); return;
   }
   const showPicker = st !== "pendiente" || caDraft || caPicking;
   const pend = st === "pendiente" && !showPicker
-    ? `<div class="card ca-pend"><div class="row start" style="gap:12px;align-items:flex-start"><span class="ico lg"><i data-lucide="hourglass"></i></span><div><h2 class="h2">Tu carnet está en revisión</h2><p class="small" style="font-size:13px">Lo enviaste ${ago(info.sent).toLowerCase()}. Te avisamos aquí apenas un administrador lo revise; suele tardar menos de un día hábil.</p></div></div>
+    ? `<div class="card ca-pend"><div class="row start" style="gap:12px;align-items:flex-start"><span class="ico lg"><i data-lucide="hourglass"></i></span><div><h2 class="h2">Tu carnet está en revisión</h2><p class="small" style="font-size:13px">Lo enviaste ${ago(info.sent).toLowerCase()}. Te avisamos apenas un administrador lo revise; suele tardar menos de un día hábil. Mientras tanto puedes pedir comida y reservar canchas.</p></div></div>
         <div class="ca-thumb" id="caMine">${info.photo ? `<img src="${info.photo}" alt="Foto de tu carnet enviada">` : `<span class="tiny">Foto enviada</span>`}</div>
-        <div class="row"><button class="btn ghost" type="button" data-ca-change><i data-lucide="refresh-cw"></i>Cambiar la foto</button><button class="btn ghost" type="button" data-go="soporte"><i data-lucide="message-circle"></i>Escribir a soporte</button></div></div>`
+        <div class="row"><button class="btn ghost" type="button" data-ca-change><i data-lucide="refresh-cw"></i>Cambiar la foto</button><button class="btn ghost" type="button" data-go="comida"><i data-lucide="utensils"></i>Pedir comida</button></div></div>`
     : "";
   const rej = st === "rechazado" ? `<div class="notice warn" role="alert"><i data-lucide="circle-alert"></i><div><b>No pudimos verificar tu carnet.</b> <span>${esc(info.reason || "Revisa la foto")}${info.by ? ` · ${esc(info.by)}` : ""}. Toma una foto nueva y envíala otra vez.</span></div></div>` : "";
   const picker = showPicker ? `<div class="card ca-shot">
@@ -5836,13 +5844,13 @@ async function caDecide(id, ok, reason) {
   logAudit("carnet", `${ok ? "Aprobó" : "Rechazó"} el carnet ${x.carnet} de ${x.who}${ok ? "" : ` (${reason})`}.`);
   try { liveSeen = liveKeys(); } catch (err) {}
   caReject = null; renderCarnets();
-  toast(ok ? `${x.who} ya tiene acceso a Nexo.` : `Rechazaste el carnet de ${x.who}. Podrá enviar una foto nueva.`);
+  toast(ok ? `${x.who} ya tiene acceso completo a Nexo.` : `Rechazaste el carnet de ${x.who}. Podrá enviar una foto nueva.`);
 }
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-ca-tab]"); if (t) { caTab = t.dataset.caTab; caReject = null; renderCarnets(); return; }
   const z = e.target.closest("[data-ca-zoom]"); if (z) { caBig = caBig === z.dataset.caZoom ? null : z.dataset.caZoom; renderCarnets(); return; }
   const okb = e.target.closest("[data-ca-ok]"); if (okb) { const x = caItems().find(i => i.id === okb.dataset.caOk); if (!x) return;
-    askConfirm({ icon: "badge-check", title: "¿Dar acceso?", text: `Confirmas que la foto es el carnet ${x.carnet} de ${x.who}. Tendrá acceso a todo Nexo.`, ok: "Dar acceso", cancel: "Volver", onOk: () => caDecide(x.id, true) }); return; }
+    askConfirm({ icon: "badge-check", title: "¿Dar acceso?", text: `Confirmas que la foto es el carnet ${x.carnet} de ${x.who}. Se le activan el estado de cuenta y el estacionamiento.`, ok: "Dar acceso", cancel: "Volver", onOk: () => caDecide(x.id, true) }); return; }
   const rj = e.target.closest("[data-ca-rej]"); if (rj) { caReject = rj.dataset.caRej; renderCarnets(); const s = document.getElementById("ca-motivo"); if (s) s.focus(); return; }
   if (e.target.closest("[data-ca-no]")) { caReject = null; renderCarnets(); }
 });

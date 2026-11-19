@@ -35,9 +35,11 @@ async def main():
         b = await p.chromium.launch(executable_path=os.environ.get("CHROME_PATH", "/opt/pw-browsers/chromium"))
         cs, ca, cl = [await b.new_context(viewport={"width": 1280, "height": 900}) for _ in range(3)]
         ps = await login(cs, "e9.corto@nexo-pruebas.dev")
-        check("el estudiante con carnet corto entra a la verificación", await ps.evaluate("current") == "carnet", await ps.evaluate("current"))
+        check("el estudiante con carnet corto entra al inicio con el aviso", await ps.evaluate("current") == "inicio" and "Verifica tu carnet" in await ps.inner_text("#homeNow"), await ps.evaluate("current"))
         await ps.evaluate("go('comida')"); await ps.wait_for_timeout(400)
-        check("sin verificar no entra a Comida", await ps.evaluate("current") == "carnet")
+        check("sin verificar ya puede pedir comida", await ps.evaluate("current") == "comida")
+        await ps.evaluate("go('caja')"); await ps.wait_for_timeout(400)
+        check("sin verificar no entra al estado de cuenta", await ps.evaluate("current") == "carnet")
         pl = await login(cl, "e9.largo@nexo-pruebas.dev")
         check("el carnet de 11 dígitos entra al inicio", await pl.evaluate("current") == "inicio", await pl.evaluate("current"))
         # seguridad antes de enviar
@@ -77,8 +79,8 @@ async def main():
         await pa.click(f"[data-ca-ok='{stu}']"); await pa.wait_for_timeout(300); await pa.click("[data-cdlg-ok]"); await pa.wait_for_timeout(3000)
         check("aprobar deja el carnet verificado", sql(f"select carnet_status from public.profiles where id = '{stu}'")[0]["carnet_status"] == "ok")
         await ps.wait_for_timeout(2000)
-        await ps.evaluate("go('comida')"); await ps.wait_for_timeout(500)
-        check("el estudiante recibe el acceso en vivo y entra a Comida", await ps.evaluate("current") == "comida", await ps.evaluate("current"))
+        await ps.evaluate("go('estacionamiento')"); await ps.wait_for_timeout(500)
+        check("el estudiante recibe el acceso en vivo y entra al estacionamiento", await ps.evaluate("current") == "estacionamiento", await ps.evaluate("current"))
         errs = ps.errs + pa.errs + pl.errs
         check("sin errores de JavaScript", not errs, "; ".join(errs[:3]))
         await b.close()
