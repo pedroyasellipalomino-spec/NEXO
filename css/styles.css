@@ -1521,3 +1521,21 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .tp-cred .link{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;overflow-wrap:anywhere}
 .tp-cred .link svg{width:13px;height:13px;flex:none}
 .tp-row > .grow{flex:1}
+
+/* Comercio · editar el menú (#local-menu) */
+.me-card{gap:10px}
+.me-cat{margin-top:10px;align-items:baseline}
+.me-cat .h3 .tiny{font-weight:400}
+.me-move{display:inline-flex;gap:2px;flex:none}
+.icon-btn{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;padding:0}
+.icon-btn svg{width:15px;height:15px}
+.icon-btn:hover:not(:disabled){border-color:var(--brand);color:var(--brand)}
+.icon-btn:disabled{opacity:.35;cursor:default}
+.me-add{display:inline-flex;align-items:center;gap:6px;font-size:13px;align-self:flex-start;padding:6px 0}
+.me-add svg{width:15px;height:15px}
+.me-form{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid color-mix(in srgb,var(--brand) 40%,var(--line));border-radius:var(--r-sm);background:color-mix(in srgb,var(--mint-bg) 45%,var(--surface))}
+.me-acts{gap:8px;align-items:center}
+.me-acts .btn{width:auto}
+.me-acts .link{display:inline-flex;align-items:center;gap:4px;font-size:13px}
+.me-acts .link svg{width:15px;height:15px}
+@media (max-width:520px){.me-move{display:none}}

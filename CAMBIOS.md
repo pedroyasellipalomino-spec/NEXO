@@ -2,6 +2,9 @@
 
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
+## 20 nov 2026
+- Cada comercio edita su menú, precios y categorías.
+
 ## 19 nov 2026
 - Correos de Nexo funcionando otra vez.
 - Cuentas de prueba fuera del inicio de sesión.

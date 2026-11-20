@@ -773,12 +773,14 @@ document.getElementById("cuotaPicker").addEventListener("click", e => {
 });
 let moves = [];
 try { moves = JSON.parse(localStorage.getItem(K("nexo-moves")) || "[]") || []; } catch (err) {}
+// Escapa texto para HTML; declarada como función para poder usarla desde el arranque (esc es const y llega después)
+function escH(v) { return String(v == null ? "" : v).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
 function drawMovement(m) {
   const card = document.getElementById("mvCount").closest(".card");
   const el = document.createElement("div");
   el.className = "move"; if (m.id) el.dataset.mv = m.id;
-  el.innerHTML = `<span class="ico"><i data-lucide="${m.icon || "graduation-cap"}"></i></span><div class="info"><b>${m.title}</b><span>${m.detail}</span><br><span>${m.date}</span></div>
-    <div class="mv-actions"><span class="amt${m.amount.startsWith("+") ? " pos" : ""}">${m.amount}</span><span class="pill ${m.pillCls}">${m.pill}</span><button class="link b" type="button" data-go="${m.go || "materias"}"${m.order ? ` data-order="${m.order}"` : ""} style="font-size:12px">${(m.goLabel || "Ver estado de cuenta →").replace("›", "→")}</button></div>`;
+  el.innerHTML = `<span class="ico"><i data-lucide="${m.icon || "graduation-cap"}"></i></span><div class="info"><b>${escH(m.title)}</b><span>${escH(m.detail)}</span><br><span>${escH(m.date)}</span></div>
+    <div class="mv-actions"><span class="amt${m.amount.startsWith("+") ? " pos" : ""}">${escH(m.amount)}</span><span class="pill ${escH(m.pillCls)}">${escH(m.pill)}</span><button class="link b" type="button" data-go="${m.go || "materias"}"${m.order ? ` data-order="${m.order}"` : ""} style="font-size:12px">${(m.goLabel || "Ver estado de cuenta →").replace("›", "→")}</button></div>`;
   card.querySelector("h2").after(el);
 }
 function addMovement(title, detail, amount, pill, pillCls, extra = {}) {
@@ -2184,6 +2186,20 @@ const localById = id => LOCALES.find(l => l.id === id);
 let localState = {};
 const loadLocalState = () => { try { localState = JSON.parse(localStorage.getItem("nexo-localstate") || "{}") || {}; } catch (err) { localState = {}; } };
 loadLocalState();
+// Menú editado por el comercio (localState[id].menu) en lugar del de ejemplo (cats0)
+function validMenu(m) {
+  return Array.isArray(m) && m.length >= 1 && m.length <= 30 && m.every(c => c && typeof c.name === "string" && Array.isArray(c.items)
+    && c.items.every(it => it && typeof it.id === "string" && typeof it.name === "string" && typeof it.price === "number" && it.price > 0));
+}
+function applyMenus() {
+  LOCALES.forEach(l => {
+    if (!l.cats0) l.cats0 = l.cats;
+    const m = localState[l.id] && localState[l.id].menu;
+    l.cats = validMenu(m) ? m : l.cats0;
+    l.cats.forEach(c => c.items.forEach(it => { if (!PROD_BY_NAME[it.name]) PROD_BY_NAME[it.name] = it.id; }));
+  });
+}
+applyMenus();
 const saveLocalState = () => { try { localStorage.setItem("nexo-localstate", JSON.stringify(localState)); } catch (err) {} try { sbSaveLocal(); } catch (err) {} };
 const lstate = id => localState[id] || (localState[id] = { paused: false, soldout: [] });
 const isPaused = id => !!(localState[id] && localState[id].paused);
@@ -2398,10 +2414,10 @@ function renderLocal() {
   document.getElementById("localHead").innerHTML = `<div class="local-hero">${foodArt(l.id, "lg")}<div><h1 class="h1">${esc(l.name)}</h1><p class="lead">${l.place} · ${esc(l.tagline)}</p></div></div>
     <div class="chips" style="margin-top:12px">${isPaused(l.id) ? `<span class="pill warn">Pedidos en pausa</span>` : `<span class="pill ${openState(l).cls}">${openState(l).label}</span>`}<span class="pill neutral">Retiro en ${l.eta}</span><span class="pill neutral">Hoy ${todayHours(l)}</span></div>
     ${isPaused(l.id) ? `<div class="notice warn" style="margin-top:12px"><i data-lucide="circle-pause"></i><p>${esc(l.name)} no está recibiendo pedidos en este momento. Puedes ver el menú y volver más tarde.</p></div>` : !openState(l).open ? `<div class="notice" style="margin-top:12px"><i data-lucide="clock"></i><p>${esc(l.name)} ${hoursOn(l, new Date()) ? `atiende hoy de ${todayHours(l)}` : "no abre hoy"} (${openState(l).label.toLowerCase()}). Puedes armar tu pedido y programar el retiro para cuando abra.</p></div>` : ""}`;
-  const cats = ["Todos", ...l.cats.map(c => c.name)];
+  const cats = ["Todos", ...l.cats.filter(c => c.items.length).map(c => c.name)];
   if (!cats.includes(curCat)) curCat = "Todos";
   document.getElementById("localChips").innerHTML = cats.map(c => `<button class="pill ${c === curCat ? "ok" : "neutral"}" type="button" data-food-cat="${esc(c)}">${esc(c)}</button>`).join("");
-  document.getElementById("localMenu").innerHTML = l.cats.filter(c => curCat === "Todos" || c.name === curCat).map(c => `<h2 class="h2">${esc(c.name)}</h2>` + c.items.map(it =>
+  document.getElementById("localMenu").innerHTML = l.cats.filter(c => c.items.length && (curCat === "Todos" || c.name === curCat)).map(c => `<h2 class="h2">${esc(c.name)}</h2>` + c.items.map(it =>
     `<div class="favwrap">${favBtn(l.id, it)}<button class="card row${isSoldOut(l.id, it.id) ? " soldout" : ""}" type="button" data-open-item="${it.id}" style="text-align:left;flex-direction:row"${isSoldOut(l.id, it.id) ? ` aria-disabled="true"` : ""}>
       ${prodArt(it.id, it.icon, "sm")}
       <div style="flex:1;min-width:0"><b class="h3">${esc(it.name)}</b><p class="small">${esc(it.desc)}</p><div class="row start" style="gap:4px 8px;margin-top:4px;flex-wrap:wrap"><b style="font-size:17px;font-weight:600">${money(it.price)}</b><span class="bsv inline">${bsOf(it.price)}</span>${isSoldOut(l.id, it.id) ? `<span class="pill neutral">Agotado</span>` : it.tag ? `<span class="pill ok">${it.tag}</span>` : ""}${it.opts ? `<span class="tiny">Con opciones</span>` : ""}</div></div>
@@ -2505,6 +2521,7 @@ function undoCartToast(snap) {
 }
 let payMethod = "card";
 function renderCarrito() {
+  { const cl = cartLocal(); if (cl) { const n0 = cart.lines.length; cart.lines = cart.lines.filter(x => itemById(cl, x.item)); if (cart.lines.length < n0) { saveCart(); setTimeout(() => toast("Quitamos de tu carrito un producto que el local ya no ofrece."), 0); } } }
   const l = cartLocal(), body = document.getElementById("cartBody");
   const back = document.getElementById("cartBack");
   if (!l || !cart.lines.length) {
@@ -2587,7 +2604,7 @@ function newOrder(method) {
   const l = cartLocal(), now = new Date(), d = day0(simDate);
   const num = `${l.pref}-${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(orders.length + 1).padStart(4, "0")}`;
   return { id: "o" + now.getTime(), num, local: l.id, method, date: fmtD(d), time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
-    lines: cart.lines.map(x => { const li = lineInfo(l, x); return { item: x.item, sel: x.sel.slice(), name: li.it.name, icon: li.it.icon, opts: li.opts, note: x.note, qty: x.qty, total: li.total }; }).filter(Boolean),
+    lines: cart.lines.map(x => { const li = lineInfo(l, x); if (!li) return null; return { item: x.item, sel: x.sel.slice(), name: li.it.name, icon: li.it.icon, opts: li.opts, note: x.note, qty: x.qty, total: li.total }; }).filter(Boolean),
     total: cartTotal(), card: method === "card" ? (cards.length ? cardLabel(cards[0]) : "Tarjeta") : method === "wallet" ? "Wallet Nexo" : null };
 }
 let draftOrder = null;
@@ -3916,14 +3933,7 @@ function renderLocalMenu() {
   document.getElementById("lmLead").textContent = `${l.name} · ${l.tagline}`;
   document.getElementById("lmArt").innerHTML = foodArt(l.id, "sm");
   document.getElementById("lmBody").innerHTML = `
-    <div class="card">
-      <div class="row"><h2 class="h2">Productos</h2><span class="small">${n ? `${n} agotado${n === 1 ? "" : "s"}` : "Todo disponible"}</span></div>
-      <p class="small" style="font-size:13px">Marca lo que se terminó hoy. Los estudiantes lo verán como agotado y no podrán pedirlo.</p>
-      ${l.cats.map(c => `<h3 class="h3" style="margin-top:6px">${esc(c.name)}</h3>` + c.items.map(it => {
-        const off = st.soldout.includes(it.id);
-        return `<div class="lm-item${off ? " off" : ""}">${prodArt(it.id, it.icon, "xs")}<span class="grow"><b>${esc(it.name)}</b><span class="tiny" style="display:block">${money(it.price)}${off ? " · Agotado" : ""}</span></span><button class="switch" type="button" role="switch" aria-checked="${!off}" aria-label="${esc(it.name)} disponible" data-lm-item="${it.id}"></button></div>`;
-      }).join("")).join("")}
-    </div>
+    ${meMenuCard(l, st)}
     <div class="stack">
       <div class="card"><h2 class="h2">Recepción de pedidos</h2>
         <p class="small" style="font-size:13px">${isPaused(l.id) ? "Los pedidos están en pausa: los estudiantes ven tu menú, pero no pueden pagar." : (hoursOn(l, new Date()) ? `Estás recibiendo pedidos. Horario de hoy: ${todayHours(l)}.` : "Hoy no abres. Los estudiantes pueden programar retiros para tu próximo día abierto.")}</p>
@@ -3941,7 +3951,7 @@ function renderLocalMenu() {
         <p class="tiny" id="lhErr" hidden></p>
         <button class="btn" type="submit"><i data-lucide="check"></i>Guardar horario</button>
       </form>
-      <div class="notice"><i data-lucide="info"></i><p>Tiempo de preparación que ven los estudiantes: ${l.eta}. Los precios y el menú los ajusta la administración de Nexo.</p></div>
+      <div class="notice"><i data-lucide="info"></i><p>Tiempo de preparación que ven los estudiantes: ${l.eta}. Los cambios del menú se ven al instante en la app de los estudiantes.</p></div>
     </div>`;
   icons();
 }
@@ -3998,7 +4008,7 @@ document.addEventListener("input", e => { if (e.target.closest && e.target.close
 /* Entre pestañas: si otra cuenta cambia pedidos o el estado de un local, esta pantalla se actualiza sola */
 window.addEventListener("storage", e => {
   if (!e.key) return;
-  if (e.key === "nexo-localstate" && !sbShared()) loadLocalState(); // con cuenta real el estado de los locales viene de Supabase
+  if (e.key === "nexo-localstate" && !sbShared()) { loadLocalState(); applyMenus(); } // con cuenta real el estado de los locales viene de Supabase
   if (e.key === K("nexo-orders")) { try { orders = JSON.parse(e.newValue || "[]") || []; } catch (err) {} }
   if (e.key === "nexo-tickets") { try { tickets = JSON.parse(e.newValue || "[]") || tickets; } catch (err) {} }
   if (!(e.key.startsWith("nexo-orders:") || e.key === "nexo-localstate" || e.key === "nexo-tickets")) return;
@@ -5267,7 +5277,7 @@ async function sbSharedInit() {
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, ({ new: row }) => { try { sbCarnetRow(row); } catch (err) {} })
     .on("postgres_changes", { event: "*", schema: "public", table: "local_state" }, ({ new: row }) => {
       if (!row || !row.local_id || sbPending("ls" + row.local_id)) return;
-      localState[row.local_id] = sbLocalRow(row);
+      localState[row.local_id] = sbLocalRow(row); applyMenus();
       sbRefreshScreens();
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "student_state" }, ({ new: row }) => {
@@ -5458,19 +5468,19 @@ document.addEventListener("click", e => {
 /* Comercio real · agotados, pausa y horario de cada local en Supabase (tabla local_state, Realtime).
    Con cuenta real, `localState` sale del servidor (no de este navegador) y cambia en vivo; el comercio real sube
    lo de su local con `sbSaveLocal` (las reglas solo le dejan tocar el suyo). Las cuentas de prueba siguen locales. */
-function sbLocalRow(r) { return { paused: !!r.paused, soldout: Array.isArray(r.soldout) ? r.soldout : [], ...(Array.isArray(r.week) && r.week.length === 7 ? { week: r.week } : {}) }; }
+function sbLocalRow(r) { return { paused: !!r.paused, soldout: Array.isArray(r.soldout) ? r.soldout : [], ...(Array.isArray(r.week) && r.week.length === 7 ? { week: r.week } : {}), ...(validMenu(r.menu) ? { menu: r.menu } : {}) }; }
 async function sbLocalsInit() {
-  const { data, error } = await sb.from("local_state").select("local_id,paused,soldout,week");
+  const { data, error } = await sb.from("local_state").select("local_id,paused,soldout,week,menu");
   if (error) { console.warn("Nexo: no se cargó el estado de los locales", error.message); return; }
   const fresh = {};
   data.forEach(r => { fresh[r.local_id] = sbLocalRow(r); });
-  localState = fresh;
+  localState = fresh; applyMenus();
 }
 function sbSaveLocal() {
   if (!sbMerchant()) return;
   const id = account.local;
   sbPush("ls" + id, () => { const st = localState[id] || { paused: false, soldout: [] };
-    return sb.from("local_state").upsert({ local_id: id, paused: !!st.paused, soldout: st.soldout || [], week: st.week || null }); },
+    return sb.from("local_state").upsert({ local_id: id, paused: !!st.paused, soldout: st.soldout || [], week: st.week || null, menu: st.menu || null }); },
     err => { console.warn("Nexo: estado del local sin guardar", err && err.message); toast("No pudimos guardar el cambio del local. Revisa tu conexión."); });
 }
 /* Equipo real: con cuenta real de personal, moderadores y administradores salen de profiles (sin Lucía ni Carlos
@@ -6049,6 +6059,136 @@ document.addEventListener("click", e => {
     try { closeUserMenu(); } catch (err) {}
     try { localStorage.removeItem("nexo-ownerback"); } catch (err) {}
     enterApp(back, true, "Volviste a tu cuenta de dueño.");
+  }
+});
+
+
+/* ---------- Cada comercio edita su menú (#local-menu) ----------
+   El menú editado vive en localState[id].menu (cuentas de prueba: nexo-localstate; cuenta real: local_state.menu en
+   Supabase, migración 014) y applyMenus() lo pone en LOCALES[i].cats (cats0 guarda el de ejemplo). El comercio
+   agrega, edita, mueve, marca o borra productos y categorías; los estudiantes lo ven al instante. Las opciones
+   ("elige una") de los productos de ejemplo se conservan, pero no se editan aquí. Los textos no llevan "<" ni ">". */
+var meEdit = null, meCat = null;
+const MENU_ICONS = [["utensils", "Plato"], ["sandwich", "Sándwich o arepa"], ["beef", "Carne o parrilla"], ["pizza", "Pizza"], ["salad", "Ensalada o bowl"], ["soup", "Sopa"], ["croissant", "Pan o empanada"], ["cookie", "Galleta o dulce"], ["cake-slice", "Torta"], ["donut", "Donut"], ["ice-cream-cone", "Helado"], ["coffee", "Café"], ["cup-soda", "Bebida fría"], ["citrus", "Jugo"], ["popcorn", "Snack"]];
+const ME_TAGS = ["", "Más pedido", "Nuevo", "Recomendado"];
+const meTxt = (s, n) => String(s || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, n);
+const meCats = () => JSON.parse(JSON.stringify(myLocal().cats));
+function meSave(cats, msg) {
+  const l = myLocal(), st = lstate(l.id), ids = new Set(cats.flatMap(c => c.items.map(i => i.id)));
+  st.menu = cats; st.soldout = (st.soldout || []).filter(x => ids.has(x));
+  saveLocalState(); applyMenus();
+  meEdit = null; meCat = null; renderLocalMenu(); toast(msg);
+}
+function meFindItem(cats, id) { for (let ci = 0; ci < cats.length; ci++) { const ii = cats[ci].items.findIndex(x => x.id === id); if (ii >= 0) return { ci, ii }; } return null; }
+function meItemForm(l, it, ci) {
+  const isNew = !it, v = it || { name: "", desc: "", price: "", icon: (MENU_ICONS[0] || [])[0], tag: "" };
+  const hasIcon = MENU_ICONS.some(x => x[0] === v.icon);
+  return `<form class="me-form" data-me-form="${isNew ? "new:" + ci : esc(it.id)}" novalidate>
+    <b style="font-size:14px">${isNew ? `Nuevo producto en ${esc(l.cats[ci].name)}` : `Editar ${esc(v.name)}`}</b>
+    <div class="field"><label for="me-name">Nombre</label><div class="input"><input id="me-name" maxlength="60" value="${esc(v.name)}" placeholder="Ej.: Arepa de queso" autocomplete="off"></div></div>
+    <div class="field"><label for="me-desc">Descripción <span class="tiny">(opcional)</span></label><div class="input"><input id="me-desc" maxlength="140" value="${esc(v.desc || "")}" placeholder="Ingredientes, tamaño…" autocomplete="off"></div></div>
+    <div class="grid2">
+      <div class="field"><label for="me-price">Precio · USD</label><div class="input"><span style="color:var(--muted)">$</span><input id="me-price" inputmode="decimal" value="${v.price !== "" ? String(v.price).replace(".", ",") : ""}" placeholder="0,00" autocomplete="off"></div></div>
+      <div class="field"><label for="me-cat">Categoría</label><div class="input sel"><select id="me-cat">${l.cats.map((c, i) => `<option value="${i}"${i === ci ? " selected" : ""}>${esc(c.name)}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
+      <div class="field"><label for="me-icon">Ícono</label><div class="input sel"><select id="me-icon">${hasIcon ? "" : `<option value="${esc(v.icon)}" selected>Dibujo actual</option>`}${MENU_ICONS.map(([k, t]) => `<option value="${k}"${k === v.icon ? " selected" : ""}>${t}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
+      <div class="field"><label for="me-tag">Etiqueta</label><div class="input sel"><select id="me-tag">${ME_TAGS.map(t => `<option value="${t}"${t === (v.tag || "") ? " selected" : ""}>${t || "Ninguna"}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
+    </div>
+    ${it && (it.opts || []).length ? `<p class="tiny">Opciones que se mantienen: ${it.opts.map(g => esc(g.name)).join(", ")}.</p>` : ""}
+    <p class="tiny" id="meErr" role="alert" hidden></p>
+    <div class="row me-acts">${isNew ? "" : `<button class="link" type="button" style="color:var(--danger)" data-me-del="${esc(it.id)}"><i data-lucide="trash-2"></i>Eliminar</button>`}<span class="grow"></span><button class="btn ghost sm" type="button" data-me-cancel>Cancelar</button><button class="btn sm" type="submit"><i data-lucide="check"></i>${isNew ? "Agregar" : "Guardar"}</button></div>
+  </form>`;
+}
+function meCatHead(l, c, ci) {
+  if (meCat === ci) return `<form class="me-form me-catform" data-me-catform="${ci}" novalidate><div class="field"><label for="me-catname">Nombre de la categoría</label><div class="input"><input id="me-catname" maxlength="40" value="${esc(c.name)}" autocomplete="off"></div></div>
+    <div class="row me-acts"><span class="grow"></span><button class="btn ghost sm" type="button" data-me-cancel>Cancelar</button><button class="btn sm" type="submit">Guardar</button></div></form>`;
+  return `<div class="row me-cat"><h3 class="h3">${esc(c.name)} <span class="tiny">· ${plural(c.items.length, "producto", "productos")}</span></h3><span class="row start" style="gap:10px">
+    <button class="link b" type="button" data-me-catren="${ci}" style="font-size:12px">Renombrar</button>${l.cats.length > 1 ? `<button class="link" type="button" data-me-catdel="${ci}" style="font-size:12px;color:var(--danger)">Eliminar</button>` : ""}</span></div>`;
+}
+function meMenuCard(l, st) {
+  const n = (st.soldout || []).length;
+  return `<div class="card me-card">
+    <div class="row"><h2 class="h2">Tu menú</h2><span class="small">${n ? `${n} agotado${n === 1 ? "" : "s"}` : "Todo disponible"}</span></div>
+    <p class="small" style="font-size:13px">Agrega, cambia o quita productos y precios. El interruptor marca lo que se terminó hoy. Los estudiantes ven los cambios al instante.</p>
+    ${l.cats.map((c, ci) => meCatHead(l, c, ci) + c.items.map((it, ii) => {
+      if (meEdit === it.id) return meItemForm(l, it, ci);
+      const off = (st.soldout || []).includes(it.id);
+      return `<div class="lm-item${off ? " off" : ""}">${prodArt(it.id, it.icon, "xs")}<span class="grow" style="min-width:0"><b>${esc(it.name)}</b><span class="tiny" style="display:block">${money(it.price)}${it.tag ? ` · ${esc(it.tag)}` : ""}${off ? " · Agotado" : ""}</span></span>
+        <span class="me-move"><button class="icon-btn" type="button" data-me-move="${esc(it.id)}|-1" aria-label="Subir ${esc(it.name)}"${ii === 0 ? " disabled" : ""}><i data-lucide="chevron-up"></i></button><button class="icon-btn" type="button" data-me-move="${esc(it.id)}|1" aria-label="Bajar ${esc(it.name)}"${ii === c.items.length - 1 ? " disabled" : ""}><i data-lucide="chevron-down"></i></button></span>
+        <button class="link b" type="button" data-me-edit="${esc(it.id)}" style="font-size:12px">Editar</button>
+        <button class="switch" type="button" role="switch" aria-checked="${!off}" aria-label="${esc(it.name)} disponible" data-lm-item="${esc(it.id)}"></button></div>`;
+    }).join("") + (meEdit === "new:" + ci ? meItemForm(l, null, ci) : `<button class="link b me-add" type="button" data-me-new="${ci}"><i data-lucide="plus"></i>Agregar producto</button>`)).join("")}
+    ${meCat === "new" ? `<form class="me-form me-catform" data-me-catform="new" novalidate><div class="field"><label for="me-catname">Nueva categoría</label><div class="input"><input id="me-catname" maxlength="40" placeholder="Ej.: Postres" autocomplete="off"></div></div>
+      <div class="row me-acts"><span class="grow"></span><button class="btn ghost sm" type="button" data-me-cancel>Cancelar</button><button class="btn sm" type="submit">Crear</button></div></form>`
+      : `<button class="btn ghost" type="button" data-me-catnew><i data-lucide="folder-plus"></i>Nueva categoría</button>`}
+    ${st.menu ? `<button class="link" type="button" data-me-reset style="font-size:12px;color:var(--muted)">Volver al menú de ejemplo</button>` : ""}
+  </div>`;
+}
+document.addEventListener("click", e => {
+  if (current !== "local-menu") return;
+  const ed = e.target.closest("[data-me-edit]"); if (ed) { meEdit = ed.dataset.meEdit; meCat = null; renderLocalMenu(); const i = document.getElementById("me-name"); if (i) i.focus(); return; }
+  const nw = e.target.closest("[data-me-new]"); if (nw) { meEdit = "new:" + nw.dataset.meNew; meCat = null; renderLocalMenu(); const i = document.getElementById("me-name"); if (i) i.focus(); return; }
+  if (e.target.closest("[data-me-cancel]")) { meEdit = null; meCat = null; renderLocalMenu(); return; }
+  const cr = e.target.closest("[data-me-catren]"); if (cr) { meCat = +cr.dataset.meCatren; meEdit = null; renderLocalMenu(); const i = document.getElementById("me-catname"); if (i) i.select(); return; }
+  if (e.target.closest("[data-me-catnew]")) { meCat = "new"; meEdit = null; renderLocalMenu(); const i = document.getElementById("me-catname"); if (i) i.focus(); return; }
+  const mv = e.target.closest("[data-me-move]");
+  if (mv) {
+    const [id, d] = mv.dataset.meMove.split("|"), cats = meCats(), p = meFindItem(cats, id); if (!p) return;
+    const list = cats[p.ci].items, j = p.ii + +d; if (j < 0 || j >= list.length) return;
+    [list[p.ii], list[j]] = [list[j], list[p.ii]];
+    meSave(cats, "Orden actualizado."); return;
+  }
+  const dl = e.target.closest("[data-me-del]");
+  if (dl) {
+    const cats = meCats(), p = meFindItem(cats, dl.dataset.meDel); if (!p) return;
+    const it = cats[p.ci].items[p.ii];
+    askConfirm({ icon: "trash-2", title: `¿Eliminar ${esc(it.name)}?`, text: "Deja de aparecer en tu menú. Los pedidos que ya se hicieron no cambian.", ok: "Eliminar", cancel: "Volver", danger: true,
+      onOk: () => { cats[p.ci].items.splice(p.ii, 1); meSave(cats, `Quitaste ${it.name} del menú.`); } });
+    return;
+  }
+  const cd = e.target.closest("[data-me-catdel]");
+  if (cd) {
+    const cats = meCats(), ci = +cd.dataset.meCatdel, c = cats[ci]; if (!c || cats.length < 2) return;
+    askConfirm({ icon: "trash-2", title: `¿Eliminar la categoría ${esc(c.name)}?`, text: c.items.length ? `También se quitan sus ${plural(c.items.length, "producto", "productos")} del menú.` : "Está vacía.", ok: "Eliminar", cancel: "Volver", danger: true,
+      onOk: () => { cats.splice(ci, 1); meSave(cats, `Eliminaste la categoría ${c.name}.`); } });
+    return;
+  }
+  if (e.target.closest("[data-me-reset]")) {
+    askConfirm({ icon: "rotate-ccw", title: "¿Volver al menú de ejemplo?", text: "Se pierden los productos, precios y categorías que cambiaste.", ok: "Volver al ejemplo", cancel: "Cancelar", danger: true,
+      onOk: () => { const l = myLocal(), st = lstate(l.id); delete st.menu; saveLocalState(); applyMenus(); meEdit = null; meCat = null; renderLocalMenu(); toast("Tu menú volvió al de ejemplo."); } });
+  }
+});
+document.addEventListener("submit", e => {
+  const f = e.target.closest("[data-me-form]");
+  if (f) {
+    e.preventDefault();
+    const l = myLocal(), cats = meCats(), key = f.dataset.meForm, err = m => { const p = document.getElementById("meErr"); p.textContent = m; p.hidden = false; };
+    const name = meTxt(document.getElementById("me-name").value, 60), desc = meTxt(document.getElementById("me-desc").value, 140);
+    const price = Math.round(parseAmt(document.getElementById("me-price").value) * 100) / 100, to = +document.getElementById("me-cat").value;
+    const icon = document.getElementById("me-icon").value, tag = document.getElementById("me-tag").value;
+    if (name.length < 2) return err("Escribe el nombre del producto.");
+    if (!(price >= 0.25 && price <= 500)) return err("El precio debe estar entre $0,25 y $500,00.");
+    if (!cats[to]) return err("Elige una categoría.");
+    const all = cats.flatMap(c => c.items);
+    if (all.some(x => x.id !== key && normTxt(x.name) === normTxt(name))) return err("Ya tienes un producto con ese nombre.");
+    let it;
+    if (key.startsWith("new:")) { it = { id: "n" + Date.now().toString(36), name, desc, price, icon }; cats[to].items.push(it); }
+    else {
+      const p = meFindItem(cats, key); if (!p) return;
+      it = Object.assign(cats[p.ci].items[p.ii], { name, desc, price, icon });
+      if (p.ci !== to) { cats[p.ci].items.splice(p.ii, 1); cats[to].items.push(it); }
+    }
+    if (tag) it.tag = tag; else delete it.tag;
+    meSave(cats, key.startsWith("new:") ? `Agregaste ${name} a tu menú.` : `Guardaste los cambios de ${name}.`);
+    return;
+  }
+  const cf = e.target.closest("[data-me-catform]");
+  if (cf) {
+    e.preventDefault();
+    const cats = meCats(), name = meTxt(document.getElementById("me-catname").value, 40), k = cf.dataset.meCatform;
+    if (name.length < 2) { toast("Escribe el nombre de la categoría."); return; }
+    if (cats.some((c, i) => String(i) !== k && normTxt(c.name) === normTxt(name))) { toast("Ya tienes una categoría con ese nombre."); return; }
+    if (k === "new") { if (cats.length >= 30) { toast("Puedes tener hasta 30 categorías."); return; } cats.push({ name, items: [] }); meSave(cats, `Creaste la categoría ${name}. Agrégale productos.`); }
+    else { cats[+k].name = name; meSave(cats, `La categoría ahora se llama ${name}.`); }
   }
 });
 

@@ -647,6 +647,23 @@ async def main() -> int:
         check(await pg.evaluate("document.querySelector('#revision [data-court-pay]').disabled"), "sin saldo suficiente no deja pagar con wallet")
 
 
+        # cada comercio edita su menú y el estudiante lo ve
+        await pg.evaluate("localStorage.setItem('nexo-session', 'pinchopan@comercio.nexo')"); await pg.goto(URL + "#local-menu"); await pg.reload(); await pg.wait_for_timeout(500)
+        await pg.click("[data-me-edit='wrap']"); await pg.fill("#me-price", "5,75"); await pg.click("[data-me-form] button[type=submit]"); await pg.wait_for_timeout(200)
+        await pg.click("[data-me-new='2']"); await pg.fill("#me-name", "Jugo de <b>parchita"); await pg.fill("#me-price", "2,50"); await pg.click("[data-me-form] button[type=submit]"); await pg.wait_for_timeout(200)
+        await pg.click("[data-me-new='0']"); await pg.fill("#me-name", "Sin precio"); await pg.fill("#me-price", "0"); await pg.click("[data-me-form] button[type=submit]"); await pg.wait_for_timeout(200)
+        check(not (await pg.locator("#meErr").is_hidden()) and "precio" in await pg.inner_text("#meErr"), "el menú no acepta productos sin precio")
+        await pg.click("[data-me-cancel]")
+        menu = await pg.evaluate("JSON.stringify(localById('pinchopan').cats)")
+        check('"price":5.75' in menu and "Jugo de bparchita" in menu and "<" not in menu, "el comercio cambia precios y agrega productos (sin código en los textos)")
+        await pg.evaluate("localStorage.setItem('nexo-session', 'ana.torres@correo.unimet.edu.ve')"); await pg.goto(URL + "#comida"); await pg.reload(); await pg.wait_for_timeout(500)
+        await pg.evaluate("curLocal = 'pinchopan'; go('local')"); await pg.wait_for_timeout(300)
+        lm = await pg.inner_text("#localMenu")
+        check("Jugo de bparchita" in lm and "$5,75" in lm, "el estudiante ve el menú nuevo")
+        await pg.evaluate("localStorage.setItem('nexo-session', 'pinchopan@comercio.nexo')"); await pg.goto(URL + "#local-menu"); await pg.reload(); await pg.wait_for_timeout(500)
+        await pg.click("[data-me-reset]"); await pg.click("[data-cdlg-ok]"); await pg.wait_for_timeout(200)
+        check(await pg.evaluate("itemById(localById('pinchopan'), 'wrap').price") == 5, "volver al menú de ejemplo")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 
