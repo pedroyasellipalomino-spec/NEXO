@@ -28,10 +28,11 @@ orig = sql(f"select row_to_json(l) r from public.local_state l where local_id = 
 async def main():
     m1 = mk("e12.granier@nexo-pruebas.dev", "Comercio Granier"); m2 = mk("e12.teeb@nexo-pruebas.dev", "Comercio Teeb")
     stu = mk("e12.estudiante@nexo-pruebas.dev", "Estudiante Doce", "20259990121")
-    sql(f"select set_config('nexo.role_change','on',false); update public.profiles set role='local', local_id='{LOC}' where id='{m1}'; update public.profiles set role='local', local_id='teeb' where id='{m2}';")
+    own = mk("e12.dueno@nexo-pruebas.dev", "Dueño Doce")
+    sql(f"select set_config('nexo.role_change','on',false); update public.profiles set role='local', local_id='{LOC}' where id='{m1}'; update public.profiles set role='local', local_id='teeb' where id='{m2}'; update public.profiles set role='owner' where id='{own}';")
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=os.environ.get("CHROME_PATH", "/opt/pw-browsers/chromium"))
-        cm, cs, ct = [await b.new_context(viewport={"width": 1280, "height": 900}) for _ in range(3)]
+        cm, cs, ct, co = [await b.new_context(viewport={"width": 1280, "height": 900}) for _ in range(4)]
         ps = await login(cs, "e12.estudiante@nexo-pruebas.dev")
         await ps.evaluate(f"curLocal = '{LOC}'; go('local')"); await ps.wait_for_timeout(800)
         pm = await login(cm, "e12.granier@nexo-pruebas.dev")
@@ -62,6 +63,14 @@ async def main():
         await pt.evaluate(f"sb.from('local_state').update({{ menu: [{{ name: 'Robado', items: [] }}] }}).eq('local_id', '{LOC}')"); await pt.wait_for_timeout(1500)
         row2 = sql(f"select menu from public.local_state where local_id = '{LOC}'")[0]["menu"] or []
         check("otro comercio no puede cambiar el menú ajeno", not any(c["name"] == "Robado" for c in row2))
+        # el dueño edita el menú del local desde su panel y el comercio lo ve en vivo
+        po = await login(co, "e12.dueno@nexo-pruebas.dev")
+        await po.evaluate(f"mnLocal = '{LOC}'; go('menus')"); await po.wait_for_timeout(1000)
+        await po.click(f"[data-me-edit='{first}']"); await po.fill("#me-price", "8,80"); await po.click("[data-me-form] button[type=submit]"); await po.wait_for_timeout(3000)
+        row3 = sql(f"select menu from public.local_state where local_id = '{LOC}'")[0]["menu"] or []
+        check("el dueño cambia el menú de un local en el servidor", any(i["id"] == first and i["price"] == 8.8 for c in row3 for i in c["items"]))
+        check("el comercio recibe el cambio del dueño en vivo", await pm.evaluate(f"itemById(localById('{LOC}'), '{first}').price") == 8.8)
+        pm.errs += po.errs
         r2 = await ps.evaluate(f"sb.from('local_state').update({{ menu: null }}).eq('local_id', '{LOC}').select().then(r => (r.data || []).length)")
         check("un estudiante no puede cambiar menús", r2 == 0, str(r2))
         errs = pm.errs + ps.errs + pt.errs

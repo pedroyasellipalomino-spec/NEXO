@@ -1549,3 +1549,11 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .me-group .grow,.me-choice .grow{flex:1;min-width:0;width:auto}
 .me-choice .input,.me-group .input{padding-inline:10px}
 @media (max-width:520px){.me-plus{width:70px}.me-choice{gap:6px;padding-left:0}.me-choice .dot{display:none}.me-opts{padding:10px}.me-group{padding:8px}}
+
+/* Dueño · Menús de los locales (#menus) */
+.mn-picker{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity}
+.mn-chip{display:flex;align-items:center;gap:10px;flex:none;min-width:190px;padding:8px 12px 8px 8px;border:1px solid var(--line);border-radius:14px;background:var(--surface);text-align:left;cursor:pointer;scroll-snap-align:start;color:var(--ink)}
+.mn-chip b{display:block;font-size:13px}
+.mn-chip .tiny{display:block}
+.mn-chip:hover{border-color:var(--brand)}
+.mn-chip.on{border-color:var(--brand);background:var(--mint-bg);box-shadow:0 0 0 1px var(--brand) inset}

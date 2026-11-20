@@ -672,6 +672,17 @@ async def main() -> int:
         await pg.evaluate("localStorage.setItem('nexo-session', 'pinchopan@comercio.nexo')"); await pg.goto(URL + "#local-menu"); await pg.reload(); await pg.wait_for_timeout(500)
         await pg.click("[data-me-reset]"); await pg.click("[data-cdlg-ok]"); await pg.wait_for_timeout(200)
         check(await pg.evaluate("itemById(localById('pinchopan'), 'wrap').price") == 5, "volver al menú de ejemplo")
+        # el dueño edita el menú de cualquier local
+        await pg.evaluate("localStorage.setItem('nexo-session', 'dueno@nexo-local.dev')"); await pg.goto(URL + "#menus"); await pg.reload(); await pg.wait_for_timeout(500)
+        check(await pg.evaluate("current") == "menus" and await pg.locator("#mnPicker [data-mn-local]").count() == 13, "el dueño ve los menús de los 13 locales")
+        await pg.click("[data-mn-local='teeb']"); await pg.wait_for_timeout(200)
+        tid = await pg.evaluate("localById('teeb').cats[0].items[0].id")
+        await pg.click(f"[data-me-edit='{tid}']"); await pg.fill("#me-price", "4,40"); await pg.click("[data-me-form] button[type=submit]"); await pg.wait_for_timeout(200)
+        check(await pg.evaluate(f"itemById(localById('teeb'), '{tid}').price") == 4.4 and "Editó el menú de TEEB" in await pg.evaluate("JSON.stringify(audit)"), "el dueño cambia el menú de TEEB y queda en el registro")
+        await pg.evaluate("localStorage.setItem('nexo-session', 'teeb@comercio.nexo')"); await pg.goto(URL + "#local-menu"); await pg.reload(); await pg.wait_for_timeout(500)
+        check("$4,40" in await pg.inner_text("#lmBody"), "el comercio ve el cambio del dueño")
+        await pg.evaluate("localStorage.setItem('nexo-session', 'ana.torres@correo.unimet.edu.ve')"); await pg.goto(URL + "#menus"); await pg.reload(); await pg.wait_for_timeout(400)
+        check(await pg.evaluate("current") != "menus", "un estudiante no entra a los menús del dueño")
 
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()

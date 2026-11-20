@@ -3,6 +3,7 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 20 nov 2026
+- Dueño edita el menú de cualquier local.
 - Comercio crea opciones con recargo en cada producto.
 - Cada comercio edita su menú, precios y categorías.
 

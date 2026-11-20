@@ -42,7 +42,7 @@ const STAFF_NAV = {
   admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"], ["validar","badge-check","Pagos por validar","validar"], ["carnets","id-card","Carnets","carnets"]],
   mod: [["moderacion","inbox","Tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]],
   local: [["local-pedidos","chef-hat","Pedidos","local-pedidos"], ["local-menu","book-open","Menú y horario","local-menu"]],
-  owner: [["dueno","shield-check","Datos reales","dueno"], ["validar","badge-check","Caja","validar"], ["carnets","id-card","Carnets","carnets"], ["pruebas","flask-conical","Cuentas de prueba","pruebas"]],
+  owner: [["dueno","shield-check","Datos reales","dueno"], ["validar","badge-check","Caja","validar"], ["carnets","id-card","Carnets","carnets"], ["menus","utensils","Menús","menus"], ["pruebas","flask-conical","Cuentas de prueba","pruebas"]],
   creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["validar","badge-check","Pagos por validar","validar"], ["carnets","id-card","Carnets","carnets"], ["config","settings","Configuración","config"]]
 };
 const ROLE_LABEL = { owner: "Dueño", local: "Comercio", creator: "Creador", admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
@@ -293,7 +293,7 @@ function staffGreet() {
 const DIA_LARGO_G = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const MES_LARGO_G = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 staffGreet();
-const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"], carnets: ["admin", "creator", "owner"], pruebas: "owner" };
+const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"], carnets: ["admin", "creator", "owner"], pruebas: "owner", menus: "owner" };
 // Carnet: de 5 a 11 dígitos. Todo estudiante lo verifica por foto cada trimestre (módulo "Verificar carnet por foto")
 const CARNET_MIN = 5, CARNET_RE = /^\d{5,11}$/, CARNET_LOCK = ["materias", "caja", "tarjeta", "inscripcion", "estacionamiento", "vehiculo", "pagoplan", "planes", "acceso"];
 const CARNET_LOCK_TXT = "El estado de cuenta y el estacionamiento se activan cuando verifiquemos tu carnet.";
@@ -357,6 +357,7 @@ function show(id) {
   if (id === "carnet") try { renderCarnet(); } catch (err) {}
   if (id === "revision") try { renderCourtPay(); } catch (err) {}
   if (id === "pruebas") try { renderPruebas(); } catch (err) {}
+  if (id === "menus") try { renderMenus(); } catch (err) {}
   if (id === "recarga") try { renderWalletHist(); } catch (err) {}
   if (id === "carnets") try { renderCarnets(); } catch (err) {}
   if (id === "notificaciones" && typeof renderNotifs === "function") try { renderNotifs(); } catch (err) {}
@@ -3984,9 +3985,10 @@ document.addEventListener("click", e => {
 document.addEventListener("click", e => {
   const it = e.target.closest("[data-lm-item]");
   if (it) {
-    const l = myLocal(), st = lstate(l.id), id = it.dataset.lmItem, name = itemById(l, id).name, avail = st.soldout.includes(id);
+    const l = current === "menus" ? localById(mnLocal) : myLocal(), st = lstate(l.id), id = it.dataset.lmItem, name = itemById(l, id).name, avail = st.soldout.includes(id);
     st.soldout = avail ? st.soldout.filter(x => x !== id) : [...st.soldout, id];
-    saveLocalState(); toast(avail ? `${name} vuelve a estar disponible.` : `${name} quedó como agotado.`); renderLocalMenu();
+    saveLocalState(); if (current === "menus") try { sbSaveLocal(l.id); } catch (err) {}
+    toast(avail ? `${name} vuelve a estar disponible.` : `${name} quedó como agotado.`); current === "menus" ? renderMenus() : renderLocalMenu();
   }
 });
 function deliverByCode(code, onlyKey) {
@@ -5479,9 +5481,10 @@ async function sbLocalsInit() {
   data.forEach(r => { fresh[r.local_id] = sbLocalRow(r); });
   localState = fresh; applyMenus();
 }
-function sbSaveLocal() {
-  if (!sbMerchant()) return;
-  const id = account.local;
+function sbSaveLocal(lid) {
+  // sin local: el comercio guarda el suyo; con local: dueño, creador o administración guardan ese (las reglas de local_state lo permiten)
+  if (!lid) { if (!sbMerchant()) return; } else if (!(sbShared() && ["owner", "creator", "admin"].includes(roleOf(account)))) return;
+  const id = lid || account.local;
   sbPush("ls" + id, () => { const st = localState[id] || { paused: false, soldout: [] };
     return sb.from("local_state").upsert({ local_id: id, paused: !!st.paused, soldout: st.soldout || [], week: st.week || null, menu: st.menu || null }); },
     err => { console.warn("Nexo: estado del local sin guardar", err && err.message); toast("No pudimos guardar el cambio del local. Revisa tu conexión."); });
@@ -6071,16 +6074,20 @@ document.addEventListener("click", e => {
    Supabase, migración 014) y applyMenus() lo pone en LOCALES[i].cats (cats0 guarda el de ejemplo). El comercio
    agrega, edita, mueve, marca o borra productos y categorías; los estudiantes lo ven al instante. Las opciones
    ("elige una") de los productos de ejemplo se conservan, pero no se editan aquí. Los textos no llevan "<" ni ">". */
-var meEdit = null, meCat = null;
+var meEdit = null, meCat = null, mnLocal = null;
+const ME_SCREENS = ["local-menu", "menus"];
+function meL() { return current === "menus" ? localById(mnLocal) : myLocal(); }
+function meRender() { current === "menus" ? renderMenus() : renderLocalMenu(); }
 const MENU_ICONS = [["utensils", "Plato"], ["sandwich", "Sándwich o arepa"], ["beef", "Carne o parrilla"], ["pizza", "Pizza"], ["salad", "Ensalada o bowl"], ["soup", "Sopa"], ["croissant", "Pan o empanada"], ["cookie", "Galleta o dulce"], ["cake-slice", "Torta"], ["donut", "Donut"], ["ice-cream-cone", "Helado"], ["coffee", "Café"], ["cup-soda", "Bebida fría"], ["citrus", "Jugo"], ["popcorn", "Snack"]];
 const ME_TAGS = ["", "Más pedido", "Nuevo", "Recomendado"];
 const meTxt = (s, n) => String(s || "").replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, n);
-const meCats = () => JSON.parse(JSON.stringify(myLocal().cats));
+const meCats = () => JSON.parse(JSON.stringify(meL().cats));
 function meSave(cats, msg) {
-  const l = myLocal(), st = lstate(l.id), ids = new Set(cats.flatMap(c => c.items.map(i => i.id)));
+  const l = meL(), st = lstate(l.id), ids = new Set(cats.flatMap(c => c.items.map(i => i.id)));
   st.menu = cats; st.soldout = (st.soldout || []).filter(x => ids.has(x));
-  saveLocalState(); applyMenus();
-  meDraft = null; meEdit = null; meCat = null; renderLocalMenu(); toast(msg);
+  saveLocalState(); if (current === "menus") { try { sbSaveLocal(l.id); } catch (err) {} logAudit("config", `Editó el menú de ${l.name}: ${msg}`); }
+  applyMenus();
+  meDraft = null; meEdit = null; meCat = null; meRender(); toast(msg);
 }
 function meFindItem(cats, id) { for (let ci = 0; ci < cats.length; ci++) { const ii = cats[ci].items.findIndex(x => x.id === id); if (ii >= 0) return { ci, ii }; } return null; }
 // Borrador del producto que se está editando (se relee de los campos antes de repintar, así no se pierde lo escrito)
@@ -6131,9 +6138,9 @@ function meItemForm(l, it, ci) {
   </form>`;
 }
 // Repinta el formulario sin perder lo escrito y devuelve el foco al campo indicado
-function meRedraw(focusId) { renderLocalMenu(); const f = focusId && document.getElementById(focusId); if (f) f.focus(); }
+function meRedraw(focusId) { meRender(); const f = focusId && document.getElementById(focusId); if (f) f.focus(); }
 document.addEventListener("click", e => {
-  if (current !== "local-menu" || !meDraft) return;
+  if (!ME_SCREENS.includes(current) || !meDraft) return;
   if (e.target.closest("[data-me-gadd]")) { meRead(); if (meDraft.opts.length >= ME_MAX_GROUPS) return; meDraft.opts.push({ name: "", choices: [{ l: "", p: "" }, { l: "", p: "" }] }); meRedraw(`me-g${meDraft.opts.length - 1}`); return; }
   const gd = e.target.closest("[data-me-gdel]"); if (gd) { meRead(); meDraft.opts.splice(+gd.dataset.meGdel, 1); meRedraw(); return; }
   const ca = e.target.closest("[data-me-cadd]"); if (ca) { meRead(); const g = meDraft.opts[+ca.dataset.meCadd]; if (!g || g.choices.length >= ME_MAX_CHOICES) return; g.choices.push({ l: "", p: "" }); meRedraw(`me-g${ca.dataset.meCadd}c${g.choices.length - 1}`); return; }
@@ -6165,12 +6172,12 @@ function meMenuCard(l, st) {
   </div>`;
 }
 document.addEventListener("click", e => {
-  if (current !== "local-menu") return;
-  const ed = e.target.closest("[data-me-edit]"); if (ed) { meDraft = null; meEdit = ed.dataset.meEdit; meCat = null; renderLocalMenu(); const i = document.getElementById("me-name"); if (i) i.focus(); return; }
-  const nw = e.target.closest("[data-me-new]"); if (nw) { meDraft = null; meEdit = "new:" + nw.dataset.meNew; meCat = null; renderLocalMenu(); const i = document.getElementById("me-name"); if (i) i.focus(); return; }
-  if (e.target.closest("[data-me-cancel]")) { meDraft = null; meEdit = null; meCat = null; renderLocalMenu(); return; }
-  const cr = e.target.closest("[data-me-catren]"); if (cr) { meCat = +cr.dataset.meCatren; meEdit = null; renderLocalMenu(); const i = document.getElementById("me-catname"); if (i) i.select(); return; }
-  if (e.target.closest("[data-me-catnew]")) { meCat = "new"; meEdit = null; renderLocalMenu(); const i = document.getElementById("me-catname"); if (i) i.focus(); return; }
+  if (!ME_SCREENS.includes(current)) return;
+  const ed = e.target.closest("[data-me-edit]"); if (ed) { meDraft = null; meEdit = ed.dataset.meEdit; meCat = null; meRender(); const i = document.getElementById("me-name"); if (i) i.focus(); return; }
+  const nw = e.target.closest("[data-me-new]"); if (nw) { meDraft = null; meEdit = "new:" + nw.dataset.meNew; meCat = null; meRender(); const i = document.getElementById("me-name"); if (i) i.focus(); return; }
+  if (e.target.closest("[data-me-cancel]")) { meDraft = null; meEdit = null; meCat = null; meRender(); return; }
+  const cr = e.target.closest("[data-me-catren]"); if (cr) { meCat = +cr.dataset.meCatren; meEdit = null; meRender(); const i = document.getElementById("me-catname"); if (i) i.select(); return; }
+  if (e.target.closest("[data-me-catnew]")) { meCat = "new"; meEdit = null; meRender(); const i = document.getElementById("me-catname"); if (i) i.focus(); return; }
   const mv = e.target.closest("[data-me-move]");
   if (mv) {
     const [id, d] = mv.dataset.meMove.split("|"), cats = meCats(), p = meFindItem(cats, id); if (!p) return;
@@ -6195,14 +6202,14 @@ document.addEventListener("click", e => {
   }
   if (e.target.closest("[data-me-reset]")) {
     askConfirm({ icon: "rotate-ccw", title: "¿Volver al menú de ejemplo?", text: "Se pierden los productos, precios y categorías que cambiaste.", ok: "Volver al ejemplo", cancel: "Cancelar", danger: true,
-      onOk: () => { const l = myLocal(), st = lstate(l.id); delete st.menu; saveLocalState(); applyMenus(); meEdit = null; meCat = null; renderLocalMenu(); toast("Tu menú volvió al de ejemplo."); } });
+      onOk: () => { const l = meL(), st = lstate(l.id); delete st.menu; saveLocalState(); if (current === "menus") { try { sbSaveLocal(l.id); } catch (err) {} logAudit("config", `Devolvió el menú de ${l.name} al de ejemplo.`); } applyMenus(); meEdit = null; meCat = null; meRender(); toast("Tu menú volvió al de ejemplo."); } });
   }
 });
 document.addEventListener("submit", e => {
   const f = e.target.closest("[data-me-form]");
   if (f) {
     e.preventDefault();
-    const l = myLocal(), cats = meCats(), key = f.dataset.meForm, err = m => { const p = document.getElementById("meErr"); p.textContent = m; p.hidden = false; };
+    const l = meL(), cats = meCats(), key = f.dataset.meForm, err = m => { const p = document.getElementById("meErr"); p.textContent = m; p.hidden = false; };
     const name = meTxt(document.getElementById("me-name").value, 60), desc = meTxt(document.getElementById("me-desc").value, 140);
     const price = Math.round(parseAmt(document.getElementById("me-price").value) * 100) / 100, to = +document.getElementById("me-cat").value;
     const icon = document.getElementById("me-icon").value, tag = document.getElementById("me-tag").value;
@@ -6244,6 +6251,33 @@ document.addEventListener("submit", e => {
     if (k === "new") { if (cats.length >= 30) { toast("Puedes tener hasta 30 categorías."); return; } cats.push({ name, items: [] }); meSave(cats, `Creaste la categoría ${name}. Agrégale productos.`); }
     else { cats[+k].name = name; meSave(cats, `La categoría ahora se llama ${name}.`); }
   }
+});
+
+
+/* ---------- Dueño · Menús de todos los locales (#menus) ----------
+   El dueño elige un local (mnLocal, recordado en sessionStorage "nexo-mnlocal") y lo edita con el mismo editor del
+   comercio (meMenuCard, meL() devuelve ese local). Con cuenta real guarda la fila del local con sbSaveLocal(id) y
+   deja auditoría (tipo config). Los cambios llegan en vivo al comercio y a los estudiantes. */
+try { mnLocal = sessionStorage.getItem("nexo-mnlocal"); } catch (err) {}
+function renderMenus() {
+  if (!localById(mnLocal)) mnLocal = LOCALES[0].id;
+  const l = localById(mnLocal), st = lstate(l.id);
+  document.getElementById("mnPicker").innerHTML = LOCALES.map(x => `<button class="mn-chip${x.id === l.id ? " on" : ""}" type="button" data-mn-local="${x.id}" aria-pressed="${x.id === l.id}">${foodArt(x.id, "xs")}<span class="grow"><b>${esc(x.name)}</b><span class="tiny">${localState[x.id] && localState[x.id].menu ? "Menú propio" : "Menú de ejemplo"}${isPaused(x.id) ? " · En pausa" : ""}</span></span></button>`).join("");
+  const n = itemsOf(l).length, off = (st.soldout || []).length;
+  document.getElementById("mnBody").innerHTML = meMenuCard(l, st) + `<div class="stack">
+    <div class="card"><div class="row start" style="gap:12px">${foodArt(l.id, "sm")}<div><h2 class="h2">${esc(l.name)}</h2><p class="small">${esc(l.place)} · ${todayHours(l)}</p></div></div>
+      <div class="kv"><span>Productos</span><b>${n}</b></div><div class="kv"><span>Agotados hoy</span><b>${off}</b></div>
+      <div class="kv"><span>Menú</span><b>${st.menu ? "Editado" : "De ejemplo"}</b></div>
+      <span class="pill ${isPaused(l.id) ? "warn" : openState(l).cls}">${isPaused(l.id) ? "Pedidos en pausa" : openState(l).label}</span></div>
+    <div class="notice"><i data-lucide="info"></i><p>Estás editando el menú de ${esc(l.name)} como dueño. El comercio y los estudiantes ven los cambios al instante, y quedan en el registro de cambios.</p></div>
+  </div>`;
+  icons();
+}
+document.addEventListener("click", e => {
+  const c = e.target.closest("[data-mn-local]"); if (!c || current !== "menus") return;
+  mnLocal = c.dataset.mnLocal; meEdit = null; meCat = null; meDraft = null;
+  try { sessionStorage.setItem("nexo-mnlocal", mnLocal); } catch (err) {}
+  renderMenus();
 });
 
 
