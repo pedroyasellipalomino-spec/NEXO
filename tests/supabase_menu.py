@@ -37,11 +37,15 @@ async def main():
         pm = await login(cm, "e12.granier@nexo-pruebas.dev")
         await pm.evaluate("go('local-menu')"); await pm.wait_for_timeout(800)
         first = await pm.evaluate("localById('granier').cats[0].items[0].id")
-        await pm.click(f"[data-me-edit='{first}']"); await pm.fill("#me-price", "9,99"); await pm.click("[data-me-form] button[type=submit]"); await pm.wait_for_timeout(1500)
+        await pm.click(f"[data-me-edit='{first}']"); await pm.fill("#me-price", "9,99")
+        await pm.click("[data-me-gadd]"); await pm.fill("#me-g0", "Relleno"); await pm.fill("#me-g0c0", "Jamón"); await pm.fill("#me-g0c1", "Queso"); await pm.fill("#me-g0p1", "0,75")
+        await pm.click("[data-me-form] button[type=submit]"); await pm.wait_for_timeout(1500)
         await pm.click("[data-me-new='0']"); await pm.fill("#me-name", "Pan de jamón de prueba"); await pm.fill("#me-price", "6,50"); await pm.click("[data-me-form] button[type=submit]"); await pm.wait_for_timeout(3000)
         row = sql(f"select menu from public.local_state where local_id = '{LOC}'")[0]["menu"] or []
         names = [i["name"] for c in row for i in c["items"]]; prices = {i["id"]: i["price"] for c in row for i in c["items"]}
         check("el menú editado queda en el servidor", "Pan de jamón de prueba" in names and prices.get(first) == 9.99, str(names)[:200])
+        opts = [i.get("opts") for c in row for i in c["items"] if i["id"] == first][0] or []
+        check("las opciones con recargo quedan en el servidor", opts and opts[-1]["name"] == "Relleno" and opts[-1]["choices"][1]["p"] == 0.75, str(opts)[:200])
         await ps.wait_for_timeout(2500)
         lm = await ps.inner_text("#localMenu")
         check("el estudiante ve el producto nuevo y el precio en vivo", "Pan de jamón de prueba" in lm and "$9,99" in lm, lm[:200])

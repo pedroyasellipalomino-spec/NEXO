@@ -1539,3 +1539,13 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .me-acts .link{display:inline-flex;align-items:center;gap:4px;font-size:13px}
 .me-acts .link svg{width:15px;height:15px}
 @media (max-width:520px){.me-move{display:none}}
+.me-opts{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:var(--r-sm);background:var(--surface);border:1px dashed var(--line)}
+.me-opts > .btn{width:auto;align-self:flex-start}
+.me-group{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:10px;background:var(--bg)}
+.me-choice{display:flex;align-items:center;gap:8px;padding-left:4px}
+.me-choice .dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--line);flex:none}
+.me-plus{width:96px;flex:none}
+.input.sm input{min-width:0}
+.me-group .grow,.me-choice .grow{flex:1;min-width:0;width:auto}
+.me-choice .input,.me-group .input{padding-inline:10px}
+@media (max-width:520px){.me-plus{width:70px}.me-choice{gap:6px;padding-left:0}.me-choice .dot{display:none}.me-opts{padding:10px}.me-group{padding:8px}}

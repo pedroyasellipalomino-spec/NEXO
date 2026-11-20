@@ -2189,7 +2189,9 @@ loadLocalState();
 // Menú editado por el comercio (localState[id].menu) en lugar del de ejemplo (cats0)
 function validMenu(m) {
   return Array.isArray(m) && m.length >= 1 && m.length <= 30 && m.every(c => c && typeof c.name === "string" && Array.isArray(c.items)
-    && c.items.every(it => it && typeof it.id === "string" && typeof it.name === "string" && typeof it.price === "number" && it.price > 0));
+    && c.items.every(it => it && typeof it.id === "string" && typeof it.name === "string" && typeof it.price === "number" && it.price > 0
+      && (it.opts === undefined || (Array.isArray(it.opts) && it.opts.every(g => g && typeof g.name === "string" && Array.isArray(g.choices) && g.choices.length >= 1
+        && g.choices.every(c => c && typeof c.l === "string" && typeof c.p === "number"))))));
 }
 function applyMenus() {
   LOCALES.forEach(l => {
@@ -2420,7 +2422,7 @@ function renderLocal() {
   document.getElementById("localMenu").innerHTML = l.cats.filter(c => c.items.length && (curCat === "Todos" || c.name === curCat)).map(c => `<h2 class="h2">${esc(c.name)}</h2>` + c.items.map(it =>
     `<div class="favwrap">${favBtn(l.id, it)}<button class="card row${isSoldOut(l.id, it.id) ? " soldout" : ""}" type="button" data-open-item="${it.id}" style="text-align:left;flex-direction:row"${isSoldOut(l.id, it.id) ? ` aria-disabled="true"` : ""}>
       ${prodArt(it.id, it.icon, "sm")}
-      <div style="flex:1;min-width:0"><b class="h3">${esc(it.name)}</b><p class="small">${esc(it.desc)}</p><div class="row start" style="gap:4px 8px;margin-top:4px;flex-wrap:wrap"><b style="font-size:17px;font-weight:600">${money(it.price)}</b><span class="bsv inline">${bsOf(it.price)}</span>${isSoldOut(l.id, it.id) ? `<span class="pill neutral">Agotado</span>` : it.tag ? `<span class="pill ok">${it.tag}</span>` : ""}${it.opts ? `<span class="tiny">Con opciones</span>` : ""}</div></div>
+      <div style="flex:1;min-width:0"><b class="h3">${esc(it.name)}</b><p class="small">${esc(it.desc)}</p><div class="row start" style="gap:4px 8px;margin-top:4px;flex-wrap:wrap"><b style="font-size:17px;font-weight:600">${money(it.price)}</b><span class="bsv inline">${bsOf(it.price)}</span>${isSoldOut(l.id, it.id) ? `<span class="pill neutral">Agotado</span>` : it.tag ? `<span class="pill ok">${esc(it.tag)}</span>` : ""}${(it.opts || []).length ? `<span class="tiny">Con opciones</span>` : ""}</div></div>
       <span class="ico"><i data-lucide="chevron-right"></i></span>
     </button></div>`).join("")).join("");
   const cl = cartLocal(), mine = cl && cl.id === l.id && cart.lines.length;
@@ -2452,6 +2454,7 @@ function renderDetalle(note) {
   const l = localById(curLocal), it = curItem && itemById(l, curItem);
   if (!it) { go("local"); return; }
   if (detSel.length !== (it.opts || []).length) detSel = (it.opts || []).map(() => 0);
+  detSel = detSel.map((v, gi) => it.opts[gi].choices[v] ? v : 0); // el comercio pudo cambiar las opciones
   setFrame("detalle", it.name, [l.name, it.name]);
   document.getElementById("detBack").lastChild.textContent = "Volver al menú de " + l.name;
   const other = cartLocal() && cart.local !== l.id && cart.lines.length ? cartLocal() : null;
@@ -2466,7 +2469,7 @@ function renderDetalle(note) {
       <div class="notice" style="background:var(--surface);border:1px solid var(--line);color:var(--muted)"><i data-lucide="info" style="color:var(--brand)"></i><p>Preparado al momento. Si tienes alergias o restricciones alimentarias, consulta con el local antes de comprar.</p></div>
     </div>
     <div class="stack s14">
-      ${it.opts ? `<h2 class="h2" style="font-size:20px">Elige tus opciones</h2>` + it.opts.map((g, gi) => `<div class="card">
+      ${(it.opts || []).length ? `<h2 class="h2" style="font-size:20px">Elige tus opciones</h2>` + it.opts.map((g, gi) => `<div class="card">
         <div><b class="h3">${esc(g.name)}</b><p class="small">${esc(g.note)}</p></div>
         ${g.choices.map((c, ci) => `<button class="opt${detSel[gi] === ci ? " on" : ""}" type="button" data-det-opt="${gi}:${ci}"><span class="dot"></span><span class="grow">${esc(c.l)}</span><span class="small">+${money(c.p)}</span></button>`).join("")}
       </div>`).join("") : ""}
@@ -6077,27 +6080,65 @@ function meSave(cats, msg) {
   const l = myLocal(), st = lstate(l.id), ids = new Set(cats.flatMap(c => c.items.map(i => i.id)));
   st.menu = cats; st.soldout = (st.soldout || []).filter(x => ids.has(x));
   saveLocalState(); applyMenus();
-  meEdit = null; meCat = null; renderLocalMenu(); toast(msg);
+  meDraft = null; meEdit = null; meCat = null; renderLocalMenu(); toast(msg);
 }
 function meFindItem(cats, id) { for (let ci = 0; ci < cats.length; ci++) { const ii = cats[ci].items.findIndex(x => x.id === id); if (ii >= 0) return { ci, ii }; } return null; }
+// Borrador del producto que se está editando (se relee de los campos antes de repintar, así no se pierde lo escrito)
+var meDraft = null;
+const ME_MAX_GROUPS = 5, ME_MAX_CHOICES = 8;
+function meDraftFrom(it, ci) {
+  const v = it || { name: "", desc: "", price: "", icon: (MENU_ICONS[0] || [])[0], tag: "" };
+  return { name: v.name, desc: v.desc || "", price: v.price === "" ? "" : String(v.price).replace(".", ","), cat: ci, icon: v.icon, tag: v.tag || "",
+    opts: JSON.parse(JSON.stringify(it && it.opts || [])).map(g => ({ name: g.name, choices: g.choices.map(c => ({ l: c.l, p: c.p ? String(c.p).replace(".", ",") : "" })) })) };
+}
+function meRead() {
+  if (!meDraft || !document.getElementById("me-name")) return;
+  const v = id => (document.getElementById(id) || {}).value;
+  Object.assign(meDraft, { name: v("me-name"), desc: v("me-desc"), price: v("me-price"), cat: +v("me-cat"), icon: v("me-icon"), tag: v("me-tag") });
+  meDraft.opts.forEach((g, gi) => { g.name = v(`me-g${gi}`) ?? g.name; g.choices.forEach((c, ci) => { c.l = v(`me-g${gi}c${ci}`) ?? c.l; c.p = v(`me-g${gi}p${ci}`) ?? c.p; }); });
+}
+function meOptsHTML(d) {
+  return `<div class="me-opts"><div class="row"><b style="font-size:13px">Opciones para elegir</b><span class="tiny">${d.opts.length}/${ME_MAX_GROUPS}</span></div>
+    <p class="tiny">Ej.: Tamaño (Pequeño, Grande +$0,50) o Salsa (Ajo, Tártara). El estudiante elige una de cada grupo; la primera viene marcada.</p>
+    ${d.opts.map((g, gi) => `<div class="me-group">
+      <div class="row" style="gap:8px"><div class="input sm grow"><input id="me-g${gi}" maxlength="40" value="${esc(g.name)}" placeholder="Nombre del grupo (ej.: Tamaño)" aria-label="Nombre del grupo ${gi + 1}"></div>
+        <button class="icon-btn" type="button" data-me-gdel="${gi}" aria-label="Quitar el grupo ${esc(g.name || gi + 1)}"><i data-lucide="trash-2"></i></button></div>
+      ${g.choices.map((c, ci) => `<div class="me-choice"><span class="dot" aria-hidden="true"></span><div class="input sm grow"><input id="me-g${gi}c${ci}" maxlength="40" value="${esc(c.l)}" placeholder="Opción ${ci + 1}" aria-label="Grupo ${gi + 1}, opción ${ci + 1}"></div>
+        <div class="input sm me-plus"><span style="color:var(--muted)">+$</span><input id="me-g${gi}p${ci}" inputmode="decimal" value="${esc(c.p)}" placeholder="0" aria-label="Recargo de la opción ${ci + 1}"></div>
+        <button class="icon-btn" type="button" data-me-cdel="${gi}|${ci}" aria-label="Quitar la opción ${ci + 1}"${g.choices.length <= 2 ? " disabled" : ""}><i data-lucide="x"></i></button></div>`).join("")}
+      ${g.choices.length < ME_MAX_CHOICES ? `<button class="link b me-add" type="button" data-me-cadd="${gi}"><i data-lucide="plus"></i>Agregar opción</button>` : ""}
+    </div>`).join("")}
+    ${d.opts.length < ME_MAX_GROUPS ? `<button class="btn ghost sm" type="button" data-me-gadd><i data-lucide="list-plus"></i>Agregar grupo de opciones</button>` : ""}
+  </div>`;
+}
 function meItemForm(l, it, ci) {
-  const isNew = !it, v = it || { name: "", desc: "", price: "", icon: (MENU_ICONS[0] || [])[0], tag: "" };
-  const hasIcon = MENU_ICONS.some(x => x[0] === v.icon);
-  return `<form class="me-form" data-me-form="${isNew ? "new:" + ci : esc(it.id)}" novalidate>
-    <b style="font-size:14px">${isNew ? `Nuevo producto en ${esc(l.cats[ci].name)}` : `Editar ${esc(v.name)}`}</b>
+  const isNew = !it, key = isNew ? "new:" + ci : it.id;
+  if (!meDraft || meDraft.key !== key) meDraft = { ...meDraftFrom(it, ci), key };
+  const v = meDraft, hasIcon = MENU_ICONS.some(x => x[0] === v.icon);
+  return `<form class="me-form" data-me-form="${esc(key)}" novalidate>
+    <b style="font-size:14px">${isNew ? `Nuevo producto en ${esc(l.cats[ci].name)}` : `Editar ${esc(it.name)}`}</b>
     <div class="field"><label for="me-name">Nombre</label><div class="input"><input id="me-name" maxlength="60" value="${esc(v.name)}" placeholder="Ej.: Arepa de queso" autocomplete="off"></div></div>
-    <div class="field"><label for="me-desc">Descripción <span class="tiny">(opcional)</span></label><div class="input"><input id="me-desc" maxlength="140" value="${esc(v.desc || "")}" placeholder="Ingredientes, tamaño…" autocomplete="off"></div></div>
+    <div class="field"><label for="me-desc">Descripción <span class="tiny">(opcional)</span></label><div class="input"><input id="me-desc" maxlength="140" value="${esc(v.desc)}" placeholder="Ingredientes, tamaño…" autocomplete="off"></div></div>
     <div class="grid2">
-      <div class="field"><label for="me-price">Precio · USD</label><div class="input"><span style="color:var(--muted)">$</span><input id="me-price" inputmode="decimal" value="${v.price !== "" ? String(v.price).replace(".", ",") : ""}" placeholder="0,00" autocomplete="off"></div></div>
-      <div class="field"><label for="me-cat">Categoría</label><div class="input sel"><select id="me-cat">${l.cats.map((c, i) => `<option value="${i}"${i === ci ? " selected" : ""}>${esc(c.name)}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
+      <div class="field"><label for="me-price">Precio · USD</label><div class="input"><span style="color:var(--muted)">$</span><input id="me-price" inputmode="decimal" value="${esc(v.price)}" placeholder="0,00" autocomplete="off"></div></div>
+      <div class="field"><label for="me-cat">Categoría</label><div class="input sel"><select id="me-cat">${l.cats.map((c, i) => `<option value="${i}"${i === v.cat ? " selected" : ""}>${esc(c.name)}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
       <div class="field"><label for="me-icon">Ícono</label><div class="input sel"><select id="me-icon">${hasIcon ? "" : `<option value="${esc(v.icon)}" selected>Dibujo actual</option>`}${MENU_ICONS.map(([k, t]) => `<option value="${k}"${k === v.icon ? " selected" : ""}>${t}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
-      <div class="field"><label for="me-tag">Etiqueta</label><div class="input sel"><select id="me-tag">${ME_TAGS.map(t => `<option value="${t}"${t === (v.tag || "") ? " selected" : ""}>${t || "Ninguna"}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
+      <div class="field"><label for="me-tag">Etiqueta</label><div class="input sel"><select id="me-tag">${ME_TAGS.map(t => `<option value="${t}"${t === v.tag ? " selected" : ""}>${t || "Ninguna"}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div></div>
     </div>
-    ${it && (it.opts || []).length ? `<p class="tiny">Opciones que se mantienen: ${it.opts.map(g => esc(g.name)).join(", ")}.</p>` : ""}
+    ${meOptsHTML(v)}
     <p class="tiny" id="meErr" role="alert" hidden></p>
     <div class="row me-acts">${isNew ? "" : `<button class="link" type="button" style="color:var(--danger)" data-me-del="${esc(it.id)}"><i data-lucide="trash-2"></i>Eliminar</button>`}<span class="grow"></span><button class="btn ghost sm" type="button" data-me-cancel>Cancelar</button><button class="btn sm" type="submit"><i data-lucide="check"></i>${isNew ? "Agregar" : "Guardar"}</button></div>
   </form>`;
 }
+// Repinta el formulario sin perder lo escrito y devuelve el foco al campo indicado
+function meRedraw(focusId) { renderLocalMenu(); const f = focusId && document.getElementById(focusId); if (f) f.focus(); }
+document.addEventListener("click", e => {
+  if (current !== "local-menu" || !meDraft) return;
+  if (e.target.closest("[data-me-gadd]")) { meRead(); if (meDraft.opts.length >= ME_MAX_GROUPS) return; meDraft.opts.push({ name: "", choices: [{ l: "", p: "" }, { l: "", p: "" }] }); meRedraw(`me-g${meDraft.opts.length - 1}`); return; }
+  const gd = e.target.closest("[data-me-gdel]"); if (gd) { meRead(); meDraft.opts.splice(+gd.dataset.meGdel, 1); meRedraw(); return; }
+  const ca = e.target.closest("[data-me-cadd]"); if (ca) { meRead(); const g = meDraft.opts[+ca.dataset.meCadd]; if (!g || g.choices.length >= ME_MAX_CHOICES) return; g.choices.push({ l: "", p: "" }); meRedraw(`me-g${ca.dataset.meCadd}c${g.choices.length - 1}`); return; }
+  const cd = e.target.closest("[data-me-cdel]"); if (cd) { meRead(); const [gi, ci] = cd.dataset.meCdel.split("|").map(Number), g = meDraft.opts[gi]; if (!g || g.choices.length <= 2) return; g.choices.splice(ci, 1); meRedraw(); }
+});
 function meCatHead(l, c, ci) {
   if (meCat === ci) return `<form class="me-form me-catform" data-me-catform="${ci}" novalidate><div class="field"><label for="me-catname">Nombre de la categoría</label><div class="input"><input id="me-catname" maxlength="40" value="${esc(c.name)}" autocomplete="off"></div></div>
     <div class="row me-acts"><span class="grow"></span><button class="btn ghost sm" type="button" data-me-cancel>Cancelar</button><button class="btn sm" type="submit">Guardar</button></div></form>`;
@@ -6125,9 +6166,9 @@ function meMenuCard(l, st) {
 }
 document.addEventListener("click", e => {
   if (current !== "local-menu") return;
-  const ed = e.target.closest("[data-me-edit]"); if (ed) { meEdit = ed.dataset.meEdit; meCat = null; renderLocalMenu(); const i = document.getElementById("me-name"); if (i) i.focus(); return; }
-  const nw = e.target.closest("[data-me-new]"); if (nw) { meEdit = "new:" + nw.dataset.meNew; meCat = null; renderLocalMenu(); const i = document.getElementById("me-name"); if (i) i.focus(); return; }
-  if (e.target.closest("[data-me-cancel]")) { meEdit = null; meCat = null; renderLocalMenu(); return; }
+  const ed = e.target.closest("[data-me-edit]"); if (ed) { meDraft = null; meEdit = ed.dataset.meEdit; meCat = null; renderLocalMenu(); const i = document.getElementById("me-name"); if (i) i.focus(); return; }
+  const nw = e.target.closest("[data-me-new]"); if (nw) { meDraft = null; meEdit = "new:" + nw.dataset.meNew; meCat = null; renderLocalMenu(); const i = document.getElementById("me-name"); if (i) i.focus(); return; }
+  if (e.target.closest("[data-me-cancel]")) { meDraft = null; meEdit = null; meCat = null; renderLocalMenu(); return; }
   const cr = e.target.closest("[data-me-catren]"); if (cr) { meCat = +cr.dataset.meCatren; meEdit = null; renderLocalMenu(); const i = document.getElementById("me-catname"); if (i) i.select(); return; }
   if (e.target.closest("[data-me-catnew]")) { meCat = "new"; meEdit = null; renderLocalMenu(); const i = document.getElementById("me-catname"); if (i) i.focus(); return; }
   const mv = e.target.closest("[data-me-move]");
@@ -6170,6 +6211,18 @@ document.addEventListener("submit", e => {
     if (!cats[to]) return err("Elige una categoría.");
     const all = cats.flatMap(c => c.items);
     if (all.some(x => x.id !== key && normTxt(x.name) === normTxt(name))) return err("Ya tienes un producto con ese nombre.");
+    meRead();
+    const opts = [];
+    for (const [gi, g] of (meDraft ? meDraft.opts : []).entries()) {
+      const gname = meTxt(g.name, 40), choices = g.choices.map(c => ({ l: meTxt(c.l, 40), p: Math.round(parseAmt(c.p) * 100) / 100 })).filter(c => c.l);
+      if (!gname && !choices.length) continue; // grupo vacío: se ignora
+      if (gname.length < 2) return err(`Escribe el nombre del grupo de opciones ${gi + 1} (ej.: Tamaño).`);
+      if (choices.length < 2) return err(`El grupo ${gname} necesita al menos 2 opciones.`);
+      if (choices.some(c => c.p < 0 || c.p > 100)) return err(`El recargo de ${gname} debe estar entre $0 y $100.`);
+      if (new Set(choices.map(c => normTxt(c.l))).size < choices.length) return err(`El grupo ${gname} tiene opciones repetidas.`);
+      if (opts.some(o => normTxt(o.name) === normTxt(gname))) return err(`Ya tienes un grupo llamado ${gname}.`);
+      opts.push({ name: gname, note: "Elige una", choices });
+    }
     let it;
     if (key.startsWith("new:")) { it = { id: "n" + Date.now().toString(36), name, desc, price, icon }; cats[to].items.push(it); }
     else {
@@ -6178,6 +6231,7 @@ document.addEventListener("submit", e => {
       if (p.ci !== to) { cats[p.ci].items.splice(p.ii, 1); cats[to].items.push(it); }
     }
     if (tag) it.tag = tag; else delete it.tag;
+    if (opts.length) it.opts = opts; else delete it.opts;
     meSave(cats, key.startsWith("new:") ? `Agregaste ${name} a tu menú.` : `Guardaste los cambios de ${name}.`);
     return;
   }
