@@ -1,0 +1,1512 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nexo · Unimet</title>
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0F3D2E">
+<meta name="description" content="Nexo: paga tu cuota, pide comida, reserva canchas y entra al estacionamiento de la Unimet desde un solo lugar.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nexo">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Manrope:wght@700&display=swap">
+<style>
+  /* reset base (antes lo ponía el visor de artifacts) */
+  :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<link rel="stylesheet" href="css/styles.css">
+<script>try{var t=localStorage.getItem("nexo-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+
+<!-- =================================================================
+     PANTALLAS DE ACCESO
+     ================================================================= -->
+
+<!-- 1 · Tutorial -->
+<section class="screen" id="tutorial" hidden>
+  <header class="topbar gutter">
+    <div class="brand"><span class="wordmark"><span aria-hidden="true">nex</span><svg class="wm-o" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" class="wm-ring" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="currentColor" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" class="wm-ring" stroke-width="10"/></svg><span class="sr-only">nexo</span></span></div>
+    <button class="link" type="button" data-go="ayuda">Soporte</button>
+  </header>
+  <main class="t-wrap gutter">
+    <div class="t-left">
+      <div class="t-intro stack">
+        <span class="t-badge"><span class="t-dot"></span>Universidad Metropolitana · Campus Central</span>
+        <div><h1 class="h1 t-h1">Todo tu campus, <span class="grad">en un solo lugar.</span></h1>
+        <p class="lead">Paga tu cuota, pide comida, reserva canchas y entra al estacionamiento sin hacer fila.</p></div>
+      </div>
+      <div class="steps t-feats">
+        <div class="tf t-car"><span class="svt-ic"><i data-lucide="car-front"></i></span><div><b>Estacionamiento</b><span>Tu credencial en el teléfono</span></div></div>
+        <div class="tf t-uni"><span class="svt-ic"><i data-lucide="graduation-cap"></i></span><div><b>Materias</b><span>Paga tu cuota con pronto pago</span></div></div>
+        <div class="tf t-food"><span class="svt-ic"><i data-lucide="utensils"></i></span><div><b>Comida</b><span>Pide y retira sin fila</span></div></div>
+        <div class="tf t-court"><span class="svt-ic"><i data-lucide="dribbble"></i></span><div><b>Canchas</b><span>Reserva tu turno en segundos</span></div></div>
+      </div>
+      <div class="access">
+        <button class="btn" type="button" data-go="login"><i data-lucide="arrow-right"></i>Iniciar sesión</button>
+        <button class="btn ghost" type="button" data-go="registro"><i data-lucide="user-plus"></i>Crear cuenta</button>
+        <p class="small center">Accede con tu correo institucional o tu carnet.</p>
+      </div>
+    </div>
+    <div class="t-video">
+      <div class="tour" id="tour" aria-roledescription="carrusel" aria-label="Así funciona Nexo">
+        <span class="hh-orb o1" aria-hidden="true"></span><span class="hh-orb o2" aria-hidden="true"></span>
+        <p class="tour-tag">ASÍ FUNCIONA NEXO</p>
+        <div class="phone" aria-hidden="true"><span class="phone-notch"></span>
+          <div class="phone-screen">
+            <div class="tslide on" data-ts="0">
+              <div class="m-bar"><span class="emblem sm"><svg class="nexo-mark" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" stroke="#3DBE85" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="#EEF4F0" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" stroke="#3DBE85" stroke-width="10"/></svg></span><b>nexo</b><span class="m-av">AT</span></div>
+              <div class="m-hero"><small>JUEVES, 12 NOV</small><b>Hola, Ana 👋</b><div class="m-stats"><div><span>Cuenta</span><b>$450,00</b></div><div><span>Wallet</span><b>$40,00</b></div></div></div>
+              <p class="m-label">Servicios</p>
+              <div class="m-tiles"><span class="t-car"><span class="svt-ic"><i data-lucide="car-front"></i></span>Parqueo</span><span class="t-uni"><span class="svt-ic"><i data-lucide="graduation-cap"></i></span>Materias</span><span class="t-food"><span class="svt-ic"><i data-lucide="utensils"></i></span>Comida</span><span class="t-court"><span class="svt-ic"><i data-lucide="dribbble"></i></span>Canchas</span></div>
+              <div class="m-tab"><i data-lucide="house"></i><i data-lucide="layout-grid"></i><i data-lucide="receipt-text"></i><i data-lucide="message-circle"></i></div>
+            </div>
+            <div class="tslide" data-ts="1">
+              <p class="m-title">Tu próxima pausa</p>
+              <div class="m-card"><span class="m-ic"><i data-lucide="sandwich"></i></span><div class="grow"><b>Pincho Pan</b><span>Almuerzo del día</span></div><b class="m-price">$8,50</b></div>
+              <div class="m-card"><span class="m-ic"><i data-lucide="coffee"></i></span><div class="grow"><b>La Pausa</b><span>Café guayoyo</span></div><b class="m-price">$1,50</b></div>
+              <div class="m-card"><span class="m-ic"><i data-lucide="fish"></i></span><div class="grow"><b>Molokai</b><span>Poke de salmón</span></div><b class="m-price">$10,00</b></div>
+              <span class="m-btn m-add">Añadir al carrito · $8,50</span>
+              <span class="m-toast"><i data-lucide="check"></i>Añadimos Almuerzo del día</span>
+            </div>
+            <div class="tslide" data-ts="2">
+              <p class="m-title">Paga como prefieras</p>
+              <div class="m-opt on"><i data-lucide="credit-card"></i><span class="grow">Visa ···· 4242</span><span class="m-radio"></span></div>
+              <div class="m-opt"><i data-lucide="smartphone"></i><span class="grow">Pago Móvil</span><span class="m-radio"></span></div>
+              <div class="m-opt"><i data-lucide="landmark"></i><span class="grow">Transferencia</span><span class="m-radio"></span></div>
+              <div class="m-total"><span>Total</span><b>$8,50</b><small>Bs. 7.663,77</small></div>
+              <span class="m-btn">Pagar $8,50</span>
+              <div class="m-done"><span class="okmark"><svg viewBox="0 0 64 64"><circle class="ok-ring" cx="32" cy="32" r="26"/><path class="ok-tick" d="M21 33l7.5 7.5L44 25"/></svg><i></i><i></i><i></i><i></i><i></i><i></i></span><b>¡Pago confirmado!</b><span>Retira con el código 4821</span></div>
+            </div>
+            <div class="tslide" data-ts="3">
+              <p class="m-title">Tu acceso al campus</p>
+              <div class="m-pass"><div class="m-pass-h"><b>nexo</b><span>Plan mensual</span></div><span class="m-lbl">TITULAR</span><b class="m-name">Ana Torres</b>
+                <div class="m-plate"><small>VENEZUELA</small>AB123CD</div><div class="m-cut"></div><div class="m-qr"><canvas data-qr="ACC-AB123CD-TOUR" width="29" height="29"></canvas></div></div>
+              <p class="m-note">Muestra el QR en el lector y entra sin hacer fila</p>
+            </div>
+          </div>
+        </div>
+        <div class="tour-steps" role="tablist" aria-label="Pasos del recorrido">
+          <button type="button" role="tab" class="on" aria-selected="true" data-tour="0"><b>1</b><span>Explora</span><i class="tbar"></i></button>
+          <button type="button" role="tab" aria-selected="false" data-tour="1"><b>2</b><span>Pide</span><i class="tbar"></i></button>
+          <button type="button" role="tab" aria-selected="false" data-tour="2"><b>3</b><span>Paga</span><i class="tbar"></i></button>
+          <button type="button" role="tab" aria-selected="false" data-tour="3"><b>4</b><span>Entra</span><i class="tbar"></i></button>
+        </div>
+        <button class="tour-pp" type="button" data-tour-pp aria-label="Pausar el recorrido"><i data-lucide="pause"></i></button>
+      </div>
+    </div>
+  </main>
+</section>
+
+<!-- 2 · Inicio de sesión -->
+<section class="screen" id="login" hidden>
+  <header class="topbar gutter">
+    <div class="brand"><span class="wordmark"><span aria-hidden="true">nex</span><svg class="wm-o" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" class="wm-ring" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="currentColor" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" class="wm-ring" stroke-width="10"/></svg><span class="sr-only">nexo</span></span></div>
+    <button class="link" type="button" data-go="ayuda">Soporte</button>
+  </header>
+  <main class="auth-wrap gutter">
+    <aside class="campus"><p class="tag">TU CAMPUS, MÁS CERCA</p><h2>Menos filas. Más vida universitaria.</h2>
+      <p>Comida, servicios y pagos en un mismo lugar.</p><p class="place">U. Metropolitana · Campus Central · Caracas</p></aside>
+    <div class="form-col">
+      <button class="link back" type="button" data-go="tutorial"><i data-lucide="arrow-left"></i>Volver al tutorial</button>
+      <div><h1 class="h1">Inicia sesión</h1><p class="lead">Usa tus credenciales institucionales para continuar en Nexo.</p></div>
+      <form class="card" id="loginForm" novalidate>
+        <div class="field"><label for="l-inst">Institución</label><div class="input"><select id="l-inst"><option>U. Metropolitana</option></select><i data-lucide="chevron-down"></i></div></div>
+        <div class="field"><label for="l-mail">Correo institucional o carnet</label><div class="input"><input id="l-mail" name="usuario" type="text" placeholder="nombre@correo.unimet.edu.ve" autocomplete="username"><i data-lucide="mail"></i></div></div>
+        <div class="field"><label for="l-pass">Contraseña</label><div class="input"><input id="l-pass" type="password" placeholder="Tu contraseña" autocomplete="current-password"><button class="eye" type="button" data-eye="l-pass" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div></div>
+        <div class="notice warn" id="loginError" role="alert" hidden><i data-lucide="circle-alert"></i><div><b data-le="title"></b><span data-le="text"></span> <button class="link b" type="button" id="loginToSignup" hidden style="font-size:12px;color:inherit;text-decoration:underline">Crear una cuenta con este correo</button></div></div>
+        <label class="remember" for="l-rem"><input id="l-rem" type="checkbox" checked>Recordar en este dispositivo</label>
+        <button class="link b" type="button" data-go="recuperar">¿Olvidaste tu contraseña?</button>
+        <button class="btn" type="submit"><i data-lucide="arrow-right"></i>Iniciar sesión</button>
+      </form>
+      <p class="center small">¿No tienes cuenta? <button class="link b" type="button" data-go="registro">Crear cuenta</button></p>
+      <p class="center small">¿Te invitaron al equipo de Nexo? <button class="link b" type="button" data-go="invitacion">Activa tu cuenta</button></p>
+      <div class="secure"><i data-lucide="shield-check"></i><p>Tu información se protege con el acceso seguro de tu universidad.</p></div>
+      <button class="link center" type="button" data-go="ayuda">¿No puedes entrar? Contactar a soporte</button>
+    </div>
+  </main>
+</section>
+
+<!-- 3 · Registro (nueva, mismo estilo que el login) -->
+<section class="screen" id="registro" hidden>
+  <header class="topbar gutter">
+    <div class="brand"><span class="wordmark"><span aria-hidden="true">nex</span><svg class="wm-o" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" class="wm-ring" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="currentColor" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" class="wm-ring" stroke-width="10"/></svg><span class="sr-only">nexo</span></span></div>
+    <button class="link" type="button" data-go="ayuda">Soporte</button>
+  </header>
+  <main class="auth-wrap gutter">
+    <aside class="campus"><p class="tag">BIENVENIDA A NEXO</p><h2>Tu campus empieza aquí.</h2>
+      <p>Crea tu cuenta con tus datos institucionales y paga comida, estacionamiento, materias y canchas desde un solo lugar.</p><p class="place">U. Metropolitana · Campus Central · Caracas</p></aside>
+    <div class="form-col">
+      <button class="link back" type="button" data-go="tutorial"><i data-lucide="arrow-left"></i>Volver al tutorial</button>
+      <div><h1 class="h1">Crea tu cuenta</h1><p class="lead">Usa tu correo institucional. Validamos tu carnet con tu universidad.</p></div>
+      <div id="sbCheckMail" hidden></div>
+      <form class="card" id="registerForm" novalidate>
+        <div class="field"><label for="r-name">Nombre completo</label><div class="input"><input id="r-name" name="nombre" type="text" placeholder="Ej.: Ana Torres" autocomplete="name" required><i data-lucide="user"></i></div></div>
+        <div class="field"><label for="r-inst">Institución</label><div class="input"><select id="r-inst"><option>U. Metropolitana</option></select><i data-lucide="chevron-down"></i></div></div>
+        <div class="field"><label for="r-carnet">Carnet</label><div class="input"><input id="r-carnet" name="carnet" type="text" inputmode="numeric" maxlength="11" pattern="[0-9]{5,11}" placeholder="Solo números, sin guiones" autocomplete="off" required data-digits><i data-lucide="id-card"></i></div><p class="tiny" data-hint="r-carnet">Solo números. Después te pediremos una foto del carnet para verificar tu inscripción.</p></div>
+        <div class="field"><label for="r-mail">Correo institucional</label><div class="input"><input id="r-mail" name="correo" type="email" placeholder="nombre@correo.unimet.edu.ve" autocomplete="email" required><i data-lucide="mail"></i></div></div>
+        <div class="field"><label for="r-pass">Contraseña</label><div class="input"><input id="r-pass" name="clave" type="password" minlength="8" placeholder="Crea una contraseña" autocomplete="new-password" required><button class="eye" type="button" data-eye="r-pass" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div>
+          <p class="tiny">Mínimo 8 caracteres, con al menos un número.</p></div>
+        <label class="remember" for="r-terms"><input id="r-terms" type="checkbox" checked>Acepto los términos de uso y el tratamiento de mis datos por la universidad.</label>
+        <div class="notice warn" id="signupError" role="alert" hidden><i data-lucide="circle-alert"></i><div><b data-se="title"></b><span data-se="text"></span> <button class="link b" type="button" data-go="login" style="font-size:12px;color:inherit;text-decoration:underline">Ir a iniciar sesión</button></div></div>
+        <button class="btn" type="submit"><i data-lucide="user-plus"></i>Crear cuenta</button>
+      </form>
+      <p class="center small">¿Ya tienes cuenta? <button class="link b" type="button" data-go="login">Inicia sesión</button></p>
+      <p class="center small">¿Te invitaron al equipo de Nexo? <button class="link b" type="button" data-go="invitacion">Activa tu cuenta</button></p>
+      <div class="secure"><i data-lucide="shield-check"></i><p>Tu información se protege con el acceso seguro de tu universidad.</p></div>
+    </div>
+  </main>
+</section>
+
+<!-- 3a · Activar cuenta del personal invitado (sin carnet) -->
+<section class="screen" id="invitacion" hidden>
+  <header class="topbar gutter">
+    <div class="brand"><span class="wordmark"><span aria-hidden="true">nex</span><svg class="wm-o" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" class="wm-ring" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="currentColor" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" class="wm-ring" stroke-width="10"/></svg><span class="sr-only">nexo</span></span></div>
+    <button class="link" type="button" data-go="ayuda">Soporte</button>
+  </header>
+  <main class="auth-wrap gutter">
+    <aside class="campus"><p class="tag">EQUIPO DE NEXO</p><h2>Ayuda a que el campus funcione.</h2>
+      <p>Las cuentas del equipo no usan carnet: se activan con la invitación que te envió la administración de Nexo.</p><p class="place">U. Metropolitana · Campus Central · Caracas</p></aside>
+    <div class="form-col">
+      <button class="link back" type="button" data-go="login"><i data-lucide="arrow-left"></i>Volver a iniciar sesión</button>
+      <div id="ivBody"></div>
+      <div class="secure"><i data-lucide="shield-check"></i><p>Las invitaciones son personales y vencen a los 7 días.</p></div>
+    </div>
+  </main>
+</section>
+
+<!-- 3c · Recuperar contraseña (código simulado por correo) -->
+<section class="screen" id="recuperar" hidden>
+  <header class="topbar gutter">
+    <div class="brand"><span class="wordmark"><span aria-hidden="true">nex</span><svg class="wm-o" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" class="wm-ring" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="currentColor" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" class="wm-ring" stroke-width="10"/></svg><span class="sr-only">nexo</span></span></div>
+    <button class="link" type="button" data-go="ayuda">Soporte</button>
+  </header>
+  <main class="auth-wrap gutter">
+    <aside class="campus"><p class="tag">RECUPERA TU ACCESO</p><h2>Vuelve a tu campus en un minuto.</h2>
+      <p>Te enviamos un código a tu correo institucional para confirmar que eres tú y creas una contraseña nueva.</p><p class="place">U. Metropolitana · Campus Central · Caracas</p></aside>
+    <div class="form-col">
+      <button class="link back" type="button" data-go="login"><i data-lucide="arrow-left"></i>Volver a iniciar sesión</button>
+      <div id="rpBody"></div>
+      <div class="secure"><i data-lucide="shield-check"></i><p>Nunca te pediremos tu contraseña por correo ni por teléfono.</p></div>
+    </div>
+  </main>
+</section>
+
+<!-- 3b · Ayuda sin iniciar sesión -->
+<section class="screen" id="ayuda" hidden>
+  <header class="topbar gutter">
+    <button class="brand" type="button" data-go="tutorial"><span class="wordmark"><span aria-hidden="true">nex</span><svg class="wm-o" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" class="wm-ring" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="currentColor" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" class="wm-ring" stroke-width="10"/></svg><span class="sr-only">nexo</span></span></button>
+    <button class="link b" type="button" data-go="login">Iniciar sesión</button>
+  </header>
+  <main class="help-wrap gutter">
+    <button class="link back" type="button" data-go-prev><i data-lucide="arrow-left"></i>Volver</button>
+    <div><p class="eyebrow">SOPORTE NEXO</p><h1 class="h1" style="margin-top:10px">¿Necesitas ayuda?</h1><p class="lead">No necesitas una cuenta para escribirnos. Elige la forma que te quede más cómoda.</p></div>
+
+    <div class="help-cols">
+      <div class="stack">
+        <div class="card faq">
+          <h2 class="h2">Preguntas frecuentes</h2>
+          <details><summary>No puedo iniciar sesión<i data-lucide="chevron-down"></i></summary><p>Revisa que uses tu correo institucional y que ya hayas creado tu cuenta en Nexo.</p></details>
+          <details><summary>Olvidé mi contraseña<i data-lucide="chevron-down"></i></summary><p>Usa "¿Olvidaste tu contraseña?" en la pantalla de inicio de sesión: te enviamos un código de 6 dígitos a tu correo institucional y creas una contraseña nueva.</p></details>
+          <details><summary>Mi carnet no es aceptado<i data-lucide="chevron-down"></i></summary><p>Escribe solo los números, sin guiones ni espacios. Puede tener de 5 a 11 dígitos. Al crear la cuenta entras de una vez a comida y canchas; cada trimestre envías una foto de tu carnet y un administrador confirma tu inscripción para activarte el estado de cuenta y el estacionamiento.</p></details>
+        </div>
+
+        <form class="card" id="ayudaForm">
+          <div class="row start"><span class="ico"><i data-lucide="ticket"></i></span><div><h2 class="h2">Crear un ticket</h2><p class="small">Te respondemos por correo en menos de 24 horas hábiles.</p></div></div>
+          <div class="field"><label for="ay-name">Nombre</label><div class="input"><input id="ay-name" name="nombre" type="text" placeholder="Ej.: Ana Torres" autocomplete="name" required><i data-lucide="user"></i></div></div>
+          <div class="field"><label for="ay-mail">Correo para responderte</label><div class="input"><input id="ay-mail" name="correo" type="email" placeholder="nombre@correo.com" autocomplete="email" required><i data-lucide="mail"></i></div></div>
+          <div class="field"><label for="ay-msg">¿Qué pasó?</label><div class="input" style="padding:12px 13px"><textarea id="ay-msg" name="mensaje" rows="4" placeholder="Cuéntanos el problema con el mayor detalle posible" required></textarea></div></div>
+          <button class="btn" type="submit"><i data-lucide="send"></i>Enviar ticket</button>
+        </form>
+      </div>
+
+      <div class="stack">
+        <div class="card dark">
+          <div class="row start" style="align-items:flex-start"><i data-lucide="messages-square" style="font-size:24px;color:var(--mint)"></i>
+            <div><h2 class="h2">Escríbenos directo</h2><p class="muted small">Si prefieres no crear un ticket, contáctanos por aquí.</p></div></div>
+          <div class="contact-row"><span class="ico"><i data-lucide="mail"></i></span><div class="grow"><b>CORREO</b><span>soporte@[dominio]</span></div><button class="copybtn" type="button" data-copy="soporte@[dominio]" data-copy-label="Correo copiado"><i data-lucide="copy"></i>Copiar</button></div>
+          <div class="contact-row"><span class="ico"><i data-lucide="message-circle"></i></span><div class="grow"><b>WHATSAPP</b><span>+58 [000-000-0000]</span></div><button class="copybtn" type="button" data-copy="+58 [000-000-0000]" data-copy-label="Número copiado"><i data-lucide="copy"></i>Copiar</button></div>
+          <div class="contact-row"><span class="ico"><i data-lucide="clock"></i></span><div class="grow"><b>HORARIO</b><span>Lun–vie · 8:00 a 18:00</span></div></div>
+        </div>
+        <div class="notice"><i data-lucide="shield-check"></i><p>Para ayudarte más rápido, incluye tu correo institucional y una captura del problema.</p></div>
+        <div class="card">
+          <h3 class="h3">¿Ya tienes cuenta?</h3>
+          <p class="small" style="font-size:13px">Inicia sesión para ver tus solicitudes y su estado en el centro de ayuda.</p>
+          <button class="btn ghost" type="button" data-go="login"><i data-lucide="arrow-right"></i>Iniciar sesión</button>
+          <button class="link b center" type="button" data-go="registro">Crear cuenta</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</section>
+
+<!-- =================================================================
+     PANTALLAS INTERNAS (el marco se agrega con JS: data-title, data-back, data-tab)
+     ================================================================= -->
+
+<!-- 4 · Inicio -->
+<section class="screen app" id="inicio" data-title="Inicio" data-tab="inicio" data-crumb="Inicio" hidden>
+  <div class="hero-home">
+    <span class="hh-orb o1" aria-hidden="true"></span><span class="hh-orb o2" aria-hidden="true"></span><span class="hh-orb o3" aria-hidden="true"></span>
+    <div class="hh-top">
+      <div><p class="hh-date" data-sim-date>Jueves, 12 nov 2026</p><h1 class="h1">Hola, <span data-user="first">Ana</span> <span class="wave" aria-hidden="true">👋</span></h1><p class="lead">Todo tu campus, en un solo lugar.</p></div>
+      <span class="pill hh-bcv" data-bcv-pill title="Tasa oficial del Banco Central de Venezuela">Dólar BCV · Bs. 915,74</span>
+    </div>
+    <div class="hh-stats" id="homeStats"></div>
+  </div>
+  <div class="inst-banner" id="installBanner" hidden></div>
+  <div class="homenow" id="homeNow" aria-live="polite" hidden></div>
+  <div class="cols">
+    <div class="stack">
+      <div class="stack s14">
+        <div class="row"><h2 class="sec">Servicios</h2><button class="link b" type="button" data-go="servicios" style="font-size:12px">Ver todos</button></div>
+        <div class="svc-tiles">
+          <button class="svt t-car" type="button" data-go="estacionamiento"><span class="svt-ic"><i data-lucide="car-front"></i></span><b>Estacionamiento</b><span>Planes desde $2,00</span></button>
+          <button class="svt t-uni" type="button" data-go="materias"><span class="svt-ic"><i data-lucide="graduation-cap"></i></span><b>Materias</b><span>Paga tu cuota</span></button>
+          <button class="svt t-food" type="button" data-go="comida"><span class="svt-ic"><i data-lucide="utensils"></i></span><b>Comida</b><span>Pide y retira</span></button>
+          <button class="svt t-court" type="button" data-go="reserva"><span class="svt-ic"><i data-lucide="dribbble"></i></span><b>Canchas</b><span>Reserva tu turno</span></button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row"><h2 class="sec">Últimos movimientos</h2><button class="link b" type="button" data-go="actividad">Ver todos</button></div>
+        <div class="stack s14" style="gap:14px" data-demo>
+        <div class="move"><span class="ico"><i data-lucide="car-front"></i></span><div class="info"><b>Plan mensual</b><span>Estacionamiento · 02 nov</span></div><span class="amt">−$28,00</span></div>
+        <div class="move"><span class="ico"><i data-lucide="utensils"></i></span><div class="info"><b>Almuerzo del día</b><span>Feria Central · 01 nov</span></div><span class="amt">−$8,50</span></div>
+        <div class="move"><span class="ico"><i data-lucide="dribbble"></i></span><div class="info"><b>Cancha de tenis</b><span>Reembolso · 30 oct</span></div><span class="amt pos">+$12,60</span></div>
+        </div>
+        <p class="small" data-new>Aún no tienes movimientos. Cuando pagues algo en Nexo, lo verás aquí.</p>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card spend" id="homeSpend"></div>
+      <div class="card">
+        <h3 class="h3" style="font-size:14px">¿Necesitas una mano?</h3>
+        <p class="small">Revisa tus solicitudes o contacta a soporte desde un solo lugar.</p>
+        <button class="btn ghost" type="button" data-go="soporte"><i data-lucide="message-circle"></i>Ir a soporte</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4b · Servicios del campus -->
+<section class="screen app" id="servicios" data-title="Servicios" data-back="inicio" data-tab="servicios" data-crumb="Servicios" hidden>
+  <div class="row">
+    <div><h1 class="h1">¿Qué quieres hacer hoy?</h1><p class="lead">Paga, reserva y retira sin filas en el Campus Central.</p></div>
+    <span class="pill neutral only-wide">4 servicios disponibles</span>
+  </div>
+  <div class="input" style="max-width:560px"><i data-lucide="search"></i><input id="s-search" aria-label="Buscar un servicio" type="search" placeholder="Buscar un servicio"></div>
+  <div class="cols">
+    <div class="svc-grid">
+      <div class="card svc">
+        <div class="head"><span class="ico lg"><i data-lucide="utensils"></i></span><span class="pill ok">7 abiertos ahora</span></div>
+        <div><h2 class="h3">Comida y kioscos</h2><p class="fact">10 locales en la Feria Central y 3 kioscos · Retiro en 5–20 min</p></div>
+        <button class="btn" type="button" data-go="comida"><i data-lucide="arrow-right"></i>Ver locales</button>
+        <div class="links"><button class="link b" type="button" data-go="detalle">Almuerzo del día · $8,50</button><button class="link b" type="button" data-go="carrito" data-demo>Mi carrito</button></div>
+      </div>
+      <div class="card svc">
+        <div class="head"><span class="ico lg"><i data-lucide="car-front"></i></span><span class="pill ok" data-plan="on">Plan <span data-planv="lname">mensual</span> activo</span><span class="pill neutral" data-plan="off">Sin plan</span></div>
+        <div><h2 class="h3">Estacionamiento</h2><p class="fact" data-plan="on"><span data-veh="name">Toyota Yaris</span> · <span data-veh="plate">AB123CD</span> · Válido hasta <span data-planv="end">01 dic 2026</span></p><p class="fact" data-plan="off">Planes desde $2,00 por día · Paga con tu wallet Nexo</p></div>
+        <button class="btn" type="button" data-go="estacionamiento"><i data-lucide="arrow-right"></i>Ir a estacionamiento</button>
+        <div class="links"><button class="link b" type="button" data-go="acceso" data-plan="on">Mi credencial</button><button class="link b" type="button" data-go="planes" data-plan="off">Ver planes</button><button class="link b" type="button" data-go="recarga">Wallet · <span data-wallet>$40,00</span></button></div>
+      </div>
+      <div class="card svc">
+        <div class="head"><span class="ico lg"><i data-lucide="graduation-cap"></i></span><span class="pill warn" data-debt="pill">Deuda $320,00</span></div>
+        <div><h2 class="h3">Materias y pagos</h2><p class="fact" data-debt="fact">3 materias · Trimestre sep–nov 2026 · Próxima cuota vence el 20 nov 2026</p></div>
+        <button class="btn" type="button" data-go="materias"><i data-lucide="arrow-right"></i>Ver estado de cuenta</button>
+        <div class="links"><button class="link b" type="button" data-go="caja">Pagar ahora</button><button class="link b" type="button" data-go="caja">Pagar en caja</button></div>
+      </div>
+      <div class="card svc">
+        <div class="head"><span class="ico lg"><i data-lucide="dribbble"></i></span><span class="pill neutral">6 deportes</span></div>
+        <div><h2 class="h3">Canchas</h2><p class="fact">Fútbol, béisbol, tenis, pádel, baloncesto y voleibol · Desde $10,00 la hora</p></div>
+        <button class="btn" type="button" data-go="reserva"><i data-lucide="arrow-right"></i>Reservar cancha</button>
+        <div class="links" data-demo><button class="link b" type="button" data-go="qr">Mi reserva · Jue 18:00</button></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card" id="pendCard">
+        <h3 class="h2">Pendientes</h3>
+        <p class="small" data-pend-empty hidden>No tienes pendientes. Te avisaremos cuando se emita tu próxima factura.</p>
+        <button class="quick" type="button" data-go="caja" data-debt-show="unpaid"><span class="ico"><i data-lucide="graduation-cap"></i></span><div class="grow"><b data-debt="nextlabel">Cuota de noviembre</b><span data-debt="nextline">$160,00 · Vence el 20 nov 2026</span></div><span class="pill warn">Pendiente</span></button>
+        <button class="quick" type="button" data-go="soporte" data-demo><span class="ico"><i data-lucide="message-circle"></i></span><div class="grow"><b>Cobro duplicado de almuerzo</b><span>Solicitud TK-1048</span></div><span class="pill warn">En revisión</span></button>
+      </div>
+      <div class="card">
+        <h3 class="h2">Accesos rápidos</h3>
+        <button class="quick" type="button" data-go="acceso" data-plan="on"><span class="ico"><i data-lucide="qr-code"></i></span><div class="grow"><b>Credencial de estacionamiento</b><span>Muéstrala en el acceso vehicular</span></div><i data-lucide="chevron-right"></i></button>
+        <button class="quick" type="button" data-go="actividad"><span class="ico"><i data-lucide="receipt-text"></i></span><div class="grow"><b>Facturas y comprobantes</b><span>Historial de todos tus pagos</span></div><i data-lucide="chevron-right"></i></button>
+        <button class="quick" type="button" data-go="materias"><span class="ico"><i data-lucide="wallet"></i></span><div class="grow"><b>Estado de cuenta</b><span>Saldo y cuotas del trimestre</span></div><i data-lucide="chevron-right"></i></button>
+        <button class="quick" type="button" data-go="soporte"><span class="ico"><i data-lucide="life-buoy"></i></span><div class="grow"><b>Centro de ayuda</b><span>Lun–vie · 8:00 a 18:00</span></div><i data-lucide="chevron-right"></i></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · Comida y kioscos -->
+<section class="screen app" id="comida" data-title="Comida y kioscos" data-back="servicios" data-tab="servicios" data-crumb="Servicios  /  Comida y kioscos" hidden>
+  <div><h1 class="h1">Tu próxima pausa</h1><p class="lead">Compra desde aquí y retira en el campus.</p></div>
+  <div class="input" style="max-width:560px"><i data-lucide="search"></i><input id="c-search" aria-label="Buscar comida o local" type="search" placeholder="Buscar comida o local"><button class="ffbtn" type="button" id="ffToggle" aria-expanded="false" aria-controls="foodFilters" aria-label="Filtros"><i data-lucide="sliders-horizontal"></i><span class="nbadge" id="ffCount" hidden></span></button></div>
+  <div class="card ffpanel" id="foodFilters" hidden></div>
+  <div class="chips" id="ffActive" hidden></div>
+  <div class="chips" data-chips data-filter="comida"><button class="pill ok" type="button" data-show="all" data-ffn="all">Todos · 7</button><button class="pill neutral" type="button" data-show="local" data-ffn="local">Locales de comida · 4</button><button class="pill neutral" type="button" data-show="kiosco" data-ffn="kiosco">Kioscos · 3</button></div>
+  <div class="again-grid" id="foodAgain" hidden></div>
+  <div class="cols">
+    <div class="stack">
+      <div class="stack s14" data-group="local">
+        <div class="row"><h2 class="sec" style="font-weight:600">Locales de comida</h2><span class="small" id="foodLocalCount">Feria Central</span></div>
+        <div class="svc-grid" id="foodLocales"></div>
+      </div>
+      <div class="stack s14" data-group="kiosco">
+        <div class="row"><h2 class="sec" style="font-weight:600">Kioscos</h2><span class="small" id="foodKioscoCount">Campus Central</span></div>
+        <div class="svc-grid" id="foodKioscos"></div>
+      </div>
+      <p class="nempty" id="foodEmpty" hidden>No encontramos productos ni locales con esa búsqueda.</p>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <i data-lucide="map-pin" style="color:var(--brand);font-size:22px"></i>
+        <h3 class="sec" style="font-weight:600">Encuéntranos en la Feria Central</h3>
+        <p class="small" style="font-size:13px">Campus Central · Planta baja. Selecciona un local, elige tu comida y retira directamente en su mostrador.</p>
+        <p style="color:var(--brand);font-weight:600;font-size:13px">Solo retiro · Sin cargos extra</p>
+      </div>
+      <div class="stack s14" id="foodOrders" hidden></div>
+      <div class="card" id="foodCartCard" hidden></div>
+      <p class="small">Los horarios y tiempos de retiro corresponden a cada local.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · Menú del local (se genera desde LOCALES en app.js) -->
+<section class="screen app" id="local" data-title="Menú" data-back="comida" data-tab="servicios" data-crumb="Comida y kioscos  /  Menú" hidden>
+  <button class="link back" type="button" data-go="comida"><i data-lucide="arrow-left"></i>Volver a comida y kioscos</button>
+  <div id="localHead"></div>
+  <div class="chips" id="localChips"></div>
+  <div class="cols">
+    <div class="stack s14" id="localMenu"></div>
+    <div class="stack" id="localSide"></div>
+  </div>
+</section>
+
+<!-- 7 · Detalle del producto -->
+<section class="screen app" id="detalle" data-title="Detalle del producto" data-back="local" data-tab="servicios" data-crumb="Comida y kioscos  /  Producto" hidden>
+  <button class="link back" type="button" data-go="local" id="detBack"><i data-lucide="arrow-left"></i>Volver al menú</button>
+  <div class="cols even" id="detBody"></div>
+</section>
+
+<!-- 8 · Carrito y pago -->
+<section class="screen app" id="carrito" data-title="Carrito y pago" data-back="local" data-tab="servicios" data-crumb="Comida y kioscos  /  Carrito y pago" hidden>
+  <button class="link back" type="button" data-go="local" id="cartBack"><i data-lucide="arrow-left"></i>Volver al menú</button>
+  <div><h1 class="h1">Tu pedido, casi listo</h1><p class="lead">Revisa tus productos, el retiro y tu método de pago.</p></div>
+  <p class="small" style="font-weight:600"><span style="color:var(--brand)">1. Carrito y pago</span> &nbsp;›&nbsp; 2. Revisión &nbsp;›&nbsp; 3. Listo</p>
+  <div class="cols" id="cartBody"></div>
+</section>
+
+<!-- 8b · Seguimiento del pedido (preparación → listo → retirado) -->
+<section class="screen app" id="pedido" data-title="Tu pedido" data-back="comida" data-tab="servicios" data-crumb="Comida y kioscos  /  Tu pedido" hidden>
+  <button class="link back" type="button" data-go="comida"><i data-lucide="arrow-left"></i>Volver a comida y kioscos</button>
+  <div class="cols" id="pdBody"></div>
+</section>
+
+<!-- 9 · Cargar comprobante -->
+<section class="screen app" id="comprobante" data-title="Comprobante de pago" data-back="carrito" data-tab="servicios" data-crumb="Carrito  /  Comprobante" hidden>
+  <div><h1 class="h1">Completa tu transferencia</h1><p class="lead" id="cpLead">Pedido de Pincho Pan · 03 nov 2026</p></div>
+  <p class="small" style="font-weight:600;color:var(--brand)">1. Carrito &nbsp;›&nbsp; 2. Comprobante &nbsp;›&nbsp; 3. Validación</p>
+  <div class="cols">
+    <div class="stack">
+      <div class="card">
+        <h2 class="h2">1. Datos para transferir</h2>
+        <b style="font-size:13px" data-ord="place">Pincho Pan · Feria Central</b>
+        <div class="field"><label>¿En qué moneda vas a transferir?</label>
+          <div class="chips" id="cpCur" role="radiogroup" aria-label="Moneda de la transferencia"><button class="pill ok" type="button" role="radio" aria-checked="true" data-cp-cur="usd">Dólares (USD)</button><button class="pill neutral" type="button" role="radio" aria-checked="false" data-cp-cur="bs">Bolívares (Bs.)</button></div></div>
+        <div class="kv"><span>Banco receptor</span><b>Mercantil · 0105</b></div>
+        <p class="small" data-cp="acctype">Cuenta corriente en divisas (USD)</p>
+        <div class="copy"><span class="mono" data-cp="acc">0105 0000 00 0000000000</span><button class="link" type="button" aria-label="Copiar número de cuenta" data-cp-copyacc><i data-lucide="copy"></i></button></div>
+        <div class="kv"><span>RIF</span><b>J-00000000-2</b></div>
+        <p class="tiny">Datos bancarios ilustrativos. Verifica la cuenta y la moneda con el comercio antes de transferir.</p>
+        <div class="kv total"><span>Importe a transferir</span><b data-cp="expect">$8,50</b></div>
+        <p class="tiny" data-cp="ratenote"></p>
+        <p class="tiny">Incluye tu carnet y el pedido <span data-ord="num">PP-261103-0186</span> en el concepto.</p>
+      </div>
+      <form class="card" id="cpForm" novalidate>
+        <div><h2 class="h2">2. Datos de tu transferencia</h2><p class="small" style="font-size:13px">Escríbelos tal como aparecen en el comprobante de tu banco.</p></div>
+        <div class="grid2">
+          <div class="field"><label for="cp-f">Fecha de la transferencia</label><div class="input sel"><select id="cp-f" data-recent-days="7"></select><i data-lucide="chevron-down"></i></div></div>
+          <div class="field"><label for="cp-b">Banco de origen</label><div class="input sel"><select id="cp-b"><option value="">Elige tu banco</option></select><i data-lucide="chevron-down"></i></div></div>
+          <div class="field"><label for="cp-r">Número de referencia</label><div class="input"><input id="cp-r" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="Ej.: 0031847265"></div></div>
+          <div class="field"><label for="cp-m" data-cp="mlabel">Monto transferido · USD</label><div class="input"><span style="color:var(--muted)" data-cp="mprefix">$</span><input id="cp-m" inputmode="decimal" autocomplete="off" placeholder="0,00"></div><p class="tiny" data-cp="mhint"></p></div>
+        </div>
+        <div class="field"><label class="upload" for="cp-file" tabindex="0" role="button" aria-describedby="cp-file-help"><i data-lucide="upload"></i>Adjuntar comprobante<span class="tiny" style="font-weight:400" id="cp-file-help">PDF, JPG o PNG · Máximo 5 MB</span></label>
+          <input id="cp-file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" hidden>
+          <div class="file" id="cpFileChip" hidden><i data-lucide="file-text"></i><div class="grow"><b style="font-size:13px" data-cp="fname"></b><p class="tiny" data-cp="fsize"></p></div><button class="link" type="button" aria-label="Quitar archivo" data-cp-rmfile><i data-lucide="x" style="color:var(--muted)"></i></button></div></div>
+        <div class="notice warn" id="cpError" role="alert" hidden><i data-lucide="circle-alert"></i><p data-cp="err"></p></div>
+        <button class="btn" type="submit"><i data-lucide="upload"></i>Enviar a revisión · <span data-cp="cta">$8,50</span></button>
+        <p class="tiny">Enviar el comprobante no confirma el pago ni emite una factura.</p>
+      </form>
+    </div>
+    <div class="stack">
+      <div class="card" id="cpOrder"></div>
+      <div class="card">
+        <h3 class="h2">Después de enviar</h3><span class="pill warn">Pendiente de validación</span>
+        <p class="small" style="font-size:13px">El comercio revisará el monto, la referencia y tu archivo. Consulta el estado en Actividad.</p>
+        <div class="sep"></div>
+        <b style="font-size:13px">Tu pedido aún no está confirmado</b>
+        <p class="small">No hay factura definitiva ni QR de retiro hasta aprobar el pago. Te avisaremos cuando termine la revisión.</p>
+      </div>
+      <div class="notice"><i data-lucide="shield-check"></i><div><b>¿Tu comprobante no carga?</b>Verifica el formato y tamaño o entra a <button class="link b" type="button" data-go="soporte" style="font-size:12px">Soporte</button> para recibir ayuda.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 · Factura confirmada -->
+<section class="screen app" id="factura" data-title="Factura de comida" data-back="actividad" data-tab="actividad" data-crumb="Actividad  /  Factura" hidden>
+  <div><h1 class="h1">Tu pago está confirmado</h1><p class="lead" id="fcLead">La transferencia fue aprobada. Aquí está el detalle de tu pedido.</p></div>
+  <div class="notice" id="fcNotice"><i data-lucide="shield-check"></i><div><b>Confirmado · Después de la aprobación</b>El comercio validó el comprobante del pedido PP-261103-0186. Este es el estado posterior a la revisión.</div></div>
+  <div class="cols">
+    <div class="card" id="fcCard">
+      <h2 class="h2">Factura de comida</h2>
+      <div class="row start"><span class="ico"><i data-lucide="store"></i></span><div><b style="font-size:17px;font-weight:600">Pincho Pan</b><p class="small" style="font-size:13px">Feria Central · Campus Central</p></div></div>
+      <span class="pill ok">Pagado · Confirmado</span>
+      <div class="sep"></div>
+      <b style="font-size:13px"><span data-user="full">Ana Torres</span> · <span data-user="carnet">20241010186</span></b>
+      <div class="kv"><span>Fecha de emisión</span><b>03 nov 2026 · 12:16</b></div>
+      <p class="small">Factura FPP-2026-1103-0186</p><p class="small" style="margin-top:-10px">Pedido PP-261103-0186</p>
+      <div class="sep"></div>
+      <div class="row start" style="align-items:flex-start"><div class="thumb sm"><i data-lucide="utensils"></i></div><div><b style="font-size:13px">Almuerzo del día</b><p class="small">Pollo · Arroz y ensalada</p><p class="small">Limonada · Cantidad 1</p></div></div>
+      <div class="sep"></div>
+      <div class="kv"><span>Subtotal</span><b>$8,50</b></div><div class="kv"><span>Cargos adicionales</span><b>$0,00</b></div><div class="kv"><span>Retiro en el local</span><b>Gratis</b></div>
+      <div class="sep"></div><div class="kv total"><span>Total</span><b>$8,50</b></div>
+      <p class="tiny">Precios finales en USD · Sin cargos extra</p>
+      <div class="sep"></div>
+      <div class="kv"><span>Método de pago</span><b>Transferencia</b></div><div class="kv"><span>Referencia</span><b>0031847265</b></div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <div><h3 class="h2">Guarda tu factura</h3><p class="small" style="font-size:13px">Disponible también en tu historial de Actividad.</p></div>
+        <button class="btn" type="button" data-toast="La descarga no está disponible en el prototipo."><i data-lucide="download"></i>Descargar factura</button>
+        <button class="btn ghost" type="button" data-go="local"><i data-lucide="store"></i>Volver al comercio</button>
+      </div>
+      <div class="card" id="fcPickup">
+        <h3 class="h2">Retira en Pincho Pan</h3>
+        <p style="font-size:13px">Feria Central · Planta baja</p>
+        <p class="small" style="font-size:13px">Preparación estimada: 10–15 min desde la confirmación del pago.</p>
+        <p class="small">Consulta el estado de tu pedido antes de acercarte al local.</p>
+        <button class="btn ghost" type="button" data-go="actividad">Ver pedido en Actividad</button>
+      </div>
+      <p class="tiny">Vista de diseño con datos de ejemplo. No representa una transacción real.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 11 · Historial y actividad -->
+<section class="screen app" id="actividad" data-title="Historial y actividad" data-back="inicio" data-tab="actividad" data-crumb="Actividad" hidden>
+  <div><h1 class="h1">Todo lo que has pagado</h1><p class="lead">Tus servicios, facturas y comprobantes en un solo lugar.</p></div>
+  <div class="grid3" style="max-width:560px">
+    <div class="card stat"><b id="stPaid">4</b><span class="tiny">Pagados</span></div>
+    <div class="card stat"><b id="stPend">0</b><span class="tiny">En revisión</span></div>
+    <div class="card stat"><b id="stRef">1</b><span class="tiny">Reembolsado</span></div>
+  </div>
+  <div class="cols">
+    <div class="card">
+      <h2 class="h2">Movimientos · <span id="mvCount">5</span> resultados</h2>
+      <div class="move" data-demo><span class="ico"><i data-lucide="utensils"></i></span><div class="info"><b>Almuerzo del día</b><span>Pincho Pan · Feria Central</span><br><span>03 nov 2026 · 12:16</span></div>
+        <div class="mv-actions"><span class="amt">−$8,50</span><span class="pill ok">Pagado</span><button class="link b" type="button" data-go="factura" style="font-size:12px">Ver factura →</button></div></div>
+      <div class="move" data-demo><span class="ico"><i data-lucide="graduation-cap"></i></span><div class="info"><b>Cuota de octubre</b><span>Universidad · Trimestre sep–nov 2026</span><br><span>18 oct 2026 · 10:30</span></div>
+        <div class="mv-actions"><span class="amt">−$160,00</span><span class="pill ok">Pagado</span><button class="link b" type="button" data-go="materias" style="font-size:12px">Ver estado de cuenta →</button></div></div>
+      <div class="move" data-demo><span class="ico"><i data-lucide="car-front"></i></span><div class="info"><b>Plan mensual</b><span>Estacionamiento</span><br><span>02 nov 2026</span></div>
+        <div class="mv-actions"><span class="amt">−$28,00</span><span class="pill ok">Pagado</span><button class="link b" type="button" data-go="acceso" style="font-size:12px">Ver factura →</button></div></div>
+      <div class="move" data-demo><span class="ico"><i data-lucide="utensils"></i></span><div class="info"><b>Almuerzo del día</b><span>Feria Central</span><br><span>01 nov 2026</span></div>
+        <div class="mv-actions"><span class="amt">−$8,50</span><span class="pill ok">Pagado</span><button class="link b" type="button" data-go="factura" style="font-size:12px">Ver factura →</button></div></div>
+      <div class="move" data-demo><span class="ico"><i data-lucide="dribbble"></i></span><div class="info"><b>Cancha de tenis</b><span>Canchas · Reembolso</span><br><span>30 oct 2026</span></div>
+        <div class="mv-actions"><span class="amt pos">+$12,60</span><span class="pill ok">Reembolsado</span><button class="link b" type="button" data-go="qr" style="font-size:12px">Ver comprobante →</button></div></div>
+      <div id="mvEmpty" hidden><div class="empty"><span class="ico lg"><i data-lucide="receipt-text"></i></span><b>Aún no tienes movimientos</b><p>Cuando pagues algo en Nexo (comida, estacionamiento o tu cuota), aparecerá aquí.</p><button class="btn ghost sm" type="button" data-go="servicios">Ver servicios</button></div></div>
+      <p class="tiny" id="mvEnd">Los pagos pendientes no se descuentan del saldo de deuda hasta su validación. Importes en USD.</p>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h3 class="h2">Filtrar movimientos</h3>
+        <div class="chips" data-chips><button class="pill ok" type="button">Todos</button><button class="pill neutral" type="button">Pagados</button><button class="pill neutral" type="button">Pendientes</button><button class="pill neutral" type="button">Reembolsados</button></div>
+        <div class="field"><label for="a-serv">Servicio</label><div class="input"><select id="a-serv"><option>Todos los servicios</option><option>Comida y kioscos</option><option>Estacionamiento</option><option>Universidad</option><option>Canchas</option></select><i data-lucide="chevron-down"></i></div></div>
+        <div class="grid2">
+          <div class="field"><label for="a-d">Desde</label><div class="input"><input id="a-d" value="30 oct 2026"></div></div>
+          <div class="field"><label for="a-h">Hasta</label><div class="input"><input id="a-h" value="03 nov 2026"></div></div>
+        </div>
+      </div>
+      <button class="btn ghost" type="button" data-toast="La descarga no está disponible en el prototipo."><i data-lucide="download"></i>Descargar estado de actividad</button>
+    </div>
+  </div>
+</section>
+
+<!-- 12 · Estacionamiento -->
+<section class="screen app" id="estacionamiento" data-title="Estacionamiento" data-back="servicios" data-tab="servicios" data-crumb="Servicios  /  Estacionamiento" hidden>
+  <div><h1 class="h1">Entra sin hacer fila</h1><p class="lead">Tu acceso, tu saldo y tu plan del Campus Central.</p></div>
+
+  <div class="card access-hero" data-plan="off">
+    <span class="ico lg" style="width:64px;height:64px;font-size:28px"><i data-lucide="car-front"></i></span>
+    <div class="stack s14" style="gap:8px;flex:1">
+      <div class="row start"><span class="pill neutral">Sin plan activo</span></div>
+      <h2 class="h2" style="font-size:20px">Aún no tienes acceso al estacionamiento</h2>
+      <p class="small" style="font-size:13px">Elige un plan y paga con tu wallet Nexo. Tu credencial aparecerá aquí.</p>
+      <button class="btn" type="button" data-go="planes"><i data-lucide="arrow-right"></i>Ver planes</button>
+    </div>
+  </div>
+  <div class="card access-hero" data-plan="on">
+    <div class="qr sm"><canvas data-qr="ACC-AB123CD-mini" width="29" height="29"></canvas></div>
+    <div class="stack s14" style="gap:8px;flex:1">
+      <div class="row start"><span class="pill ok">Plan <span data-planv="lname">mensual</span> activo</span><span class="small">Hasta el <span data-planv="end">01 dic 2026</span></span></div>
+      <h2 class="h2" style="font-size:20px">Tu acceso al campus</h2>
+      <p class="small" style="font-size:13px"><span data-veh="name">Toyota Yaris</span> · <b style="color:var(--ink)" data-veh="plate">AB123CD</b> · Muestra tu credencial en el lector del acceso vehicular.</p>
+      <button class="btn" type="button" data-go="acceso"><i data-lucide="qr-code"></i>Ver mi acceso</button>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="stack">
+  <div class="card dark wallet">
+    <div class="row"><div class="row start"><span class="ico" style="background:rgba(255,255,255,.08);color:#fff"><i data-lucide="wallet"></i></span><div><b class="h3">Tu wallet Nexo</b><p class="muted tiny">Saldo disponible en la app</p></div></div><span class="pill ok">Activa</span></div>
+    <p class="big" style="font-weight:600" data-wallet>$40,00</p>
+    <p class="muted small">Úsalo para pagar tus planes de estacionamiento, sin tarjeta.</p>
+    <div class="wallet-actions">
+      <button class="btn" type="button" data-go="recarga"><i data-lucide="plus"></i>Recargar wallet</button>
+      <button class="btn ghost-dark" type="button" data-go="actividad"><i data-lucide="receipt-text"></i>Ver movimientos</button>
+    </div>
+  </div>
+      <div class="card" style="flex-direction:row;align-items:center" id="vehCard"><span class="ico"><i data-lucide="car-front"></i></span><div style="flex:1;min-width:0"><b>Mi vehículo</b><p class="small" data-veh="summary">Aún no registras un vehículo.</p></div><button class="link b" type="button" style="font-size:12px" data-go="vehiculo" data-veh="action">Agregar</button></div>
+    </div>
+    <div class="stack">
+      <div class="card" data-plan="off">
+        <div class="row"><span class="ico"><i data-lucide="calendar-check"></i></span><span class="pill neutral">Sin plan</span></div>
+        <div><h3 class="h2">Elige tu primer plan</h3><p class="small" style="font-size:13px">Por día, semanal, mensual, bimestral o trimestral. Desde $2,00.</p></div>
+        <button class="btn" type="button" data-go="planes"><i data-lucide="arrow-right"></i>Ver planes</button>
+      </div>
+      <div class="card" data-plan="on">
+        <div class="row"><span class="ico"><i data-lucide="calendar-check"></i></span><span class="pill neutral">Tu plan actual</span></div>
+        <div><h3 class="h2">Plan <span data-planv="lname">mensual</span></h3><p class="small" style="font-size:13px" data-planv="desc">Accesos ilimitados · 30 días · $28,00</p></div>
+        <div class="kv"><span>Válido hasta</span><b><span data-planv="end">01 dic 2026</span></b></div>
+        <button class="btn ghost" type="button" data-go="planes"><i data-lucide="arrow-right"></i>Elegir o renovar plan</button>
+        <p class="tiny">Hay 5 planes: por día, semanal, mensual, bimestral y trimestral.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 12c · Mi vehículo -->
+<section class="screen app" id="vehiculo" data-title="Mi vehículo" data-back="estacionamiento" data-tab="servicios" data-crumb="Estacionamiento  /  Mi vehículo" hidden>
+  <div><h1 class="h1" data-vf="title">Registra tu vehículo</h1><p class="lead">Tu plan y tu credencial de estacionamiento quedan asociados a esta placa.</p></div>
+  <div class="cols">
+    <form class="card" id="vehForm" novalidate>
+      <div class="field"><label for="v-brand">Marca</label><div class="input"><select id="v-brand"><option value="">Elige la marca</option><option>Toyota</option><option>Chevrolet</option><option>Ford</option><option>Hyundai</option><option>Kia</option><option>Mitsubishi</option><option>Nissan</option><option>Renault</option><option>Volkswagen</option><option>Chery</option><option>Fiat</option><option>Jeep</option><option>Honda</option><option>Mazda</option><option value="Otra">Otra marca</option></select><i data-lucide="chevron-down"></i></div></div>
+      <div class="field" data-vf="brandother" hidden><label for="v-brand-o">¿Cuál marca?</label><div class="input"><input id="v-brand-o" autocomplete="off" placeholder="Ej.: Peugeot" maxlength="24"></div></div>
+      <div class="field"><label for="v-model">Modelo</label><div class="input"><select id="v-model" disabled><option value="">Primero elige la marca</option></select><i data-lucide="chevron-down"></i></div></div>
+      <div class="field" data-vf="modelother" hidden><label for="v-model-o">¿Cuál modelo?</label><div class="input"><input id="v-model-o" autocomplete="off" placeholder="Escribe el modelo" maxlength="24"></div></div>
+      <div class="grid2">
+        <div class="field"><label for="v-year">Año</label><div class="input"><select id="v-year"><option value="">Año</option><option>2027</option><option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option><option>2017</option><option>2016</option><option>2015</option><option>2014</option><option>2013</option><option>2012</option><option>2011</option><option>2010</option><option>2009</option><option>2008</option><option>2007</option><option>2006</option><option>2005</option><option>2004</option><option>2003</option><option>2002</option><option>2001</option><option>2000</option><option>1999</option><option>1998</option><option>1997</option><option>1996</option><option>1995</option><option>1994</option><option>1993</option><option>1992</option><option>1991</option><option>1990</option><option>1989</option><option>1988</option><option>1987</option><option>1986</option><option>1985</option><option>1984</option><option>1983</option><option>1982</option><option>1981</option><option>1980</option></select><i data-lucide="chevron-down"></i></div></div>
+        <div class="field"><label for="v-plate">Placa</label><div class="input"><input id="v-plate" autocomplete="off" placeholder="AB123CD" maxlength="7" style="text-transform:uppercase;letter-spacing:.08em"></div></div>
+      </div>
+      <p class="tiny" data-vf="platehint">Escribe la placa sin guiones ni espacios, por ejemplo AB123CD.</p>
+      <div class="notice warn" id="vehError" role="alert" hidden><i data-lucide="circle-alert"></i><p data-vf="err"></p></div>
+      <button class="btn" type="submit"><i data-lucide="check"></i><span data-vf="cta">Guardar vehículo</span></button>
+      <button class="link center" type="button" id="vehDelete" hidden style="color:var(--muted);font-size:12px">Eliminar este vehículo</button>
+      <div class="delconfirm" id="vehDelConfirm" hidden><span>¿Eliminar tu vehículo de la cuenta?</span><div class="acts"><button type="button" data-vdel="no">Cancelar</button><button type="button" class="danger" data-vdel="yes">Eliminar</button></div></div>
+    </form>
+    <div class="stack">
+      <div class="card veh-preview">
+        <span class="ico lg"><i data-lucide="car-front"></i></span>
+        <div><b class="h3" data-vf="pname">Tu vehículo</b><p class="small" data-vf="pyear">Marca, modelo y año</p></div>
+        <div class="plate"><span class="plate-top">VENEZUELA</span><span class="plate-num" data-vf="pplate">AA000AA</span></div>
+      </div>
+      <p class="tiny">Puedes registrar un vehículo por cuenta. Si cambias de carro, edítalo aquí y tu credencial se actualiza.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 12d · Pago del plan con verificación -->
+<section class="screen app" id="pagoplan" data-title="Confirmar pago" data-back="planes" data-tab="servicios" data-crumb="Planes  /  Confirmar pago" hidden>
+  <div><h1 class="h1" data-pp="title">Confirma tu pago</h1><p class="lead" data-pp="lead">Paga tu plan con el saldo de tu wallet Nexo.</p></div>
+  <ol class="steps3" aria-label="Pasos del pago"><li data-step="1" class="on">Revisar</li><li data-step="2">Verificar</li><li data-step="3">Listo</li></ol>
+  <div class="cols">
+    <div class="stack">
+      <!-- paso 1 -->
+      <div class="card" data-ppstep="1">
+        <h2 class="h2">Resumen del pago</h2>
+        <div class="row start"><span class="ico lg"><i data-lucide="calendar-check"></i></span><div><b class="h3" data-pp="plan">Plan mensual</b><p class="small" data-pp="desc">Accesos ilimitados · 30 días</p></div></div>
+        <div class="sep"></div>
+        <div class="kv"><span>Vigencia</span><b data-pp="range">—</b></div>
+        <div class="kv"><span>Vehículo</span><b data-pp="veh">—</b></div>
+        <div class="kv"><span>Titular</span><b><span data-user="full"></span></b></div>
+        <div class="sep"></div>
+        <div class="kv"><span>Saldo de tu wallet</span><b data-pp="before">—</b></div>
+        <div class="kv total"><span>Total a pagar</span><b data-pp="price">—</b></div>
+        <div class="kv"><span>Saldo después del pago</span><b data-pp="after">—</b></div>
+        <div class="notice"><i data-lucide="mail"></i><p>Para proteger tu saldo, te enviaremos un código de 6 dígitos a <b data-pp="email"></b>.</p></div>
+        <button class="btn" type="button" id="ppSend"><i data-lucide="send"></i>Enviar código a mi correo</button>
+      </div>
+      <!-- paso 2 -->
+      <form class="card" data-ppstep="2" id="ppCodeForm" hidden novalidate>
+        <h2 class="h2">Escribe el código</h2>
+        <p class="small" style="font-size:13px">Enviamos un código de 6 dígitos a <b data-pp="email"></b>. Vence en <b data-pp="ttl">10:00</b>.</p>
+        <div class="otp" id="ppOtp" role="group" aria-label="Código de verificación">
+          <input inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Dígito 1"><input inputmode="numeric" maxlength="1" aria-label="Dígito 2"><input inputmode="numeric" maxlength="1" aria-label="Dígito 3"><input inputmode="numeric" maxlength="1" aria-label="Dígito 4"><input inputmode="numeric" maxlength="1" aria-label="Dígito 5"><input inputmode="numeric" maxlength="1" aria-label="Dígito 6">
+        </div>
+        <div class="notice warn" id="ppErr" role="alert" hidden><i data-lucide="circle-alert"></i><p data-pp="err"></p></div>
+        <button class="btn" type="submit" id="ppVerify"><i data-lucide="lock-keyhole"></i><span data-pp="cta">Verificar y pagar</span></button>
+        <div class="row" style="justify-content:center;gap:6px;font-size:13px"><span class="small">¿No te llegó?</span><button class="link b" type="button" id="ppResend" disabled>Reenviar código</button><span class="small" data-pp="resendt"></span></div>
+        <button class="link center" type="button" id="ppBack" style="font-size:12px;color:var(--muted)">Cambiar plan</button>
+      </form>
+      <!-- paso 3 -->
+      <div class="card" data-ppstep="3" hidden style="align-items:center;text-align:center">
+        <span class="okmark" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="ok-ring" cx="32" cy="32" r="26"/><path class="ok-tick" d="M21 33l7.5 7.5L44 25"/></svg><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <h2 class="h2" style="font-size:22px">¡Pago confirmado!</h2>
+        <p class="small" style="font-size:13px" data-pp="donetext"></p>
+        <div class="stack s14" style="gap:8px;width:100%;max-width:360px;margin-top:6px">
+          <div class="kv"><span>Plan</span><b data-pp="plan">—</b></div>
+          <div class="kv"><span>Válido hasta</span><b data-pp="end">—</b></div>
+          <div class="kv"><span>Pagaste</span><b data-pp="price">—</b></div>
+          <div class="kv"><span>Saldo en tu wallet</span><b data-wallet>—</b></div>
+          <div class="kv"><span>Comprobante</span><b data-pp="ref">—</b></div>
+        </div>
+        <button class="btn" type="button" data-go="acceso" style="max-width:360px"><i data-lucide="qr-code"></i>Ver mi credencial</button>
+        <button class="link b" type="button" data-go="estacionamiento">Volver a estacionamiento</button>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="mailsim" id="ppMail" hidden>
+        <p class="mailsim-tag"><i data-lucide="flask-conical"></i>Simulación · así se vería el correo</p>
+        <div class="mailsim-head"><b>Nexo &lt;seguridad@nexo.app&gt;</b><span class="tiny">Para: <span data-pp="email"></span></span><span class="tiny" data-pp="mailtime">Ahora</span></div>
+        <b class="h3">Tu código para pagar en Nexo</b>
+        <p class="small" style="font-size:13px">Hola, <span data-user="first"></span>. Usa este código para confirmar el pago de <b data-pp="mailwhat"></b>:</p>
+        <p class="mailsim-code" data-pp="code">000000</p>
+        <p class="tiny">Vence en 10 minutos. Si no fuiste tú, ignora este correo y cambia tu contraseña.</p>
+      </div>
+      <p class="tiny" id="ppMailNote" hidden>En la app real el código llega a tu bandeja de entrada. En este prototipo no se envían correos, así que lo mostramos aquí para que puedas probar el flujo.</p>
+      <div class="card" data-ppstep="1">
+        <h3 class="h3">¿Por qué te pedimos un código?</h3>
+        <p class="small" style="font-size:13px">Así confirmamos que eres tú quien usa el saldo de tu wallet, aunque alguien más tenga acceso a tu teléfono o computadora.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 12b · Planes de estacionamiento -->
+<section class="screen app" id="planes" data-title="Elige tu plan" data-back="estacionamiento" data-tab="servicios" data-crumb="Estacionamiento  /  Planes" hidden>
+  <div><h1 class="h1">Elige tu plan</h1><p class="lead">Accesos al estacionamiento del Campus Central<span data-veh-show> para <span data-veh="name">Toyota Yaris</span> · <span data-veh="plate">AB123CD</span></span>.</p></div>
+  <div class="notice warn" data-veh-missing hidden><i data-lucide="car-front"></i><div><b>Registra tu vehículo.</b> Tu plan queda asociado a la placa de tu carro. <button class="link b" type="button" data-go="vehiculo" style="font-size:12px;color:inherit;text-decoration:underline">Registrar vehículo</button></div></div>
+  <div class="cols">
+    <div class="stack s14">
+      <div class="stack s14" data-radio id="planList">
+        <button class="opt plan" type="button" data-plan-key="dia" data-days="1" data-name="Por día" data-price="2,00" data-range="02 dic 2026">
+          <span class="dot"></span><span class="grow"><b class="h3">Por día</b><span class="small plan-desc">Un acceso · Válido por 24 horas</span></span><span class="plan-price">$2,00</span>
+        </button>
+        <button class="opt plan" type="button" data-plan-key="semanal" data-days="7" data-name="Semanal" data-price="8,00" data-range="02 dic – 08 dic 2026">
+          <span class="dot"></span><span class="grow"><b class="h3">Semanal</b><span class="small plan-desc">Accesos ilimitados · 7 días</span></span><span class="plan-price">$8,00</span>
+        </button>
+        <button class="opt plan on" type="button" data-plan-key="mensual" data-days="30" data-name="Mensual" data-price="28,00" data-range="02 dic – 31 dic 2026">
+          <span class="dot"></span><span class="grow"><b class="h3">Mensual</b><span class="small plan-desc">Accesos ilimitados · 30 días</span></span><span class="plan-price">$28,00</span>
+        </button>
+        <button class="opt plan" type="button" data-plan-key="bimestral" data-days="60" data-name="Bimestral" data-price="52,00" data-range="02 dic 2026 – 30 ene 2027">
+          <span class="dot"></span><span class="grow"><b class="h3">Bimestral</b> <span class="pill ok" style="margin-left:6px">Ahorra 7 %</span><span class="small plan-desc">Accesos ilimitados · 60 días</span></span><span class="plan-price">$52,00</span>
+        </button>
+        <button class="opt plan" type="button" data-plan-key="trimestral" data-days="90" data-name="Trimestral" data-price="75,00" data-range="02 dic 2026 – 01 mar 2027">
+          <span class="dot"></span><span class="grow"><b class="h3">Trimestral</b> <span class="pill ok" style="margin-left:6px">Ahorra 11 %</span><span class="small plan-desc">Accesos ilimitados · 90 días</span></span><span class="plan-price">$75,00</span>
+        </button>
+      </div>
+      <p class="tiny">El ahorro se calcula frente a pagar el plan mensual cada 30 días.</p>
+    </div>
+    <div class="stack">
+      <div class="card" id="planSummary">
+        <span class="pill ok" data-ps="tag">Renovación · Plan mensual</span>
+        <div class="kv"><span>Nueva vigencia</span><b data-ps="range">02 dic – 31 dic 2026</b></div>
+        <div class="kv total"><span>Total</span><b data-ps="price">$28,00</b></div>
+        <div class="sep"></div>
+        <div class="kv"><span>Pagas con</span><b>Wallet Nexo · <span data-wallet>$0,00</span></b></div>
+        <div class="kv"><span>Saldo después del pago</span><b data-ps="after">$12,00</b></div>
+        <div class="notice warn" data-ps="short" hidden><i data-lucide="circle-alert"></i><div><b>Saldo insuficiente</b><span data-ps="shortmsg">Te faltan $12,00. Recarga tu wallet para continuar.</span></div></div>
+        <button class="btn" type="button" data-ps="cta" id="planPay">Pagar plan mensual · $28,00</button>
+        <button class="btn ghost" type="button" data-ps="needveh" data-go="vehiculo" hidden><i data-lucide="car-front"></i>Registrar mi vehículo</button>
+        <button class="btn ghost" type="button" data-ps="topup" data-go="recarga" hidden><i data-lucide="plus"></i>Recargar wallet</button>
+        <p class="tiny">Sin renovación automática. Incluye todos los cargos.</p>
+      </div>
+      <div class="card" style="flex-direction:row;align-items:center"><span class="ico"><i data-lucide="wallet"></i></span><div style="flex:1"><b>Wallet Nexo</b><p class="small">Saldo disponible: <b style="color:var(--ink)" data-wallet>$40,00</b></p></div><button class="link b" type="button" style="font-size:12px" data-go="recarga">Recargar</button></div>
+    </div>
+  </div>
+</section>
+
+
+<!-- 13 · Recarga de wallet -->
+<section class="screen app" id="recarga" data-title="Wallet Nexo" data-back="inicio" data-tab="inicio" data-crumb="Wallet Nexo  /  Recargar" hidden>
+  <div><h1 class="h1">Recarga tu wallet</h1><p class="lead">Un solo saldo para pagar comida, canchas, facturas de la universidad y estacionamiento.</p></div>
+  <div class="notice warn" id="rcPending" hidden><i data-lucide="clock"></i><div><b>Recarga en revisión</b><span data-rc="pendtext"></span></div></div>
+  <div class="cols">
+    <div class="stack">
+      <div class="card dark"><p class="muted" style="font-size:13px">Saldo de tu wallet Nexo</p><p class="big" style="font-weight:600" data-wallet>$0,00</p><p class="muted small">Sirve para pagar en todo Nexo: comida, canchas, facturas y estacionamiento.</p></div>
+
+      <div class="card">
+        <h2 class="h2">¿Cuánto quieres recargar?</h2>
+        <div class="amt-grid" id="rcChips"><button class="amt-chip" type="button" data-amt="5">$5,00</button><button class="amt-chip on" type="button" data-amt="10">$10,00</button><button class="amt-chip" type="button" data-amt="20">$20,00</button><button class="amt-chip" type="button" data-amt="50">$50,00</button><button class="amt-chip" type="button" data-amt="100">$100,00</button></div>
+        <div class="field"><label for="rc-m">Otro monto · USD</label>
+          <div class="input"><span style="color:var(--muted)">$</span><input id="rc-m" inputmode="decimal" autocomplete="off" value="10,00" aria-describedby="rc-hint"></div>
+          <p class="tiny" id="rc-hint">Mínimo $5,00 · Máximo $100,00 por recarga.</p></div>
+      </div>
+
+      <div class="card">
+        <h2 class="h2">Método de recarga</h2>
+        <div class="method-tabs" role="radiogroup" aria-label="Método de recarga" id="rcMethods">
+          <button class="opt on" type="button" role="radio" aria-checked="true" data-rcm="card"><span class="dot"></span><i data-lucide="credit-card" style="color:var(--brand)"></i><span class="grow">Tarjeta de débito o crédito<br><span class="small" style="font-weight:400">El saldo se acredita al instante</span></span></button>
+          <button class="opt" type="button" role="radio" aria-checked="false" data-rcm="pm"><span class="dot"></span><i data-lucide="smartphone" style="color:var(--brand)"></i><span class="grow">Pago Móvil / transferencia<br><span class="small" style="font-weight:400">Se acredita cuando validemos tu pago</span></span></button>
+        </div>
+        <div id="rcCardBox" class="stack s14" style="gap:10px"></div>
+        <div id="rcPmBox" class="notice" hidden><i data-lucide="info"></i><p>En el siguiente paso verás los datos de Pago Móvil de Nexo y podrás registrar tu pago.</p></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h3 class="h2">Resumen de recarga</h3>
+        <div class="kv"><span>Saldo actual</span><b data-wallet>$0,00</b></div>
+        <div class="kv"><span>Recarga</span><b data-rc="amount">$10,00</b></div>
+        <div class="kv"><span>Comisión</span><b>$0,00</b></div>
+        <div class="sep"></div>
+        <div class="kv total"><span>Total a pagar</span><b data-rc="amount">$10,00</b></div>
+        <div class="kv"><span>En bolívares</span><b data-rc="bs"></b></div>
+        <div class="kv"><span data-rc="afterlabel">Saldo tras la recarga</span><b data-rc="after">$10,00</b></div>
+        <div class="sep"></div>
+        <div class="kv"><span>Pagas con</span><b data-rc="method">—</b></div>
+        <button class="btn" type="button" id="rcGo"><i data-lucide="lock-keyhole"></i><span data-rc="cta">Recargar $10,00</span></button>
+        <p class="tiny" data-rc="foot">Prototipo: no se realiza ningún cobro real.</p>
+      </div>
+      <div class="card wl-hist" id="wlHist"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 13b · Afiliar tarjeta -->
+<section class="screen app" id="afiliar" data-title="Afiliar tarjeta" data-back="recarga" data-tab="servicios" data-crumb="Recargar wallet  /  Afiliar tarjeta" hidden>
+  <div><h1 class="h1">Afilia una tarjeta</h1><p class="lead">Guárdala en tu cuenta para recargar tu wallet y pagar en Nexo sin volver a escribir sus datos.</p></div>
+  <div class="notice warn"><i data-lucide="triangle-alert"></i><p>Prototipo: no escribas los datos de una tarjeta real. Prueba con 4242 4242 4242 4242 (Visa), 5555 5555 5555 4444 (Mastercard) o 3782 822463 10005 (Amex).</p></div>
+  <div class="cols">
+    <form class="card" id="afForm" novalidate>
+      <div class="card-preview" id="afPreview">
+        <div class="row"><span class="brand-chip" data-af="brand">Tarjeta</span><span data-af="type" style="font-size:11px">DÉBITO</span></div>
+        <p class="mono cp-num" data-af="num">•••• •••• •••• ••••</p>
+        <div class="row"><span data-af="name">NOMBRE EN LA TARJETA</span><span class="mono" data-af="exp">MM/AA</span></div>
+      </div>
+      <div class="field"><label>Tipo de tarjeta</label>
+        <div class="seg" role="radiogroup" aria-label="Tipo de tarjeta" id="afType">
+          <button type="button" role="radio" aria-checked="true" class="on" data-aftype="Débito">Débito</button>
+          <button type="button" role="radio" aria-checked="false" data-aftype="Crédito">Crédito</button>
+        </div></div>
+      <div class="field"><label for="af-num">Número de tarjeta</label><div class="input"><input id="af-num" inputmode="numeric" autocomplete="off" placeholder="0000 0000 0000 0000"><i data-lucide="credit-card"></i></div><p class="tiny">Aceptamos Visa, Mastercard y American Express.</p></div>
+      <div class="field"><label for="af-name">Nombre como aparece en la tarjeta</label><div class="input"><input id="af-name" autocomplete="off" placeholder="Ej.: ANA TORRES"></div></div>
+      <div class="grid2">
+        <div class="field"><label for="af-exp">Vencimiento</label><div class="input"><input id="af-exp" inputmode="numeric" autocomplete="off" placeholder="MM/AA" maxlength="5"></div></div>
+        <div class="field"><label for="af-cvv">Código de seguridad</label><div class="input"><input id="af-cvv" inputmode="numeric" autocomplete="off" placeholder="CVV" maxlength="4"><i data-lucide="lock-keyhole"></i></div><p class="tiny" id="af-cvvhint">3 dígitos al reverso.</p></div>
+      </div>
+      <button class="btn" type="submit"><i data-lucide="shield-check"></i>Afiliar tarjeta</button>
+    </form>
+    <div class="stack">
+      <div class="card">
+        <h3 class="h2">Tus tarjetas afiliadas</h3>
+        <div id="afList" class="stack s14" style="gap:10px"></div>
+      </div>
+      <p class="tiny">Nexo guarda solo la marca, los últimos 4 dígitos y el vencimiento. Nunca el número completo ni el código de seguridad.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 13c · Pago Móvil -->
+<section class="screen app" id="pagomovil" data-title="Pago Móvil" data-back="recarga" data-tab="servicios" data-crumb="Recargar wallet  /  Pago Móvil" hidden>
+  <div><h1 class="h1">Recarga por Pago Móvil</h1><p class="lead" data-pm="lead">Recarga de $10,00 a tu wallet Nexo</p></div>
+  <div class="cols">
+    <div class="stack">
+      <div class="card dark">
+        <div class="row"><b class="h2">1. Envía tu Pago Móvil a Nexo</b><span class="pill ok">Datos de destino</span></div>
+        <p class="muted small">Desde la app de tu banco, haz un Pago Móvil con estos datos:</p>
+        <div class="pmrow"><div><b>BANCO</b><span>Mercantil · 0105</span></div><button class="copybtn" type="button" data-copy="0105" data-copy-label="Código del banco copiado"><i data-lucide="copy"></i>Copiar</button></div>
+        <div class="pmrow"><div><b>TELÉFONO</b><span>0414-000-0000</span></div><button class="copybtn" type="button" data-copy="04140000000" data-copy-label="Teléfono copiado"><i data-lucide="copy"></i>Copiar</button></div>
+        <div class="pmrow"><div><b>RIF</b><span>J-00000000-1</span></div><button class="copybtn" type="button" data-copy="J000000001" data-copy-label="RIF copiado"><i data-lucide="copy"></i>Copiar</button></div>
+        <div class="pmrow"><div><b>MONTO</b><span data-pm="amount">$10,00 en bolívares a la tasa BCV del día</span></div></div>
+        <div class="pmrow"><div><b>CONCEPTO</b><span data-pm="concept">Wallet <span data-user="carnet"></span></span></div><button class="copybtn" type="button" data-pm-copyconcept><i data-lucide="copy"></i>Copiar</button></div>
+        <p class="muted tiny">Datos ilustrativos del prototipo. No envíes dinero a estos datos. <span data-pm="ratenote"></span></p>
+      </div>
+    </div>
+    <form class="card" id="pmForm" novalidate>
+      <div><h2 class="h2">2. Registra tu pago</h2><p class="small" style="font-size:13px">Escribe los datos tal como aparecen en el comprobante de tu banco.</p></div>
+      <div class="field"><label for="pm-bank">Banco desde el que pagaste</label><div class="input"><select id="pm-bank"><option value="">Elige tu banco</option>
+        <option>Banco de Venezuela · 0102</option><option>Mercantil · 0105</option><option>Provincial · 0108</option><option>Bancaribe · 0114</option><option>Exterior · 0115</option><option>Banesco · 0134</option><option>Banco Fondo Común · 0151</option><option>Banco del Tesoro · 0163</option><option>Bancamiga · 0172</option><option>BNC · 0191</option></select><i data-lucide="chevron-down"></i></div></div>
+      <div class="grid2">
+        <div class="field"><label for="pm-phone">Teléfono de origen</label><div class="input"><input id="pm-phone" inputmode="numeric" autocomplete="off" placeholder="0414-1234567" maxlength="12"></div></div>
+        <div class="field"><label for="pm-ci">Cédula del titular</label><div class="input"><select id="pm-cit" style="flex:0 0 auto;width:auto" aria-label="Tipo de documento"><option>V</option><option>E</option><option>J</option></select><input id="pm-ci" inputmode="numeric" autocomplete="off" placeholder="12345678" maxlength="9"></div></div>
+        <div class="field"><label for="pm-ref">Número de referencia</label><div class="input"><input id="pm-ref" inputmode="numeric" autocomplete="off" placeholder="Últimos 6 dígitos o más" maxlength="12"></div></div>
+        <div class="field"><label for="pm-date">Fecha del pago</label><div class="input sel"><select id="pm-date" data-recent-days="7"></select><i data-lucide="chevron-down"></i></div></div>
+      </div>
+      <div class="field"><label for="pm-bs">Monto pagado en bolívares</label><div class="input"><span style="color:var(--muted)">Bs.</span><input id="pm-bs" inputmode="decimal" autocomplete="off" placeholder="0,00"></div><p class="tiny" data-pm="bshint">Debe equivaler a $10,00 a la tasa BCV del día del pago.</p></div>
+      <div class="notice warn" id="pmError" role="alert" hidden><i data-lucide="circle-alert"></i><p data-pm="err"></p></div>
+      <button class="btn" type="submit"><i data-lucide="send"></i><span data-pm="cta">Registrar pago de $10,00</span></button>
+      <p class="tiny">Validamos tu pago en un máximo de 24 horas hábiles. El saldo se acredita a tu wallet cuando se confirme.</p>
+    </form>
+  </div>
+</section>
+
+
+<!-- 14 · Acceso al estacionamiento -->
+<section class="screen app" id="acceso" data-title="Acceso al campus" data-back="estacionamiento" data-tab="servicios" data-crumb="Estacionamiento  /  Acceso" hidden>
+  <div><h1 class="h1">Tu acceso al campus</h1><p class="lead">Presenta tu credencial en el lector del estacionamiento.</p></div>
+  <div class="card" data-plan="off" style="align-items:flex-start">
+    <span class="ico lg"><i data-lucide="qr-code"></i></span>
+    <h2 class="h2">Aún no tienes credencial</h2>
+    <p class="small" style="font-size:13px">Tu credencial de estacionamiento aparece aquí cuando contratas un plan.</p>
+    <button class="btn" type="button" data-go="planes" style="width:auto;padding:0 18px"><i data-lucide="arrow-right"></i>Ver planes</button>
+  </div>
+  <div class="notice" data-plan="on"><i data-lucide="shield-check"></i><div><b>Plan <span data-planv="lname">mensual</span> activo.</b> Válido hasta el <span data-planv="end">01 dic 2026</span>. No necesitas saldo recargable para usar este plan.</div></div>
+  <div class="cols" data-plan="on">
+    <div class="stack">
+      <h2 class="sr-only">Credencial de estacionamiento</h2>
+      <div class="pass" role="group" aria-label="Credencial de estacionamiento">
+        <div class="pass-head">
+          <div class="pass-brand"><span class="emblem"><svg class="nexo-mark" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" stroke="#3DBE85" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="#EEF4F0" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" stroke="#3DBE85" stroke-width="10"/></svg></span><div><b>nexo</b><span>Estacionamiento</span></div></div>
+          <span class="pass-plan">Plan <span data-planv="lname">mensual</span></span>
+        </div>
+        <div class="pass-body">
+          <div><span class="pass-lbl">Titular</span><b class="pass-name"><span data-user="full">Ana Torres</span></b><span class="pass-sub" data-has-carnet>Carnet <span data-user="carnet">20241010186</span></span></div>
+          <div class="pass-plate" aria-label="Placa"><span>VENEZUELA</span><b data-veh="plate">AB123CD</b></div>
+        </div>
+        <div class="pass-row"><div><span class="pass-lbl">Vehículo</span><b data-veh="full">Toyota Yaris 2019</b></div><div><span class="pass-lbl">Válido hasta</span><b><span data-planv="end">01 dic 2026</span></b></div></div>
+        <div class="pass-cut" aria-hidden="true"></div>
+        <div class="pass-qr"><div class="qr"><canvas data-qr="ACC-AB123CD-20241010186" width="29" height="29"></canvas></div><p>Muestra este código en el lector del acceso vehicular</p><span class="pass-note">QR ilustrativo · No válido para entrar</span></div>
+      </div>
+      <div class="card">
+        <h2 class="h2">Cómo usar tu credencial</h2>
+        <div class="row start"><span class="num">1</span><p style="font-size:13px">Acércate al acceso vehicular del Campus Central.</p></div>
+        <div class="row start"><span class="num">2</span><p style="font-size:13px">Sube el brillo y muestra el QR frente al lector.</p></div>
+        <div class="row start"><span class="num">3</span><p style="font-size:13px">Espera la indicación del lector antes de avanzar.</p></div>
+        <p class="tiny">La credencial está asociada a tu vehículo. Esta maqueta no abre barreras ni valida accesos.</p>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <div class="row start"><i data-lucide="nfc" style="color:var(--brand);font-size:20px"></i><b class="h3">Acceso por NFC</b></div>
+        <span class="pill neutral">Requiere equipo compatible</span>
+        <p class="small" style="font-size:13px">Alternativa en la app móvil con NFC habilitado y lector compatible en el acceso.</p>
+      </div>
+      <div class="card">
+        <div class="row start"><i data-lucide="bluetooth" style="color:var(--brand);font-size:20px"></i><b class="h3">Acceso por Bluetooth</b></div>
+        <span class="pill neutral">Disponibilidad por verificar</span>
+        <p class="small" style="font-size:13px">Requiere la app móvil, Bluetooth y permisos de dispositivos cercanos, además de un receptor habilitado.</p>
+      </div>
+      <div class="card">
+        <h3 class="h2">¿El acceso no funciona?</h3>
+        <p class="small" style="font-size:13px">Prueba con tu QR o solicita ayuda al personal del acceso. Ten a mano tu carnet y placa.</p>
+        <button class="btn ghost" type="button" data-go="soporte"><i data-lucide="message-circle"></i>Contactar a soporte</button>
+        <button class="btn ghost" type="button" data-go="recarga"><i data-lucide="wallet"></i>Recargar wallet</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 15a · Registro de materias -->
+<section class="screen app" id="inscripcion" data-title="Mis materias" data-back="inicio" data-tab="cuenta" data-crumb="Estado de cuenta  /  Mis materias" hidden>
+  <div><p class="eyebrow">TRIMESTRE SEP–NOV 2026</p><h1 class="h1" style="margin-top:10px" data-ins="title">Antes de ver tu cuenta, cuéntanos qué inscribiste</h1><p class="lead">Con tus materias calculamos tus 3 facturas del trimestre: septiembre, octubre y noviembre.</p></div>
+  <div class="cols">
+    <form class="card" id="insForm" novalidate>
+      <div class="field"><label for="insCareer">Tu carrera</label><div class="input"><select id="insCareer"><option value="">Elige tu carrera</option></select><i data-lucide="chevron-down"></i></div></div>
+      <div class="field"><label>¿Cuántas materias inscribiste este trimestre?</label>
+        <div class="mcount" id="insCount" role="radiogroup" aria-label="Cantidad de materias"><button class="amt-chip" type="button" data-mcount="1">1</button><button class="amt-chip" type="button" data-mcount="2">2</button><button class="amt-chip" type="button" data-mcount="3">3</button><button class="amt-chip" type="button" data-mcount="4">4</button><button class="amt-chip" type="button" data-mcount="5">5</button><button class="amt-chip" type="button" data-mcount="6">6</button><button class="amt-chip" type="button" data-mcount="7">7</button></div></div>
+      <div id="insRows" class="stack s14" style="gap:12px"></div>
+      <datalist id="matCatalog"></datalist>
+      <p class="tiny" id="insHint" style="margin-top:-4px">Escribe el nombre o el código de la materia (por ejemplo, BPTMI02).</p>
+      <fieldset class="paidset" id="insPaid" hidden></fieldset>
+      <div class="notice warn" id="insErr" role="alert" hidden><i data-lucide="circle-alert"></i><p></p></div>
+      <div class="notice" data-ins="editnote" hidden><i data-lucide="info"></i><p>Las facturas que ya pagaste no cambian. El cambio aplica a las facturas que aún no pagas.</p></div>
+      <button class="btn" type="submit"><i data-lucide="check"></i><span data-ins="cta">Guardar y ver mi estado de cuenta</span></button>
+    </form>
+    <div class="stack">
+      <div class="card dark">
+        <div class="row"><b class="h3">Así quedan tus facturas</b><span class="pill ok" data-ins="n">0 materias</span></div>
+        <div class="kv" style="color:var(--mint)"><span>Precio por materia</span><b style="color:#fff">$160,00</b></div>
+        <div class="kv" style="color:var(--mint)"><span>Con pronto pago</span><b style="color:#fff">$150,00</b></div>
+        <div class="sep" style="background:rgba(255,255,255,.15)"></div>
+        <div class="kv" style="color:var(--mint)"><span>Cada factura mensual</span><b style="color:#fff;font-size:17px" data-ins="month">$0,00</b></div>
+        <div class="kv" style="color:var(--mint)"><span>Con pronto pago</span><b style="color:#fff" data-ins="monthpp">$0,00</b></div>
+        <div class="kv" style="color:var(--mint)"><span>Trimestre completo · 3 facturas</span><b style="color:#fff" data-ins="trim">$0,00</b></div>
+      </div>
+      <p class="tiny">Escribe el nombre de cada materia o elígelo de la lista. Si tu materia no aparece, escríbela igual.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 15 · Materias y estado de cuenta -->
+<section class="screen app" id="materias" data-title="Estado de cuenta" data-back="inicio" data-tab="cuenta" data-crumb="Estado de cuenta" hidden>
+  <div><h1 class="h1">Tu cuenta, sin sorpresas</h1><p class="lead"><span data-user="full">Ana Torres</span> <span data-has-carnet>· Carnet <span data-user="carnet">20241010186</span> </span>· Trimestre sep–nov 2026</p></div>
+  <div class="card simbar demo-only">
+    <div class="row start" style="gap:10px"><i data-lucide="calendar-clock" style="color:var(--brand);font-size:20px"></i><div><b style="font-size:13px">Fecha de simulación</b><p class="tiny">Solo para probar el prototipo: cambia el día para ver cómo se emiten las facturas.</p></div></div>
+    <div class="row start" style="flex-wrap:wrap;gap:8px">
+      <div class="input sel" style="min-height:40px;max-width:210px"><select id="simDate" aria-label="Fecha de simulación"></select><i data-lucide="chevron-down"></i></div>
+      <div class="chips" id="simChips">
+        <button class="pill neutral" type="button" data-sim="today">Hoy</button>
+        <button class="pill neutral" type="button" data-sim="2026-11-10">Pronto pago nov</button>
+        <button class="pill neutral" type="button" data-sim="2026-11-17">Factura regular</button>
+        <button class="pill neutral" type="button" data-sim="2026-11-24">Factura vencida</button>
+      </div>
+    </div>
+  </div>
+  <div class="notice ok-notice" id="debtNotice" hidden><span class="okmark sm" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="ok-ring" cx="32" cy="32" r="26"/><path class="ok-tick" d="M21 33l7.5 7.5L44 25"/></svg></span><div><b data-debt-msg="title">Pago confirmado</b><span data-debt-msg="text"></span></div></div>
+  <div class="cols">
+    <div class="stack">
+      <div class="card" id="currentInvoice"></div>
+      <div class="card">
+        <div class="row"><h2 class="h2">Facturas del trimestre</h2><span class="small">Una por mes</span></div>
+        <p class="small" style="font-size:13px;margin-top:-6px">El trimestre tiene 3 facturas: septiembre, octubre y noviembre. Cada una se emite el segundo lunes del mes y cobra tus materias inscritas. Si pagas antes del viernes de esa semana, cada materia baja de $160,00 a $150,00.</p>
+        <div id="cuotasList" class="stack s14" style="gap:0"></div>
+      </div>
+      <div class="card">
+        <div class="row"><h2 class="h2">Materias inscritas</h2><button class="link b" type="button" data-go="inscripcion" style="font-size:12px">Editar materias</button></div>
+        <div id="matList" class="stack s14" style="gap:0"></div>
+      </div>
+      <div class="card" data-demo>
+        <div class="row"><b style="font-size:13px">Trimestre jun–ago 2026</b><span class="pill ok">Solvente</span></div>
+        <div class="kv"><span>Saldo pendiente</span><b>$0,00</b></div>
+        <p class="tiny">Las 3 facturas pagadas · Sin deuda anterior.</p>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card dark">
+        <div class="row"><span class="muted" style="font-size:13px">Saldo por pagar</span><span class="pill warn" data-debt="status">Con deuda</span></div>
+        <p class="big" style="font-weight:600" data-debt="saldo">$0,00</p>
+        <p class="muted small" data-debt="summary"></p>
+        <div class="sep" style="background:rgba(255,255,255,.15)"></div>
+        <div class="kv" style="color:var(--mint)"><span>Pagado este trimestre</span><b style="color:#fff" data-debt="paid">$450,00</b></div>
+        <div class="kv" style="color:var(--mint)"><span>Por facturar</span><b style="color:#fff" data-debt="future">$960,00</b></div>
+        <button class="btn" type="button" data-go="caja" data-debt-show="unpaid"><span data-debt="cta">Pagar factura</span></button>
+        <p class="small" data-debt-show="paidall" hidden style="color:var(--mint)" data-debt="idle">No tienes facturas por pagar hoy.</p>
+      </div>
+      <p class="tiny">Importes en USD. Solo puedes pagar facturas ya emitidas: no se aceptan pagos adelantados. Con tarjeta el saldo se actualiza al instante; las transferencias, cuando la universidad las valida.</p>
+      <button class="link" type="button" data-debt-reset style="font-size:12px;color:var(--muted)">Reiniciar datos de ejemplo</button>
+    </div>
+  </div>
+</section>
+
+<!-- 16 · Pago universitario y caja -->
+<section class="screen app" id="caja" data-title="Pagar factura" data-back="materias" data-tab="cuenta" data-crumb="Estado de cuenta  /  Pagar factura" hidden>
+  <div><h1 class="h1">Paga tu factura del mes</h1><p class="lead"><span data-user="full">Ana Torres</span> <span data-has-carnet>· Carnet <span data-user="carnet">20241010186</span> </span>· Trimestre sep–nov 2026</p></div>
+  <div class="cols">
+    <div class="stack">
+      <div class="card">
+        <h2 class="h2">¿Qué quieres pagar?</h2>
+        <p class="small" style="font-size:13px;margin-top:-6px">Solo aparecen las facturas ya emitidas. Si tienes más de una, se pagan en orden.</p>
+        <div id="cuotaPicker" class="stack s14" style="gap:10px"></div>
+        <p class="small" data-debt-show="paidall" hidden data-debt="idle">No tienes facturas por pagar hoy.</p>
+      </div>
+      <div class="card">
+        <div><h2 class="h2">Elige cómo pagar</h2><p class="small" style="font-size:13px">Con wallet o tarjeta el pago queda listo al instante.</p></div>
+        <div class="card wallet-pay" id="walletPayCard">
+          <div class="row"><div class="row start"><i data-lucide="wallet" style="color:var(--brand)"></i><b style="font-size:15px">Wallet Nexo</b></div><b data-wallet>$0,00</b></div>
+          <p class="small" id="wpHint" style="font-size:13px">Se descuenta de tu saldo al instante.</p>
+          <button class="btn ghost" type="button" data-pay-wallet data-pay-gate><i data-lucide="wallet"></i><span id="wpCta">Pagar con wallet</span></button>
+        </div>
+        <div class="card sel" style="border-color:var(--brand)">
+          <div class="row start"><i data-lucide="credit-card" style="color:var(--brand)"></i><b style="font-size:15px">Tarjeta de crédito o débito</b></div>
+          <div class="brands"><span class="brand-chip visa">VISA</span><span class="brand-chip mc">Mastercard</span><span class="brand-chip amex">AMEX</span></div>
+          <button class="btn" type="button" data-go="tarjeta" data-pay-gate><i data-lucide="arrow-right"></i>Pagar con tarjeta</button>
+        </div>
+        <div class="card">
+          <div class="row start"><i data-lucide="landmark" style="color:var(--brand)"></i><b style="font-size:15px">Transferencia bancaria</b></div>
+          <b style="font-size:13px">Universidad Metropolitana</b>
+          <div class="chips" id="utCur" role="radiogroup" aria-label="Moneda de la transferencia"><button class="pill ok" type="button" role="radio" aria-checked="true" data-ut-cur="usd">Dólares (USD)</button><button class="pill neutral" type="button" role="radio" aria-checked="false" data-ut-cur="bs">Bolívares (Bs.)</button></div>
+          <div class="kv"><span>Banco receptor</span><b>Mercantil · 0105</b></div>
+          <p class="small" data-ut="acctype">Cuenta corriente en divisas (USD)</p>
+          <div class="copy"><span class="mono" data-ut="acc">0105 0000 00 0000000000</span><button class="link" type="button" aria-label="Copiar número de cuenta" data-ut-copyacc><i data-lucide="copy"></i></button></div>
+          <div class="kv"><span>RIF</span><b>J-00000000-1</b></div>
+          <div class="kv total"><span>Importe a transferir</span><b data-ut="expect">$0,00</b></div>
+          <p class="tiny" data-ut="ratenote"></p>
+          <p class="tiny">Datos bancarios ilustrativos. La factura queda en revisión hasta que la universidad valide la transferencia.</p>
+          <button class="btn ghost" type="button" data-ut-open data-pay-gate><i data-lucide="upload"></i>Registrar mi transferencia</button>
+          <form class="stack s14" id="utForm" novalidate hidden>
+            <div class="grid2">
+              <div class="field"><label for="ut-f">Fecha de la transferencia</label><div class="input sel"><select id="ut-f" data-recent-days="7"></select><i data-lucide="chevron-down"></i></div></div>
+              <div class="field"><label for="ut-b">Banco de origen</label><div class="input sel"><select id="ut-b"><option value="">Elige tu banco</option></select><i data-lucide="chevron-down"></i></div></div>
+              <div class="field"><label for="ut-r">Número de referencia</label><div class="input"><input id="ut-r" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="Ej.: 0031847265"></div></div>
+              <div class="field"><label for="ut-m" data-ut="mlabel">Monto transferido · USD</label><div class="input"><span style="color:var(--muted)" data-ut="mprefix">$</span><input id="ut-m" inputmode="decimal" autocomplete="off" placeholder="0,00"></div><p class="tiny" data-ut="mhint"></p></div>
+            </div>
+            <div class="field"><label class="upload" for="ut-file" tabindex="0" role="button"><i data-lucide="upload"></i>Adjuntar comprobante<span class="tiny" style="font-weight:400">PDF, JPG o PNG · Máximo 5 MB</span></label>
+              <input id="ut-file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" hidden>
+              <div class="file" id="utFileChip" hidden><i data-lucide="file-text"></i><div class="grow"><b style="font-size:13px" data-ut="fname"></b><p class="tiny" data-ut="fsize"></p></div><button class="link" type="button" aria-label="Quitar archivo" data-ut-rmfile><i data-lucide="x" style="color:var(--muted)"></i></button></div></div>
+            <div class="notice warn" id="utError" role="alert" hidden><i data-lucide="circle-alert"></i><p data-ut="err"></p></div>
+            <button class="btn" type="submit"><i data-lucide="send"></i>Enviar a revisión<span class="ut-amt">&nbsp;· <span data-ut="cta">$0,00</span></span></button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="row start"><i data-lucide="map-pin" style="color:var(--brand)"></i><b style="font-size:15px">Pagar en caja</b></div>
+          <p class="small" style="font-size:13px">Caja UNIMET · Edificio Administrativo · Lunes a viernes, 8:00–15:30</p>
+          <button class="btn ghost" type="button" data-toast="Lleva tu cédula y tu carnet. Tu saldo se actualiza cuando Caja registre el pago.">Ver qué llevar</button>
+        </div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h3 class="h2">Resumen del pago</h3>
+        <div id="paySel" class="stack s14" style="gap:8px"></div>
+        <div class="sep"></div>
+        <div class="kv total"><span>Total a pagar</span><b data-pay="total">$160,00</b></div>
+        <div class="kv"><span>Saldo después del pago</span><b data-pay="after">$160,00</b></div>
+      </div>
+      <div class="card dark">
+        <div class="row"><b class="h3">Saldo actual</b><span class="pill warn" data-debt="status">Con deuda</span></div>
+        <p class="big" data-debt="saldo">$320,00</p>
+        <p class="muted small" data-debt="summary">2 cuotas por pagar</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 16b · Pago con tarjeta -->
+<section class="screen app" id="tarjeta" data-title="Pago con tarjeta" data-back="caja" data-tab="cuenta" data-crumb="Estado de cuenta  /  Pago con tarjeta" hidden>
+  <div><h1 class="h1">Paga con tarjeta</h1><p class="lead" data-pay="lead">Cuota de noviembre · $160,00</p></div>
+  <div class="notice warn"><i data-lucide="triangle-alert"></i><p>Prototipo: no se procesan pagos reales. No escribas los datos de una tarjeta real.</p></div>
+  <div class="cols">
+    <div class="stack">
+      <div class="card">
+        <h2 class="h2">Tus tarjetas</h2>
+        <div class="stack s14" style="gap:10px" id="cardPicker"></div>
+        <button class="opt cardopt" type="button" data-card="new" id="useNewCard"><span class="dot"></span><i data-lucide="plus" style="color:var(--brand);font-size:18px"></i><span class="grow">Usar otra tarjeta</span></button>
+      </div>
+      <form class="card" id="newCardForm" hidden novalidate>
+        <div class="row"><h2 class="h2">Nueva tarjeta</h2><span class="brand-chip" id="ncBrand">Tarjeta</span></div>
+        <div class="card-preview" id="ncPreview">
+          <div class="row"><span class="brand-chip" data-nc="brand">Tarjeta</span><i data-lucide="nfc"></i></div>
+          <p class="mono cp-num" data-nc="num">•••• •••• •••• ••••</p>
+          <div class="row"><span data-nc="name">NOMBRE EN LA TARJETA</span><span class="mono" data-nc="exp">MM/AA</span></div>
+        </div>
+        <div class="field"><label for="nc-num">Número de tarjeta</label><div class="input"><input id="nc-num" inputmode="numeric" autocomplete="off" placeholder="0000 0000 0000 0000"><i data-lucide="credit-card"></i></div><p class="tiny" data-nc-hint="num">Aceptamos Visa, Mastercard y American Express.</p></div>
+        <div class="field"><label for="nc-name">Nombre como aparece en la tarjeta</label><div class="input"><input id="nc-name" autocomplete="off" placeholder="Ej.: ANA TORRES"></div></div>
+        <div class="grid2">
+          <div class="field"><label for="nc-exp">Vencimiento</label><div class="input"><input id="nc-exp" inputmode="numeric" autocomplete="off" placeholder="MM/AA" maxlength="5"></div><p class="tiny" data-nc-hint="exp"></p></div>
+          <div class="field"><label for="nc-cvv">Código de seguridad</label><div class="input"><input id="nc-cvv" inputmode="numeric" autocomplete="off" placeholder="CVV" maxlength="4"><i data-lucide="lock-keyhole"></i></div><p class="tiny" data-nc-hint="cvv">3 dígitos al reverso.</p></div>
+        </div>
+        <div class="affil">
+          <div class="grow"><b>¿Afiliar esta tarjeta?</b><p class="tiny">Si la afilias, quedará guardada en tu cuenta para próximos pagos. Puedes eliminarla cuando quieras.</p></div>
+          <div class="seg" role="radiogroup" aria-label="Afiliar tarjeta" id="affilSeg">
+            <button type="button" role="radio" aria-checked="true" data-affil="1" class="on">Afiliar</button>
+            <button type="button" role="radio" aria-checked="false" data-affil="0">Solo esta vez</button>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h3 class="h2">Resumen</h3>
+        <div id="paySel2" class="stack s14" style="gap:8px"></div>
+        <div class="sep"></div>
+        <div class="kv"><span>Cargos adicionales</span><b>$0,00</b></div>
+        <div class="kv total"><span>Total</span><b data-pay="total">$160,00</b></div>
+        <div class="kv"><span>Pagas con</span><b data-pay="card">Visa ···· 4242</b></div>
+        <button class="btn" type="button" data-pay-card><i data-lucide="lock-keyhole"></i><span data-pay="cta">Pagar $160,00</span></button>
+        <p class="tiny">Al confirmar, la factura se marca como pagada y tu saldo se actualiza en toda la app.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 17 · Reserva de canchas -->
+<section class="screen app" id="reserva" data-title="Reserva de canchas" data-back="servicios" data-tab="servicios" data-crumb="Servicios  /  Canchas" hidden>
+  <div><h1 class="h1">Un espacio para jugar</h1><p class="lead">Elige el deporte, la fecha y el horario.</p></div>
+  <div class="card my-courts" id="myCourts" hidden></div>
+  <div class="stack s14">
+    <h2 class="sec" style="font-weight:600">¿Qué quieres jugar?</h2>
+    <div class="sports" id="sportPicker"><button class="sport" type="button" data-sport="futbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sport-svg" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5l3.2 2.3-1.2 3.7h-4l-1.2-3.7z"/><path d="M12 7.5V3.2M15.2 9.8l4-1.4M14 13.5l2.5 3.5M10 13.5l-2.5 3.5M8.8 9.8l-4-1.4"/></svg><span>Fútbol</span></button><button class="sport" type="button" data-sport="beisbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sport-svg" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M7.5 4.3c2 2.2 2.6 5.4 1.6 8.4-.6 1.9-1.8 3.5-3.4 4.7"/><path d="M16.5 19.7c-2-2.2-2.6-5.4-1.6-8.4.6-1.9 1.8-3.5 3.4-4.7"/></svg><span>Béisbol</span></button><button class="sport on" type="button" data-sport="tenis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sport-svg" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6c3.5 3.5 3.5 9.3 0 12.8"/><path d="M18.4 5.6c-3.5 3.5-3.5 9.3 0 12.8"/></svg><span>Tenis</span></button><button class="sport" type="button" data-sport="padel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sport-svg" aria-hidden="true"><path d="M9.5 3.5c3.6 0 6.5 2.6 6.5 6 0 2.3-1.4 4.2-3.4 5.2L11 19.5"/><path d="M9.5 3.5C5.9 3.5 3 6.1 3 9.5c0 2.3 1.4 4.2 3.4 5.2l1.6 4.8"/><path d="M8 19.5h3"/><circle cx="19" cy="17" r="2"/></svg><span>Pádel</span></button><button class="sport" type="button" data-sport="baloncesto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sport-svg" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18"/><path d="M5.6 5.6c2.3 2.3 2.3 10.5 0 12.8M18.4 5.6c-2.3 2.3-2.3 10.5 0 12.8"/></svg><span>Baloncesto</span></button><button class="sport" type="button" data-sport="voleibol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sport-svg" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12c0-4 1.5-7 4-8.2"/><path d="M12 12c-3.5 2-6.8 2.2-8.9.9"/><path d="M12 12c3.5 2 5.4 4.8 5.3 7.3"/></svg><span>Voleibol</span></button></div>
+  </div>
+  <div class="cols">
+    <div class="stack">
+      <div class="card court-card">
+        <div class="court-ico" data-r="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sport-svg" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6c3.5 3.5 3.5 9.3 0 12.8"/><path d="M18.4 5.6c-3.5 3.5-3.5 9.3 0 12.8"/></svg></div>
+        <div class="stack s14" style="gap:6px;min-width:0">
+          <div class="row start"><span class="pill ok" data-r="label">Tenis</span><span class="small">Campus Central · Zona deportiva</span></div>
+          <h2 style="font-size:21px;font-weight:600" data-r="court">Cancha de tenis 02</h2>
+          <p class="small" data-r="desc">Superficie dura · Hasta 4 personas · Iluminación</p>
+          <p style="font-size:13px"><b data-r="pricehour">$12,00</b> <span class="small">por hora</span></p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row"><i data-lucide="chevron-left" style="color:var(--brand)"></i><span style="font-size:15px">Noviembre 2026</span><i data-lucide="chevron-right" style="color:var(--brand)"></i></div>
+        <div class="week" id="dayPicker"><button class="day" type="button" data-day="9" data-dname="Lun"><small>L</small>9</button><button class="day" type="button" data-day="10" data-dname="Mar"><small>M</small>10</button><button class="day" type="button" data-day="11" data-dname="Mié"><small>M</small>11</button><button class="day on" type="button" data-day="12" data-dname="Jue"><small>J</small>12</button><button class="day" type="button" data-day="13" data-dname="Vie"><small>V</small>13</button><button class="day" type="button" data-day="14" data-dname="Sáb"><small>S</small>14</button><button class="day" type="button" data-day="15" data-dname="Dom"><small>D</small>15</button></div>
+        <p class="tiny" data-r="dayhint">Jueves, 12 de noviembre · Selecciona una hora</p>
+      </div>
+      <div class="stack s14">
+        <h2 class="sec">Horarios disponibles</h2>
+        <div class="chips"><span class="pill ok">Disponible</span><span class="pill neutral">Ocupado</span></div>
+        <div class="slots" id="slotPicker"><button class="slot" type="button" data-slot="16:00">16:00<small>Disponible</small></button><button class="slot" type="button" data-slot="17:00">17:00<small>Disponible</small></button><button class="slot" type="button" data-slot="18:00">18:00<small>Disponible</small></button><button class="slot" type="button" data-slot="19:00">19:00<small>Disponible</small></button><button class="slot" type="button" data-slot="20:00">20:00<small>Disponible</small></button><button class="slot" type="button" data-slot="21:00">21:00<small>Disponible</small></button></div>
+        <p class="tiny">Cada turno dura 60 minutos. Horario del campus (VET).</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="sec">Tu reserva</h3>
+      <b style="font-size:14px" data-r="court">Cancha de tenis 02</b>
+      <div class="kv"><span>Fecha</span><b data-r="date">12 nov 2026</b></div><div class="kv"><span>Horario</span><b data-r="time">18:00 – 19:00</b></div>
+      <div class="kv"><span>Alquiler · 1 hora</span><b data-r="rent">$12,00</b></div><div class="kv"><span>Servicio Nexo · 5 %</span><b data-r="fee">$0,60</b></div>
+      <div class="sep"></div><div class="kv total"><span>Total a pagar</span><b data-r="total">$12,60</b></div>
+      <button class="btn" type="button" data-go="revision" data-r-cta><i data-lucide="arrow-right"></i>Continuar al pago</button>
+      <p class="tiny">Cancela sin cargo hasta 2 horas antes. Recibirás tu QR al confirmar el pago.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 18 · Revisión del pago -->
+<section class="screen app" id="revision" data-title="Revisar y pagar" data-back="reserva" data-tab="servicios" data-crumb="Canchas  /  Revisar y pagar" hidden>
+  <div class="chips"><span class="pill ok">1 · Reserva</span><span class="pill ok">2 · Pago</span><span class="pill neutral">3 · QR</span></div>
+  <div><h1 class="h1">Todo listo, <span data-user="first">Ana</span></h1><p class="lead">Revisa los datos antes de confirmar.</p></div>
+  <div class="cols">
+    <div class="stack">
+      <div class="card">
+        <div class="row start"><span class="ico lg" data-r="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="sport-svg" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6c3.5 3.5 3.5 9.3 0 12.8"/><path d="M18.4 5.6c-3.5 3.5-3.5 9.3 0 12.8"/></svg></span><div><b data-r="court">Cancha de tenis 02</b><p class="small" data-r="desc">Superficie dura · Hasta 4 personas · Iluminación</p></div></div>
+        <div class="sep"></div>
+        <div class="kv"><span>Fecha</span><b data-r="datelong">Jue, 12 nov 2026</b></div><div class="kv"><span>Turno</span><b data-r="timeh">18:00 – 19:00 · 1 h</b></div><div class="kv"><span>Titular</span><b><span data-user="full">Ana Torres</span></b></div>
+      </div>
+      <div class="stack s14">
+        <h2 class="sec">¿Cómo quieres pagar?</h2>
+        <div class="stack s14" id="courtPayBox" style="gap:10px"></div>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <div class="kv"><span>Alquiler de cancha</span><b data-r="rent">$12,00</b></div><div class="kv"><span>Servicio Nexo · 5 %</span><b data-r="fee">$0,60</b></div>
+        <div class="sep"></div><div class="kv total"><span>Total en USD</span><b data-r="total">$12,60</b></div>
+      </div>
+      <div class="notice"><i data-lucide="shield-check"></i><p>Pago protegido. Tu QR estará disponible al confirmar. Cancelación gratuita hasta las 16:00.</p></div>
+      <button class="btn" type="button" data-go="qr" data-court-pay><i data-lucide="lock-keyhole"></i>Confirmar pago · <span data-r="total">$12,60</span></button>
+      <p class="tiny">Al continuar, aceptas las condiciones de reserva del campus. Entorno conceptual: no se procesará un pago real.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 19 · Comprobante QR -->
+<section class="screen app" id="qr" data-title="Comprobante" data-back="inicio" data-tab="servicios" data-crumb="Canchas  /  Comprobante" hidden>
+  <div class="stack" style="max-width:520px;width:100%;margin-inline:auto">
+    <div class="stack s14" style="align-items:center;text-align:center">
+      <span class="okmark" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="ok-ring" cx="32" cy="32" r="26"/><path class="ok-tick" d="M21 33l7.5 7.5L44 25"/></svg><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <h1 class="h1" style="font-size:27px">¡Tu cancha está lista!</h1>
+      <p class="small" style="font-size:13px;margin-top:-8px">Reserva confirmada · Comprobante de ejemplo</p>
+    </div>
+    <div class="card">
+      <div class="stack s14" style="align-items:center;text-align:center">
+        <span class="pill ok">Pago exitoso · Demo</span>
+        <div class="qr"><canvas data-qr="NX-261112-0842" width="29" height="29"></canvas></div>
+        <p class="mono" style="font-size:15px">NX-261112-0842</p>
+        <p class="small">Presenta este QR en la entrada de la cancha. Válido para el turno reservado.</p>
+      </div>
+      <div class="sep"></div>
+      <b style="font-size:17px;font-weight:600" data-r="court">Cancha de tenis 02</b>
+      <div class="kv"><span>Campus</span><b>Central · Zona deportiva</b></div><div class="kv"><span>Fecha</span><b data-r="datelong">Jue, 12 nov 2026</b></div>
+      <div class="kv"><span>Horario</span><b data-r="time">18:00 – 19:00</b></div><div class="kv"><span>Titular</span><b><span data-user="full">Ana Torres</span></b></div><div class="kv"><span>Método</span><b data-court-method><span data-defcard>Visa ···· 4242</span></b></div>
+      <div class="sep"></div><div class="kv total"><span>Total pagado</span><b data-r="total">$12,60</b></div>
+    </div>
+    <button class="btn" type="button" data-toast="La descarga no está disponible en el prototipo."><i data-lucide="download"></i>Descargar comprobante</button>
+    <button class="btn ghost" type="button" data-go="inicio">Volver al inicio</button>
+    <p class="tiny center">QR de demostración, sin validez de acceso real. No se ha realizado ningún cobro.</p>
+  </div>
+</section>
+
+<!-- 20 · Soporte -->
+<section class="screen app" id="soporte" data-title="Centro de ayuda" data-back="inicio" data-tab="soporte" data-crumb="Soporte" hidden>
+  <div><h1 class="h1">Estamos para ayudarte</h1><p class="lead">Consulta tus solicitudes o cuéntanos qué pasó.</p></div>
+  <div class="cols">
+    <div class="stack s14">
+      <div class="chips" id="supChips"></div>
+      <h2 class="sec">Mis solicitudes</h2>
+      <div class="stack s14" id="supList"></div>
+    </div>
+    <div class="stack">
+      <div class="card dark">
+        <div class="row start" style="align-items:flex-start"><i data-lucide="messages-square" style="font-size:24px;color:var(--mint)"></i><div><b class="h2">Tu campus te escucha</b><p class="muted small">Lun–vie · 8:00 a 18:00. Respondemos en menos de 24 horas hábiles.</p></div></div>
+        <button class="btn" type="button" id="supNew"><i data-lucide="plus"></i>Crear nueva solicitud</button>
+      </div>
+      <form class="card" id="supForm" novalidate hidden>
+        <div><h2 class="h2">Nueva solicitud</h2><p class="small" style="font-size:13px">Cuéntanos qué pasó. Un moderador te responderá aquí.</p></div>
+        <div class="field"><label for="sp-svc">Servicio</label><div class="input sel"><select id="sp-svc"><option>Comida</option><option>Estacionamiento</option><option>Materias</option><option>Canchas</option><option>Acceso</option><option>Otro</option></select><i data-lucide="chevron-down"></i></div></div>
+        <div class="field"><label for="sp-subj">Asunto</label><div class="input"><input id="sp-subj" maxlength="60" placeholder="Ej.: Cobro duplicado de almuerzo"></div></div>
+        <div class="field" id="sp-buy-f"><label for="sp-buy">Compra relacionada · Opcional</label><div class="input sel"><select id="sp-buy"></select><i data-lucide="chevron-down"></i></div></div>
+        <div class="field"><label for="sp-msg">Describe el problema</label><div class="input" style="padding:12px"><textarea id="sp-msg" rows="4" maxlength="600" placeholder="Qué pasó, cuándo y qué esperabas que pasara."></textarea></div></div>
+        <div class="row"><button class="btn ghost" type="button" id="supCancel">Cancelar</button><button class="btn" type="submit"><i data-lucide="send"></i>Enviar solicitud</button></div>
+      </form>
+      <div class="notice"><i data-lucide="shield-check"></i><p>Para ayudarte más rápido, incluye el identificador de compra y una captura del problema.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Espacio de gestión (se pinta desde app.js · módulo de soporte) ===== -->
+<!-- G1 · Administrador · Tickets abiertos (Figma 2:25419) -->
+<section class="screen app" id="gestion" data-staff="admin" data-title="Tickets abiertos" data-tab="gestion" data-crumb="Gestión  /  Administrador  /  Tickets abiertos" hidden>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px"><h1 class="h1">El soporte, bajo control</h1><p class="lead">Supervisa los tickets abiertos y organiza tu equipo de moderación.</p></div>
+    <span class="pill neutral" id="gsUpdated">Actualizado</span>
+  </div>
+  <div class="kpis" id="gsKpis"></div>
+  <div class="cols">
+    <div class="stack s14">
+      <div class="row"><h2 class="sec">Todos los tickets</h2><button class="link b" type="button" id="gsExport">Exportar listado ↓</button></div>
+      <div class="filters">
+        <div class="input"><i data-lucide="search"></i><input id="gsSearch" type="search" placeholder="Buscar por ticket, estudiante o compra" aria-label="Buscar tickets"></div>
+        <div class="input sel"><select id="gsState" aria-label="Filtrar por estado"><option value="open">Sin resolver</option><option value="abierto">Abierto</option><option value="revision">En revisión</option><option value="espera">En espera</option><option value="resuelto">Resuelto</option><option value="all">Todos los estados</option></select><i data-lucide="chevron-down"></i></div>
+        <div class="input sel"><select id="gsService" aria-label="Filtrar por servicio"><option value="all">Todos los servicios</option></select><i data-lucide="chevron-down"></i></div>
+      </div>
+      <div class="card tk-table" id="gsTable"></div>
+    </div>
+    <div class="stack" id="gsSide"></div>
+  </div>
+</section>
+
+<!-- G2 · Administrador · Moderadores -->
+<section class="screen app" id="equipo" data-staff="admin" data-title="Moderadores" data-tab="equipo" data-crumb="Gestión  /  Administrador  /  Moderadores" hidden>
+  <div><h1 class="h1">Tu equipo de moderación</h1><p class="lead">Invita, activa o desactiva a quienes responden los tickets.</p></div>
+  <div class="cols">
+    <div class="card tk-table" id="eqTable"></div>
+    <div class="stack" id="eqSide"></div>
+  </div>
+</section>
+
+<!-- G3 · Administrador · Detalle de un ticket (solo lectura) -->
+<section class="screen app" id="caso" data-staff="admin" data-title="Detalle del ticket" data-back="gestion" data-tab="gestion" data-crumb="Gestión  /  Administrador  /  Ticket" hidden>
+  <button class="link back" type="button" data-go="gestion"><i data-lucide="arrow-left"></i>Volver a los tickets</button>
+  <div class="cols" id="csBody"></div>
+</section>
+
+<!-- G4 · Moderador · Mis tickets (Figma 2:25614) -->
+<section class="screen app" id="moderacion" data-staff="mod" data-title="Tickets" data-tab="moderacion" data-crumb="Gestión  /  Moderador  /  Tickets" hidden>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px"><h1 class="h1">Cada problema, una solución</h1><p class="lead" id="mdLead">Mis tickets</p></div>
+    <span class="pill" id="mdPrio" hidden></span>
+  </div>
+  <div class="mod-grid" id="mdBody"></div>
+</section>
+
+<!-- G5 · Moderador · Resueltos -->
+<section class="screen app" id="resueltos" data-staff="mod" data-title="Resueltos" data-tab="resueltos" data-crumb="Gestión  /  Moderador  /  Resueltos" hidden>
+  <div><h1 class="h1">Casos resueltos</h1><p class="lead">Lo que ya solucionaste, con las acciones que quedaron registradas.</p></div>
+  <div class="card tk-table" id="rsTable"></div>
+</section>
+
+<!-- G6 · Creador · Resumen (Figma 2:25763) -->
+<section class="screen app" id="creador" data-staff="creator" data-title="Resumen" data-tab="creador" data-crumb="Gestión  /  Creador  /  Resumen" hidden>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px"><h1 class="h1">Una mirada a todo Nexo</h1><p class="lead">Rendimiento de la plataforma · Universidad Metropolitana</p></div>
+    <div class="period"><div class="input sel"><select id="crPeriod" aria-label="Período"></select><i data-lucide="chevron-down"></i></div><p class="tiny" id="crCompare"></p></div>
+  </div>
+  <div class="kpis four" id="crKpis"></div>
+  <div class="cols wide">
+    <div class="card" id="crChart"></div>
+    <div class="card" id="crMix"></div>
+  </div>
+  <div class="health" id="crHealth"></div>
+  <p class="tiny" id="crFoot"></p>
+</section>
+
+<!-- G7 · Creador · Equipo y tickets (Figma 2:25970) -->
+<section class="screen app" id="creador-equipo" data-staff="creator" data-title="Equipo y tickets" data-tab="creador-equipo" data-crumb="Gestión  /  Creador  /  Equipo y tickets" hidden>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px"><h1 class="h1">Las personas detrás de Nexo</h1><p class="lead">Acceso total para gestionar roles, responder y resolver solicitudes.</p></div>
+    <span class="pill ok">Creador · Todos los permisos</span>
+  </div>
+  <div class="cols wide">
+    <div class="card" id="ceTeam"></div>
+    <div id="ceInvite"></div>
+  </div>
+  <div class="row" style="flex-wrap:wrap"><h2 class="sec">Centro de soporte</h2><div class="chips" id="ceChips"></div></div>
+  <div class="cols wide">
+    <div class="stack s14">
+      <div class="filters">
+        <div class="input"><i data-lucide="search"></i><input id="ceSearch" type="search" placeholder="Buscar por ticket, estudiante o compra" aria-label="Buscar tickets"></div>
+        <div class="input sel"><select id="ceState" aria-label="Filtrar por estado"><option value="all">Todos los estados</option><option value="abierto">Abierto</option><option value="revision">En revisión</option><option value="espera">En espera</option><option value="resuelto">Resuelto</option></select><i data-lucide="chevron-down"></i></div>
+        <div class="input sel"><select id="ceService" aria-label="Filtrar por servicio"><option value="all">Todos los servicios</option></select><i data-lucide="chevron-down"></i></div>
+      </div>
+      <div class="card tk-table" id="ceTable"></div>
+    </div>
+    <div class="stack s14"><div class="card" id="ceTicket"></div><p class="tiny">Los cambios de roles, respuestas y soluciones quedan registrados en el historial de auditoría.</p></div>
+  </div>
+</section>
+
+<!-- G8 · Creador · Movimientos (transacciones y registro de cambios) -->
+<section class="screen app" id="movimientos" data-staff="creator" data-title="Movimientos" data-tab="movimientos" data-crumb="Gestión  /  Creador  /  Movimientos" hidden>
+  <div><h1 class="h1">Todo lo que pasa en Nexo</h1><p class="lead">Compras, reembolsos y cada cambio del equipo, en orden.</p></div>
+  <div class="chips" id="mvTabs"></div>
+  <div class="card tk-table" id="mvList"></div>
+</section>
+
+<!-- G9 · Creador · Configuración -->
+<section class="screen app" id="dueno" data-staff="owner" data-title="Datos reales" data-tab="dueno" data-crumb="Dueño  /  Datos reales" hidden>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap;gap:12px"><div><p class="eyebrow">CUENTA DE DUEÑO</p><h1 class="h1">Datos reales de Nexo</h1><p class="lead" id="dnLead">Usuarios y pagos reales hechos en nexouni.netlify.app.</p></div>
+    <div class="row start" style="gap:8px" id="dnActs"></div></div>
+  <div id="dnBody" class="stack"></div>
+</section>
+<!-- Dueño · Menús de todos los locales -->
+<section class="screen app" id="menus" data-staff="owner" data-title="Menús de los locales" data-tab="menus" data-crumb="Dueño  /  Menús" hidden>
+  <div><h1 class="h1">Menús de los locales</h1><p class="lead">Elige un local para revisar o editar su menú, igual que lo haría el comercio.</p></div>
+  <div class="mn-picker" id="mnPicker" aria-label="Locales"></div>
+  <div class="cols" id="mnBody"></div>
+</section>
+<!-- Dueño · Cuentas de prueba (antes estaban en el inicio de sesión) -->
+<section class="screen app" id="pruebas" data-staff="owner" data-title="Cuentas de prueba" data-tab="pruebas" data-crumb="Dueño  /  Cuentas de prueba" hidden>
+  <div><h1 class="h1">Cuentas de prueba</h1><p class="lead">Solo tú las ves. Entra a cualquiera para revisar Nexo como estudiante, personal o comercio, y vuelve a tu cuenta desde el menú de usuario.</p></div>
+  <div class="stack s14" id="tpList"></div>
+</section>
+<section class="screen app" id="config" data-staff="creator" data-title="Configuración" data-tab="config" data-crumb="Gestión  /  Creador  /  Configuración" hidden>
+  <div><h1 class="h1">Configuración de la plataforma</h1><p class="lead">Ajusta las comisiones por servicio y los datos del prototipo.</p></div>
+  <div class="cols">
+    <form class="card" id="cfForm" novalidate></form>
+    <div class="stack" id="cfSide"></div>
+  </div>
+</section>
+
+<!-- G10 · Comercio · Pedidos -->
+<section class="screen app" id="local-pedidos" data-staff="local" data-title="Pedidos" data-tab="local-pedidos" data-crumb="Comercio  /  Pedidos" hidden>
+  <div class="row" style="align-items:flex-start;flex-wrap:wrap">
+    <div class="row start lp-hero-id" style="flex:1;min-width:240px;gap:16px"><span class="lp-art" id="lpArt" aria-hidden="true"></span><div><h1 class="h1" id="lpTitle">Pedidos de hoy</h1><p class="lead" id="lpLead"></p></div></div>
+    <div id="lpPause" style="width:220px"></div>
+  </div>
+  <form class="card lp-code" id="lpCodeForm" novalidate>
+    <div class="row start" style="gap:12px;flex-wrap:wrap"><span class="ico"><i data-lucide="hand-platter"></i></span><div style="flex:1;min-width:180px"><b class="h3">Entregar con código</b><p class="small">Escribe los 4 dígitos que te muestra el estudiante.</p></div>
+      <div class="input" style="width:150px"><input inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000" aria-label="Código de retiro"></div><button class="btn" type="submit" style="width:auto;padding:0 20px">Entregar</button></div>
+  </form>
+  <div class="kpis" id="lpKpis"></div>
+  <div class="lp-board" id="lpBoard"></div>
+</section>
+
+<!-- G11 · Comercio · Menú y horario -->
+<section class="screen app" id="local-menu" data-staff="local" data-title="Menú y horario" data-tab="local-menu" data-crumb="Comercio  /  Menú y horario" hidden>
+  <div class="row start lp-hero-id" style="gap:16px"><span class="lp-art" id="lmArt" aria-hidden="true"></span><div><h1 class="h1">Tu menú de hoy</h1><p class="lead" id="lmLead"></p></div></div>
+  <div class="cols" id="lmBody"></div>
+</section>
+
+<!-- G12 · Administración y creador · Pagos por validar (sin diseño en Figma) -->
+<section class="screen app" id="validar" data-staff="admin" data-title="Pagos por validar" data-tab="validar" data-crumb="Gestión  /  Caja  /  Pagos por validar" hidden>
+  <div><h1 class="h1">Pagos por validar</h1><p class="lead">Transferencias y Pago Móvil que esperan confirmación de Caja.</p></div>
+  <div class="kpis" id="vlKpis"></div>
+  <div class="chips" id="vlTabs"></div>
+  <div class="stack s14" id="vlList"></div>
+</section>
+
+<!-- Verificar carnet (todos los estudiantes, cada trimestre): foto → administración -->
+<section class="screen app" id="carnet" data-title="Verifica tu carnet" data-tab="inicio" data-crumb="Verificar carnet" hidden>
+  <div><h1 class="h1">Verifica tu carnet</h1><p class="lead" id="caLead">Envía una foto de tu carnet y un administrador te da acceso.</p></div>
+  <div class="stack s14" id="caBody"></div>
+</section>
+
+<!-- Gestión · Carnets por verificar (admin, creador, dueño) -->
+<section class="screen app" id="carnets" data-staff="admin" data-title="Carnets por verificar" data-tab="carnets" data-crumb="Gestión  /  Carnets por verificar" hidden>
+  <div><h1 class="h1">Carnets por verificar</h1><p class="lead">Cada trimestre los estudiantes envían una foto de su carnet. Revisa que el nombre y el número coincidan y que estén inscritos en el trimestre en curso.</p></div>
+  <div class="kpis" id="caKpis"></div>
+  <div class="chips" id="caTabs"></div>
+  <div class="stack s14" id="caList"></div>
+</section>
+
+<!-- 21 · Notificaciones -->
+<section class="screen app" id="notificaciones" data-title="Notificaciones" data-back="inicio" data-tab="inicio" data-crumb="Notificaciones" hidden>
+  <div class="row" style="flex-wrap:wrap">
+    <div><h1 class="h1">Tus notificaciones</h1><p class="lead" id="notifLead">Lo importante de tu campus, en un solo lugar.</p></div>
+    <button class="btn ghost" type="button" id="notifReadAll" style="width:auto;padding:0 16px"><i data-lucide="check-check"></i>Marcar todas como leídas</button>
+  </div>
+  <div class="chips" id="notifFilter">
+    <button class="pill ok" type="button" data-nf="all">Todas</button>
+    <button class="pill neutral" type="button" data-nf="estacionamiento">Estacionamiento</button>
+    <button class="pill neutral" type="button" data-nf="universidad">Universidad</button>
+    <button class="pill neutral" type="button" data-nf="canchas">Canchas</button>
+    <button class="pill neutral" type="button" data-nf="comida">Comida</button>
+    <button class="pill neutral" type="button" data-nf="soporte">Soporte</button>
+  </div>
+  <div class="cols">
+    <div class="card" id="notifList" style="gap:0"></div>
+    <div class="stack">
+      <div class="card">
+        <h2 class="h2">¿Qué quieres recibir?</h2>
+        <p class="small" style="font-size:13px;margin-top:-6px">Desactiva un tema y dejarás de ver sus avisos.</p>
+        <div id="notifPrefs" class="stack s14" style="gap:0"></div>
+      </div>
+      <p class="tiny">Las fechas de los avisos siguen la fecha de simulación del estado de cuenta. Las ofertas de comida y los turnos libres son ejemplos.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 22 · Mi cuenta -->
+<section class="screen app" id="perfil" data-title="Mi cuenta" data-back="inicio" data-tab="perfil" data-crumb="Mi cuenta" hidden>
+  <div class="profile-head">
+    <span class="avatar xl" data-user="initials">AT</span>
+    <div style="min-width:0"><h1 class="h1" data-user="full">Ana Torres</h1><p class="lead"><span data-user="email"></span><span data-has-carnet> · Carnet <span data-user="carnet"></span></span><span data-no-carnet hidden> · Cuenta del equipo de Nexo</span></p></div>
+  </div>
+  <div class="cols">
+    <div class="stack">
+      <form class="card" id="pfAccount" novalidate>
+        <div><h2 class="h2">Datos de la cuenta</h2><p class="small" style="font-size:13px">Así te verán en Nexo y aquí te llegarán los códigos de verificación.</p></div>
+        <div class="field"><label for="pf-name">Nombre completo</label><div class="input"><input id="pf-name" autocomplete="name"><i data-lucide="user"></i></div></div>
+        <div class="field"><label for="pf-mail">Correo institucional</label><div class="input"><input id="pf-mail" type="email" autocomplete="email"><i data-lucide="mail"></i></div><p class="tiny" data-pf="mailhint">Si lo cambias, usarás el correo nuevo para iniciar sesión.</p></div>
+        <div class="field" data-pf="mailpass" hidden><label for="pf-mailpass">Tu contraseña actual</label><div class="input"><input id="pf-mailpass" type="password" autocomplete="current-password" placeholder="Confírmala para cambiar el correo"><button class="eye" type="button" data-eye="pf-mailpass" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div></div>
+        <div class="field"><label for="pf-carnet">Carnet</label><div class="input" style="background:var(--field)"><input id="pf-carnet" readonly aria-readonly="true"><i data-lucide="lock"></i></div><p class="tiny">El carnet lo asigna la universidad y no se puede cambiar.</p><p class="tiny" id="pfCarnetSt" hidden></p></div>
+        <div class="notice warn" data-pf="err1" role="alert" hidden><i data-lucide="circle-alert"></i><p></p></div>
+        <button class="btn" type="submit"><i data-lucide="check"></i>Guardar datos de la cuenta</button>
+      </form>
+
+      <form class="card" id="pfPersonal" novalidate>
+        <div><h2 class="h2">Datos personales</h2><p class="small" style="font-size:13px">Los usamos para validar tus pagos y contactarte si hay un problema.</p></div>
+        <div class="grid2">
+          <div class="field"><label for="pf-ci">Cédula</label><div class="input"><select id="pf-cit" style="flex:0 0 auto;width:auto" aria-label="Tipo de documento"><option>V</option><option>E</option></select><input id="pf-ci" inputmode="numeric" maxlength="9" placeholder="12345678" autocomplete="off"></div></div>
+          <div class="field"><label for="pf-phone">Teléfono</label><div class="input"><input id="pf-phone" inputmode="numeric" maxlength="12" placeholder="0414-1234567" autocomplete="tel"><i data-lucide="phone"></i></div></div>
+          <div class="field" role="group" aria-labelledby="pf-birth-lbl"><label id="pf-birth-lbl" for="pf-bd-d">Fecha de nacimiento</label>
+            <div class="dob"><div class="input sel"><select id="pf-bd-d" aria-label="Día"><option value="">Día</option></select><i data-lucide="chevron-down"></i></div><div class="input sel"><select id="pf-bd-m" aria-label="Mes"><option value="">Mes</option></select><i data-lucide="chevron-down"></i></div><div class="input sel"><select id="pf-bd-y" aria-label="Año"><option value="">Año</option></select><i data-lucide="chevron-down"></i></div></div>
+            <input id="pf-birth" type="hidden"></div>
+          <div class="field"><label for="pf-career">Carrera</label><div class="input"><select id="pf-career"><option value="">Elige tu carrera</option></select><i data-lucide="chevron-down"></i></div></div>
+        </div>
+        <div class="field"><label for="pf-addr">Dirección <span class="small" style="font-weight:400">· Opcional</span></label><div class="input"><input id="pf-addr" autocomplete="street-address" placeholder="Ej.: Los Palos Grandes, Caracas" maxlength="80"><i data-lucide="map-pin"></i></div></div>
+        <div class="notice warn" data-pf="err2" role="alert" hidden><i data-lucide="circle-alert"></i><p></p></div>
+        <button class="btn" type="submit"><i data-lucide="check"></i>Guardar datos personales</button>
+      </form>
+    </div>
+
+    <div class="stack">
+      <form class="card" id="pfPass" novalidate>
+        <div><h2 class="h2">Contraseña</h2><p class="small" style="font-size:13px">Usa al menos 8 caracteres y un número.</p></div>
+        <div class="field"><label for="pf-p0">Contraseña actual</label><div class="input"><input id="pf-p0" type="password" autocomplete="current-password"><button class="eye" type="button" data-eye="pf-p0" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div></div>
+        <div class="field"><label for="pf-p1">Contraseña nueva</label><div class="input"><input id="pf-p1" type="password" autocomplete="new-password"><button class="eye" type="button" data-eye="pf-p1" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div>
+          <div class="strength" aria-hidden="true"><span></span><span></span><span></span></div><p class="tiny" data-pf="strength">Escribe tu contraseña nueva.</p></div>
+        <div class="field"><label for="pf-p2">Repite la contraseña nueva</label><div class="input"><input id="pf-p2" type="password" autocomplete="new-password"><button class="eye" type="button" data-eye="pf-p2" aria-label="Mostrar contraseña" aria-pressed="false"><i data-lucide="eye-off"></i></button></div></div>
+        <div class="notice warn" data-pf="err3" role="alert" hidden><i data-lucide="circle-alert"></i><p></p></div>
+        <button class="btn" type="submit"><i data-lucide="key-round"></i>Cambiar contraseña</button>
+      </form>
+
+      <div class="card">
+        <h2 class="h2">Accesos rápidos</h2>
+        <button class="quick" type="button" data-go="vehiculo"><span class="ico"><i data-lucide="car-front"></i></span><div class="grow"><b>Mi vehículo</b><span data-veh="summary"></span></div><i data-lucide="chevron-right"></i></button>
+        <button class="quick" type="button" data-go="afiliar"><span class="ico"><i data-lucide="credit-card"></i></span><div class="grow"><b>Tarjetas afiliadas</b><span data-pf="cards">—</span></div><i data-lucide="chevron-right"></i></button>
+        <button class="quick" type="button" data-go="notificaciones"><span class="ico"><i data-lucide="bell"></i></span><div class="grow"><b>Notificaciones</b><span>Elige qué avisos recibir</span></div><i data-lucide="chevron-right"></i></button>
+      </div>
+
+      <div class="card" data-install-card hidden></div>
+      <div class="card">
+        <div><h2 class="h2">Apariencia</h2><p class="small" style="font-size:13px">Elige cómo se ve Nexo. "Automático" sigue la configuración de tu dispositivo.</p></div>
+        <div data-theme-seg></div>
+      </div>
+      <div class="card">
+        <div class="row" style="align-items:flex-start;gap:12px"><div><h2 class="h2">Modo demostración</h2><p class="small" style="font-size:13px">Muestra herramientas para probar el prototipo: cambiar la fecha en tu estado de cuenta y simular que un pedido ya está listo.</p></div><button class="switch" type="button" role="switch" aria-checked="false" aria-label="Modo demostración" data-demo-mode></button></div>
+      </div>
+      <div class="card">
+        <h2 class="h2">Sesión</h2>
+        <p class="small" style="font-size:13px">Sesión iniciada como <b data-user="email" style="color:var(--ink)"></b>.</p>
+        <button class="btn danger-ghost" type="button" data-logout><i data-lucide="log-out"></i>Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<template id="account-tpl">
+  <div class="row"><span class="muted" style="font-size:13px">Tu cuenta universitaria</span><span class="pill warn" data-debt="status">Deuda pendiente</span></div>
+  <p class="big" data-debt="saldo">$320,00</p>
+  <p class="muted small" style="margin-top:-4px" data-debt="summary">2 cuotas por pagar · Próxima vence el 20 nov 2026</p>
+  <button class="btn" type="button" data-go="materias"><i data-lucide="arrow-up-right"></i>Ver estado de cuenta</button>
+</template>
+
+<script src="vendor/lucide.min.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
