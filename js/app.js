@@ -39,11 +39,11 @@ const NAV = [
 const TABS = NAV.filter(n => n[0] !== "cuenta" && n[0] !== "perfil");
 /* Espacio de gestión: cada sección con data-staff="admin" o "mod" usa su propio menú */
 const STAFF_NAV = {
-  admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"], ["validar","badge-check","Pagos por validar","validar"], ["carnets","id-card","Carnets","carnets"]],
+  admin: [["gestion","inbox","Tickets abiertos","gestion"], ["equipo","users","Moderadores","equipo"], ["validar","badge-check","Pagos por validar","validar"], ["carnets","id-card","Carnets","carnets"], ["menus","utensils","Menús","menus"]],
   mod: [["moderacion","inbox","Tickets","moderacion"], ["resueltos","circle-check","Resueltos","resueltos"]],
   local: [["local-pedidos","chef-hat","Pedidos","local-pedidos"], ["local-menu","book-open","Menú y horario","local-menu"]],
   owner: [["dueno","shield-check","Datos reales","dueno"], ["validar","badge-check","Caja","validar"], ["carnets","id-card","Carnets","carnets"], ["menus","utensils","Menús","menus"], ["pruebas","flask-conical","Cuentas de prueba","pruebas"]],
-  creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["validar","badge-check","Pagos por validar","validar"], ["carnets","id-card","Carnets","carnets"], ["config","settings","Configuración","config"]]
+  creator: [["creador","chart-no-axes-combined","Resumen","creador"], ["creador-equipo","users","Equipo y tickets","creador-equipo"], ["movimientos","receipt-text","Movimientos","movimientos"], ["validar","badge-check","Pagos por validar","validar"], ["carnets","id-card","Carnets","carnets"], ["menus","utensils","Menús","menus"], ["config","settings","Configuración","config"]]
 };
 const ROLE_LABEL = { owner: "Dueño", local: "Comercio", creator: "Creador", admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
 const ROLE_HOME = { owner: "dueno", local: "local-pedidos", creator: "creador", admin: "gestion", mod: "moderacion", estudiante: "inicio" };
@@ -293,7 +293,7 @@ function staffGreet() {
 const DIA_LARGO_G = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const MES_LARGO_G = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 staffGreet();
-const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"], carnets: ["admin", "creator", "owner"], pruebas: "owner", menus: "owner" };
+const STAFF_SCREENS = { dueno: "owner", gestion: "admin", equipo: "admin", caso: "admin", moderacion: "mod", resueltos: "mod", creador: "creator", "creador-equipo": "creator", movimientos: "creator", config: "creator", "local-pedidos": "local", "local-menu": "local", validar: ["admin", "creator", "owner"], carnets: ["admin", "creator", "owner"], pruebas: "owner", menus: ["owner", "creator", "admin"] };
 // Carnet: de 5 a 11 dígitos. Todo estudiante lo verifica por foto cada trimestre (módulo "Verificar carnet por foto")
 const CARNET_MIN = 5, CARNET_RE = /^\d{5,11}$/, CARNET_LOCK = ["materias", "caja", "tarjeta", "inscripcion", "estacionamiento", "vehiculo", "pagoplan", "planes", "acceso"];
 const CARNET_LOCK_TXT = "El estado de cuenta y el estacionamiento se activan cuando verifiquemos tu carnet.";
@@ -4406,7 +4406,7 @@ function relabelForCreator(role = "creator", secId = "validar") {
   // la sección usa el menú de administración; para el creador (o el dueño) se reemplaza por el suyo
   const sec = document.getElementById(secId);
   if (sec.dataset.navFor === role) return;
-  const nav = STAFF_NAV[role], RL = role === "owner" ? "Dueño" : "Creador", mk = n => `<button type="button" data-go="${n[3]}" class="${n[0] === secId ? "on" : ""}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`;
+  const nav = STAFF_NAV[role], RL = ROLE_LABEL[role] || "Creador", mk = n => `<button type="button" data-go="${n[3]}" class="${n[0] === secId ? "on" : ""}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`;
   const sideNav = sec.querySelector(".side .nav"); if (sideNav) sideNav.innerHTML = nav.map(mk).join("") + `<button type="button" class="mode-nav" data-mode-switch="usuario"><i data-lucide="user-round"></i>Usar Nexo como usuario</button>`;
   const bar = sec.querySelector(".tabbar"); if (bar) bar.innerHTML = nav.map(mk).join("") + `<button type="button" data-logout><i data-lucide="log-out"></i>Salir</button>`;
   sec.querySelectorAll(".side .user span:last-child").forEach(el => el.textContent = RL + " · Menú");
@@ -6260,6 +6260,7 @@ document.addEventListener("submit", e => {
    deja auditoría (tipo config). Los cambios llegan en vivo al comercio y a los estudiantes. */
 try { mnLocal = sessionStorage.getItem("nexo-mnlocal"); } catch (err) {}
 function renderMenus() {
+  const r = roleOf(account); if (r !== "owner") relabelForCreator(r, "menus");
   if (!localById(mnLocal)) mnLocal = LOCALES[0].id;
   const l = localById(mnLocal), st = lstate(l.id);
   document.getElementById("mnPicker").innerHTML = LOCALES.map(x => `<button class="mn-chip${x.id === l.id ? " on" : ""}" type="button" data-mn-local="${x.id}" aria-pressed="${x.id === l.id}">${foodArt(x.id, "xs")}<span class="grow"><b>${esc(x.name)}</b><span class="tiny">${localState[x.id] && localState[x.id].menu ? "Menú propio" : "Menú de ejemplo"}${isPaused(x.id) ? " · En pausa" : ""}</span></span></button>`).join("");
@@ -6269,7 +6270,7 @@ function renderMenus() {
       <div class="kv"><span>Productos</span><b>${n}</b></div><div class="kv"><span>Agotados hoy</span><b>${off}</b></div>
       <div class="kv"><span>Menú</span><b>${st.menu ? "Editado" : "De ejemplo"}</b></div>
       <span class="pill ${isPaused(l.id) ? "warn" : openState(l).cls}">${isPaused(l.id) ? "Pedidos en pausa" : openState(l).label}</span></div>
-    <div class="notice"><i data-lucide="info"></i><p>Estás editando el menú de ${esc(l.name)} como dueño. El comercio y los estudiantes ven los cambios al instante, y quedan en el registro de cambios.</p></div>
+    <div class="notice"><i data-lucide="info"></i><p>Estás editando el menú de ${esc(l.name)} como ${({ owner: "dueño", creator: "creador", admin: "administración" })[roleOf(account)] || "personal"}. El comercio y los estudiantes ven los cambios al instante, y quedan en el registro de cambios.</p></div>
   </div>`;
   icons();
 }

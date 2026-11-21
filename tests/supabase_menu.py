@@ -71,6 +71,14 @@ async def main():
         check("el dueño cambia el menú de un local en el servidor", any(i["id"] == first and i["price"] == 8.8 for c in row3 for i in c["items"]))
         check("el comercio recibe el cambio del dueño en vivo", await pm.evaluate(f"itemById(localById('{LOC}'), '{first}').price") == 8.8)
         pm.errs += po.errs
+        # la administración también puede
+        sql(f"select set_config('nexo.role_change','on',false); update public.profiles set role='admin' where id='{own}'")
+        await po.reload(); await po.wait_for_timeout(5000)
+        await po.evaluate(f"mnLocal = '{LOC}'; go('menus')"); await po.wait_for_timeout(1000)
+        check("la administración entra a Menús", await po.evaluate("current") == "menus")
+        await po.click(f"[data-me-edit='{first}']"); await po.fill("#me-price", "7,70"); await po.click("[data-me-form] button[type=submit]"); await po.wait_for_timeout(3000)
+        row4 = sql(f"select menu from public.local_state where local_id = '{LOC}'")[0]["menu"] or []
+        check("la administración cambia el menú en el servidor", any(i["id"] == first and i["price"] == 7.7 for c in row4 for i in c["items"]))
         r2 = await ps.evaluate(f"sb.from('local_state').update({{ menu: null }}).eq('local_id', '{LOC}').select().then(r => (r.data || []).length)")
         check("un estudiante no puede cambiar menús", r2 == 0, str(r2))
         errs = pm.errs + ps.errs + pt.errs

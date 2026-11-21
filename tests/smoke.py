@@ -683,6 +683,12 @@ async def main() -> int:
         check("$4,40" in await pg.inner_text("#lmBody"), "el comercio ve el cambio del dueño")
         await pg.evaluate("localStorage.setItem('nexo-session', 'ana.torres@correo.unimet.edu.ve')"); await pg.goto(URL + "#menus"); await pg.reload(); await pg.wait_for_timeout(400)
         check(await pg.evaluate("current") != "menus", "un estudiante no entra a los menús del dueño")
+        for who, lbl in [("maria.vera@unimet.edu.ve", "administradora"), ("diego.mendez@unimet.edu.ve", "creador")]:
+            await pg.evaluate(f"localStorage.setItem('nexo-session', '{who}')"); await pg.goto(URL + "#menus"); await pg.reload(); await pg.wait_for_timeout(500)
+            check(await pg.evaluate("current") == "menus" and await pg.locator("#menus .side .nav [data-go='menus'].on").count() == 1, f"la {lbl} entra a Menús desde su propio menú" if lbl == "administradora" else f"el {lbl} entra a Menús desde su propio menú")
+        await pg.click("[data-mn-local='teeb']"); await pg.wait_for_timeout(200)
+        await pg.click(f"[data-me-edit='{tid}']"); await pg.fill("#me-price", "4,60"); await pg.click("[data-me-form] button[type=submit]"); await pg.wait_for_timeout(200)
+        check(await pg.evaluate(f"itemById(localById('teeb'), '{tid}').price") == 4.6, "el creador también edita el menú de un local")
 
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
