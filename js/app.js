@@ -2192,6 +2192,7 @@ function validMenu(m) {
   return Array.isArray(m) && m.length >= 1 && m.length <= 30 && m.every(c => c && typeof c.name === "string" && Array.isArray(c.items)
     && c.items.every(it => it && typeof it.id === "string" && typeof it.name === "string" && typeof it.price === "number" && it.price > 0
       && (it.opts === undefined || (Array.isArray(it.opts) && it.opts.every(g => g && typeof g.name === "string" && Array.isArray(g.choices) && g.choices.length >= 1
+        && (g.multi === undefined || typeof g.multi === "boolean") && (g.max === undefined || (Number.isInteger(g.max) && g.max >= 1))
         && g.choices.every(c => c && typeof c.l === "string" && typeof c.p === "number"))))));
 }
 function applyMenus() {
@@ -2232,12 +2233,19 @@ const saveCart = () => { try { localStorage.setItem(K("nexo-cart"), JSON.stringi
 const saveOrders = () => { try { localStorage.setItem(K("nexo-orders"), JSON.stringify(orders)); } catch (err) {} try { sbSyncOrders(); } catch (err) {} };
 
 // Precio y descripción de una línea del carrito
+// Selección de un grupo de opciones: un índice ("elige una") o una lista de índices ("elige varias", g.multi, tope g.max)
+function selNorm(g, v) {
+  if (g.multi) { const a = Array.isArray(v) ? v : []; return [...new Set(a)].filter(i => g.choices[i]).slice(0, g.max || g.choices.length); }
+  return Number.isInteger(v) && g.choices[v] ? v : 0;
+}
+function selChoices(g, v) { return g.multi ? selNorm(g, v).map(i => g.choices[i]) : [g.choices[selNorm(g, v)]]; }
+function selText(g, v) { const c = selChoices(g, v); return c.length ? `${g.name}: ${c.map(x => x.l).join(", ")}` : null; }
 function lineInfo(l, line) {
   const it = itemById(l, line.item);
   if (!it) return null;
-  const chosen = (it.opts || []).map((g, gi) => g.choices[line.sel[gi] || 0] || g.choices[0]);
-  const unit = it.price + chosen.reduce((a, c) => a + c.p, 0);
-  return { it, unit, total: unit * line.qty, opts: (it.opts || []).map((g, gi) => `${g.name}: ${chosen[gi].l}`) };
+  const opts = it.opts || [], sel = line.sel || [];
+  const unit = it.price + opts.reduce((a, g, gi) => a + selChoices(g, sel[gi]).reduce((b, c) => b + c.p, 0), 0);
+  return { it, unit, total: unit * line.qty, opts: opts.map((g, gi) => selText(g, sel[gi])).filter(Boolean) };
 }
 const cartLocal = () => cart.local && localById(cart.local);
 const cartCount = () => cart.lines.reduce((a, x) => a + x.qty, 0);
@@ -2445,17 +2453,17 @@ function openItem(itemId, line = null) {
   curItem = itemId; editLine = line;
   const l = localById(curLocal), it = itemById(l, itemId);
   const src = line !== null && cart.lines[line];
-  detSel = (it.opts || []).map((g, gi) => src ? (src.sel[gi] || 0) : 0);
+  detSel = (it.opts || []).map((g, gi) => selNorm(g, src ? src.sel[gi] : (g.multi ? [] : 0)));
   detQty = src ? src.qty : 1;
   saveFoodNav();
   renderDetalle(src ? src.note : "");
 }
-function detUnit(it) { return it.price + (it.opts || []).reduce((a, g, gi) => a + g.choices[detSel[gi]].p, 0); }
+function detUnit(it) { return it.price + (it.opts || []).reduce((a, g, gi) => a + selChoices(g, detSel[gi]).reduce((b, c) => b + c.p, 0), 0); }
 function renderDetalle(note) {
   const l = localById(curLocal), it = curItem && itemById(l, curItem);
   if (!it) { go("local"); return; }
-  if (detSel.length !== (it.opts || []).length) detSel = (it.opts || []).map(() => 0);
-  detSel = detSel.map((v, gi) => it.opts[gi].choices[v] ? v : 0); // el comercio pudo cambiar las opciones
+  if (detSel.length !== (it.opts || []).length) detSel = (it.opts || []).map(g => g.multi ? [] : 0);
+  detSel = detSel.map((v, gi) => selNorm(it.opts[gi], v)); // el comercio pudo cambiar las opciones
   setFrame("detalle", it.name, [l.name, it.name]);
   document.getElementById("detBack").lastChild.textContent = "Volver al menú de " + l.name;
   const other = cartLocal() && cart.local !== l.id && cart.lines.length ? cartLocal() : null;
@@ -2472,7 +2480,7 @@ function renderDetalle(note) {
     <div class="stack s14">
       ${(it.opts || []).length ? `<h2 class="h2" style="font-size:20px">Elige tus opciones</h2>` + it.opts.map((g, gi) => `<div class="card">
         <div><b class="h3">${esc(g.name)}</b><p class="small">${esc(g.note)}</p></div>
-        ${g.choices.map((c, ci) => `<button class="opt${detSel[gi] === ci ? " on" : ""}" type="button" data-det-opt="${gi}:${ci}"><span class="dot"></span><span class="grow">${esc(c.l)}</span><span class="small">+${money(c.p)}</span></button>`).join("")}
+        ${g.choices.map((c, ci) => { const on = g.multi ? detSel[gi].includes(ci) : detSel[gi] === ci; return `<button class="opt${g.multi ? " chk" : ""}${on ? " on" : ""}" type="button" data-det-opt="${gi}:${ci}"${g.multi ? ` aria-pressed="${on}"` : ""}><span class="${g.multi ? "box" : "dot"}">${g.multi && on ? '<i data-lucide="check"></i>' : ""}</span><span class="grow">${esc(c.l)}</span><span class="small">${c.p ? "+" + money(c.p) : "Sin costo"}</span></button>`; }).join("")}
       </div>`).join("") : ""}
       <div class="card">
         <label for="d-note" style="font-weight:600">Indicaciones · Opcional</label>
@@ -2499,7 +2507,7 @@ function refreshDetTotal() {
 }
 function addFromDetalle() {
   const note = document.getElementById("d-note").value.trim();
-  const line = { item: curItem, sel: detSel.slice(), qty: detQty, note };
+  const line = { item: curItem, sel: JSON.parse(JSON.stringify(detSel)), qty: detQty, note };
   const name = itemById(localById(curLocal), curItem).name;
   if (editLine !== null && cart.local === curLocal && cart.lines[editLine]) {
     cart.lines[editLine] = line;
@@ -2507,7 +2515,7 @@ function addFromDetalle() {
   } else {
     let prevCart = null;
     if (cart.local !== curLocal) { if (cart.lines.length) prevCart = JSON.parse(JSON.stringify(cart)); cart = { local: curLocal, lines: [] }; }
-    const same = cart.lines.find(x => x.item === line.item && x.note === line.note && x.sel.join() === line.sel.join());
+    const same = cart.lines.find(x => x.item === line.item && x.note === line.note && JSON.stringify(x.sel) === JSON.stringify(line.sel));
     if (same) same.qty = Math.min(20, same.qty + line.qty); else cart.lines.push(line);
     if (prevCart) {
       const pl = localById(prevCart.local);
@@ -2691,7 +2699,17 @@ document.addEventListener("click", e => {
   const oi = e.target.closest("[data-open-item]");
   if (oi) { if (isSoldOut(curLocal, oi.dataset.openItem)) { toast("Este producto se agotó por hoy."); return; } openItem(oi.dataset.openItem); go("detalle"); return; }
   const dopt = e.target.closest("[data-det-opt]");
-  if (dopt) { const [g, c] = dopt.dataset.detOpt.split(":").map(Number); detSel[g] = c; dopt.parentElement.querySelectorAll("[data-det-opt]").forEach(b => b.classList.toggle("on", b === dopt)); refreshDetTotal(); return; }
+  if (dopt) {
+    const [g, c] = dopt.dataset.detOpt.split(":").map(Number), grp = (itemById(localById(curLocal), curItem).opts || [])[g];
+    if (grp && grp.multi) {
+      const cur = detSel[g], on = cur.includes(c);
+      if (!on && grp.max && cur.length >= grp.max) { toast(`En ${grp.name} puedes elegir hasta ${grp.max}.`); return; }
+      detSel[g] = on ? cur.filter(i => i !== c) : [...cur, c].sort((a, b) => a - b);
+      dopt.classList.toggle("on", !on); dopt.setAttribute("aria-pressed", String(!on));
+      dopt.querySelector(".box").innerHTML = on ? "" : '<i data-lucide="check"></i>'; icons();
+    } else { detSel[g] = c; dopt.parentElement.querySelectorAll("[data-det-opt]").forEach(b => b.classList.toggle("on", b === dopt)); }
+    refreshDetTotal(); return;
+  }
   const dq = e.target.closest("[data-det-qty]");
   if (dq) { detQty = Math.max(1, Math.min(20, detQty + +dq.dataset.detQty)); refreshDetTotal(); return; }
   if (e.target.closest("#detAdd")) { addFromDetalle(); return; }
@@ -3871,7 +3889,7 @@ function seedLocalOrders(l) {
   const mk = (email, name, idx, qty, paidAgo, extra) => {
     const it = items[idx % items.length], id = "o" + (n - paidAgo * MIN), paidAt = n - paidAgo * MIN;
     const o = { id, num: `${l.pref}-${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(900 + idx).padStart(4, "0")}`, local: l.id, method: "card",
-      date: fmtD(d), time: hhmm(paidAt), lines: [{ name: it.name, icon: it.icon, opts: (it.opts || []).map(g => `${g.name}: ${g.choices[0].l}`), note: idx === 1 ? "Sin cebolla, por favor" : "", qty, total: it.price * qty }],
+      date: fmtD(d), time: hhmm(paidAt), lines: [{ name: it.name, icon: it.icon, opts: (it.opts || []).filter(g => !g.multi).map(g => `${g.name}: ${g.choices[0].l}`), note: idx === 1 ? "Sin cebolla, por favor" : "", qty, total: it.price * qty }],
       total: it.price * qty, card: "Visa ···· 1190", paidAt, readyAt: paidAt + prepMinutes(l) * MIN, studentName: name, readyNotified: true, ...extra };
     o.code = pickupCode(o);
     const key = "nexo-orders:" + email;
@@ -4729,8 +4747,12 @@ function reorder(o) {
   const lines = o.lines.map(x => {
     const it = (x.item && items.find(i => i.id === x.item)) || items.find(i => i.name === x.name);
     if (!it || isSoldOut(l.id, it.id)) { skipped.push(x.name); return null; }
-    let sel = x.sel && x.sel.length === (it.opts || []).length ? x.sel.slice() : (it.opts || []).map(g => { const k = g.choices.findIndex(c => (x.opts || []).includes(`${g.name}: ${c.l}`)); return k < 0 ? 0 : k; });
-    sel = sel.map((v, gi) => it.opts[gi].choices[v] ? v : 0);
+    let sel = x.sel && x.sel.length === (it.opts || []).length ? JSON.parse(JSON.stringify(x.sel)) : (it.opts || []).map(g => {
+      const t = (x.opts || []).find(o => o.startsWith(g.name + ": ")), rest = t ? t.slice(g.name.length + 2) : "";
+      if (g.multi) return rest ? rest.split(", ").map(lb => g.choices.findIndex(c => c.l === lb)).filter(i => i >= 0) : [];
+      const k = g.choices.findIndex(c => c.l === rest); return k < 0 ? 0 : k;
+    });
+    sel = sel.map((v, gi) => selNorm(it.opts[gi], v));
     return { item: it.id, sel, qty: Math.min(20, x.qty), note: x.note || "" };
   }).filter(Boolean);
   if (!lines.length) { toast(`Ninguno de esos productos está disponible hoy en ${l.name}.`); return; }
@@ -6096,23 +6118,25 @@ const ME_MAX_GROUPS = 5, ME_MAX_CHOICES = 8;
 function meDraftFrom(it, ci) {
   const v = it || { name: "", desc: "", price: "", icon: (MENU_ICONS[0] || [])[0], tag: "" };
   return { name: v.name, desc: v.desc || "", price: v.price === "" ? "" : String(v.price).replace(".", ","), cat: ci, icon: v.icon, tag: v.tag || "",
-    opts: JSON.parse(JSON.stringify(it && it.opts || [])).map(g => ({ name: g.name, choices: g.choices.map(c => ({ l: c.l, p: c.p ? String(c.p).replace(".", ",") : "" })) })) };
+    opts: JSON.parse(JSON.stringify(it && it.opts || [])).map(g => ({ name: g.name, multi: !!g.multi, max: g.max || 0, choices: g.choices.map(c => ({ l: c.l, p: c.p ? String(c.p).replace(".", ",") : "" })) })) };
 }
 function meRead() {
   if (!meDraft || !document.getElementById("me-name")) return;
   const v = id => (document.getElementById(id) || {}).value;
   Object.assign(meDraft, { name: v("me-name"), desc: v("me-desc"), price: v("me-price"), cat: +v("me-cat"), icon: v("me-icon"), tag: v("me-tag") });
-  meDraft.opts.forEach((g, gi) => { g.name = v(`me-g${gi}`) ?? g.name; g.choices.forEach((c, ci) => { c.l = v(`me-g${gi}c${ci}`) ?? c.l; c.p = v(`me-g${gi}p${ci}`) ?? c.p; }); });
+  meDraft.opts.forEach((g, gi) => { g.name = v(`me-g${gi}`) ?? g.name; const t = v(`me-g${gi}t`); if (t !== undefined) g.multi = t === "multi"; const m = v(`me-g${gi}m`); if (m !== undefined) g.max = +m || 0; g.choices.forEach((c, ci) => { c.l = v(`me-g${gi}c${ci}`) ?? c.l; c.p = v(`me-g${gi}p${ci}`) ?? c.p; }); });
 }
 function meOptsHTML(d) {
   return `<div class="me-opts"><div class="row"><b style="font-size:13px">Opciones para elegir</b><span class="tiny">${d.opts.length}/${ME_MAX_GROUPS}</span></div>
-    <p class="tiny">Ej.: Tamaño (Pequeño, Grande +$0,50) o Salsa (Ajo, Tártara). El estudiante elige una de cada grupo; la primera viene marcada.</p>
+    <p class="tiny">"Elige una": Tamaño (Pequeño, Grande +$0,50); viene marcada la primera. "Elige varias": Extras (Queso +$0,50, Tocineta +$1); el estudiante marca las que quiera, con un tope si lo pones.</p>
     ${d.opts.map((g, gi) => `<div class="me-group">
       <div class="row" style="gap:8px"><div class="input sm grow"><input id="me-g${gi}" maxlength="40" value="${esc(g.name)}" placeholder="Nombre del grupo (ej.: Tamaño)" aria-label="Nombre del grupo ${gi + 1}"></div>
         <button class="icon-btn" type="button" data-me-gdel="${gi}" aria-label="Quitar el grupo ${esc(g.name || gi + 1)}"><i data-lucide="trash-2"></i></button></div>
+      <div class="row me-gtype" style="gap:8px"><div class="input sm sel grow"><select id="me-g${gi}t" data-me-gtype="${gi}" aria-label="Cómo se elige en el grupo ${gi + 1}"><option value="one"${g.multi ? "" : " selected"}>Elige una</option><option value="multi"${g.multi ? " selected" : ""}>Elige varias</option></select><i data-lucide="chevron-down"></i></div>
+        ${g.multi ? `<div class="input sm sel grow"><select id="me-g${gi}m" aria-label="Máximo que se puede elegir en el grupo ${gi + 1}"><option value="0"${g.max ? "" : " selected"}>Sin tope</option>${g.choices.map((_, k) => k + 1).filter(k => k < g.choices.length || k === 1).map(k => `<option value="${k}"${g.max === k ? " selected" : ""}>Hasta ${k}</option>`).join("")}</select><i data-lucide="chevron-down"></i></div>` : ""}</div>
       ${g.choices.map((c, ci) => `<div class="me-choice"><span class="dot" aria-hidden="true"></span><div class="input sm grow"><input id="me-g${gi}c${ci}" maxlength="40" value="${esc(c.l)}" placeholder="Opción ${ci + 1}" aria-label="Grupo ${gi + 1}, opción ${ci + 1}"></div>
         <div class="input sm me-plus"><span style="color:var(--muted)">+$</span><input id="me-g${gi}p${ci}" inputmode="decimal" value="${esc(c.p)}" placeholder="0" aria-label="Recargo de la opción ${ci + 1}"></div>
-        <button class="icon-btn" type="button" data-me-cdel="${gi}|${ci}" aria-label="Quitar la opción ${ci + 1}"${g.choices.length <= 2 ? " disabled" : ""}><i data-lucide="x"></i></button></div>`).join("")}
+        <button class="icon-btn" type="button" data-me-cdel="${gi}|${ci}" aria-label="Quitar la opción ${ci + 1}"${g.choices.length <= (g.multi ? 1 : 2) ? " disabled" : ""}><i data-lucide="x"></i></button></div>`).join("")}
       ${g.choices.length < ME_MAX_CHOICES ? `<button class="link b me-add" type="button" data-me-cadd="${gi}"><i data-lucide="plus"></i>Agregar opción</button>` : ""}
     </div>`).join("")}
     ${d.opts.length < ME_MAX_GROUPS ? `<button class="btn ghost sm" type="button" data-me-gadd><i data-lucide="list-plus"></i>Agregar grupo de opciones</button>` : ""}
@@ -6137,6 +6161,8 @@ function meItemForm(l, it, ci) {
     <div class="row me-acts">${isNew ? "" : `<button class="link" type="button" style="color:var(--danger)" data-me-del="${esc(it.id)}"><i data-lucide="trash-2"></i>Eliminar</button>`}<span class="grow"></span><button class="btn ghost sm" type="button" data-me-cancel>Cancelar</button><button class="btn sm" type="submit"><i data-lucide="check"></i>${isNew ? "Agregar" : "Guardar"}</button></div>
   </form>`;
 }
+// Cambiar "Elige una" / "Elige varias" repinta el grupo (aparece o se va el tope)
+document.addEventListener("change", e => { const t = e.target.closest && e.target.closest("[data-me-gtype]"); if (!t || !meDraft) return; meRead(); meRedraw(t.id); });
 // Repinta el formulario sin perder lo escrito y devuelve el foco al campo indicado
 function meRedraw(focusId) { meRender(); const f = focusId && document.getElementById(focusId); if (f) f.focus(); }
 document.addEventListener("click", e => {
@@ -6144,7 +6170,7 @@ document.addEventListener("click", e => {
   if (e.target.closest("[data-me-gadd]")) { meRead(); if (meDraft.opts.length >= ME_MAX_GROUPS) return; meDraft.opts.push({ name: "", choices: [{ l: "", p: "" }, { l: "", p: "" }] }); meRedraw(`me-g${meDraft.opts.length - 1}`); return; }
   const gd = e.target.closest("[data-me-gdel]"); if (gd) { meRead(); meDraft.opts.splice(+gd.dataset.meGdel, 1); meRedraw(); return; }
   const ca = e.target.closest("[data-me-cadd]"); if (ca) { meRead(); const g = meDraft.opts[+ca.dataset.meCadd]; if (!g || g.choices.length >= ME_MAX_CHOICES) return; g.choices.push({ l: "", p: "" }); meRedraw(`me-g${ca.dataset.meCadd}c${g.choices.length - 1}`); return; }
-  const cd = e.target.closest("[data-me-cdel]"); if (cd) { meRead(); const [gi, ci] = cd.dataset.meCdel.split("|").map(Number), g = meDraft.opts[gi]; if (!g || g.choices.length <= 2) return; g.choices.splice(ci, 1); meRedraw(); }
+  const cd = e.target.closest("[data-me-cdel]"); if (cd) { meRead(); const [gi, ci] = cd.dataset.meCdel.split("|").map(Number), g = meDraft.opts[gi]; if (!g || g.choices.length <= (g.multi ? 1 : 2)) return; g.choices.splice(ci, 1); meRedraw(); }
 });
 function meCatHead(l, c, ci) {
   if (meCat === ci) return `<form class="me-form me-catform" data-me-catform="${ci}" novalidate><div class="field"><label for="me-catname">Nombre de la categoría</label><div class="input"><input id="me-catname" maxlength="40" value="${esc(c.name)}" autocomplete="off"></div></div>
@@ -6224,11 +6250,12 @@ document.addEventListener("submit", e => {
       const gname = meTxt(g.name, 40), choices = g.choices.map(c => ({ l: meTxt(c.l, 40), p: Math.round(parseAmt(c.p) * 100) / 100 })).filter(c => c.l);
       if (!gname && !choices.length) continue; // grupo vacío: se ignora
       if (gname.length < 2) return err(`Escribe el nombre del grupo de opciones ${gi + 1} (ej.: Tamaño).`);
-      if (choices.length < 2) return err(`El grupo ${gname} necesita al menos 2 opciones.`);
+      if (choices.length < (g.multi ? 1 : 2)) return err(g.multi ? `El grupo ${gname} necesita al menos 1 opción.` : `El grupo ${gname} necesita al menos 2 opciones.`);
       if (choices.some(c => c.p < 0 || c.p > 100)) return err(`El recargo de ${gname} debe estar entre $0 y $100.`);
       if (new Set(choices.map(c => normTxt(c.l))).size < choices.length) return err(`El grupo ${gname} tiene opciones repetidas.`);
       if (opts.some(o => normTxt(o.name) === normTxt(gname))) return err(`Ya tienes un grupo llamado ${gname}.`);
-      opts.push({ name: gname, note: "Elige una", choices });
+      const max = g.multi && g.max && g.max < choices.length ? g.max : 0;
+      opts.push(g.multi ? { name: gname, note: max ? `Elige hasta ${max} · Opcional` : "Elige las que quieras · Opcional", multi: true, ...(max ? { max } : {}), choices } : { name: gname, note: "Elige una", choices });
     }
     let it;
     if (key.startsWith("new:")) { it = { id: "n" + Date.now().toString(36), name, desc, price, icon }; cats[to].items.push(it); }

@@ -2,6 +2,9 @@
 
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
+## 22 nov 2026
+- Opciones de varias selecciones con tope (extras).
+
 ## 21 nov 2026
 - Creador y administración también editan los menús.
 

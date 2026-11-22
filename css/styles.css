@@ -1557,3 +1557,8 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .mn-chip .tiny{display:block}
 .mn-chip:hover{border-color:var(--brand)}
 .mn-chip.on{border-color:var(--brand);background:var(--mint-bg);box-shadow:0 0 0 1px var(--brand) inset}
+/* Opciones de "elige varias": casilla cuadrada */
+.opt.chk .box{display:grid;place-items:center;width:20px;height:20px;flex:none;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:#fff}
+.opt.chk .box svg{width:14px;height:14px}
+.opt.chk.on .box{background:var(--brand);border-color:var(--brand)}
+.me-gtype .sel{min-width:0}
