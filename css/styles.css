@@ -1562,3 +1562,68 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 .opt.chk .box svg{width:14px;height:14px}
 .opt.chk.on .box{background:var(--brand);border-color:var(--brand)}
 .me-gtype .sel{min-width:0}
+
+/* ---------- Animaciones (23/11/2026) ---------- */
+#splash{display:none}
+#splash.on{display:grid;place-items:center;position:fixed;inset:0;z-index:999;pointer-events:none;background:radial-gradient(120% 80% at 50% 30%,#1F7A55 0%,#0F3D2E 55%,#0A2A20 100%);transition:opacity .4s ease}
+#splash.out{opacity:0}
+.sp-in{display:flex;flex-direction:column;align-items:center;gap:10px}
+.sp-mark{width:120px;height:80px;overflow:visible}
+.sp-word{font-family:Manrope,Inter,system-ui,sans-serif;font-weight:700;font-size:34px;color:#EEF4F0;letter-spacing:-.02em}
+.sp-tag{font-size:13px;color:#a9c4b6}
+.skel{display:block;height:12px;border-radius:8px;background:linear-gradient(90deg,var(--line) 0%,color-mix(in srgb,var(--line) 40%,var(--surface)) 50%,var(--line) 100%);background-size:200% 100%}
+.skel.h28{height:28px}.skel.w20{width:20%}.skel.w40{width:40%}.skel.w60{width:60%}.skel.w80{width:80%}
+.skel.circ{width:36px;height:36px;border-radius:50%;flex:none}
+.skel-fill{position:absolute;inset:0;height:auto;border-radius:0}
+.skel-card{gap:12px;min-height:110px}
+.skel-row{display:flex;align-items:center;gap:12px;padding:10px 0}
+.skel-row .grow{display:flex;flex-direction:column;gap:8px;flex:1}
+.skel-row+.skel-row{border-top:1px solid var(--line)}
+.pd-anim{position:relative;display:grid;place-items:center;width:64px;height:64px;flex:none}
+.pd-anim svg{width:64px;height:64px;overflow:visible}
+.pd-pot .stm{position:absolute;bottom:40px;width:6px;height:16px;border-radius:6px;background:color-mix(in srgb,var(--muted) 45%,transparent);opacity:0}
+.pd-pot .s1{left:22px}.pd-pot .s2{left:30px}.pd-pot .s3{left:38px}
+.pd-bag .spk{position:absolute;width:8px;height:8px;border-radius:50%;background:#eda100;opacity:0}
+.pd-bag .k1{top:4px;left:4px}.pd-bag .k2{top:0;right:8px;background:#3DBE85}.pd-bag .k3{top:22px;right:-2px;background:#2a78d6}
+.confetti{position:absolute;inset:0;pointer-events:none}
+.confetti i{position:absolute;left:50%;top:50%;width:7px;height:10px;border-radius:2px;background:var(--c);opacity:0}
+.line-pop{border-radius:12px}
+@media (prefers-reduced-motion: no-preference){
+  #splash.on .sp-a,#splash.on .sp-b{stroke-dasharray:100;stroke-dashoffset:100;animation:spDraw .7s cubic-bezier(.6,0,.2,1) forwards}
+  #splash.on .sp-b{animation-delay:.25s}
+  #splash.on .sp-c{opacity:0;animation:spFade .2s .75s forwards}
+  #splash.on .sp-word{opacity:0;transform:translateY(8px);animation:spUp .45s .55s forwards}
+  #splash.on .sp-tag{opacity:0;animation:spUp .45s .75s forwards}
+  .content.scr-fwd{animation:scrFwd .32s cubic-bezier(.2,.8,.2,1) backwards}
+  .content.scr-back{animation:scrBack .32s cubic-bezier(.2,.8,.2,1) backwards}
+  .screen:not(.app).scr-fwd,.screen:not(.app).scr-back{animation:scrFade .3s ease backwards}
+  .skel{animation:skel 1.2s ease-in-out infinite}
+  .pd-pot svg{animation:potBob 1.6s ease-in-out infinite;transform-origin:50% 90%}
+  .pd-pot .stm{animation:steam 1.8s ease-out infinite}
+  .pd-pot .s2{animation-delay:.6s}.pd-pot .s3{animation-delay:1.2s}
+  .pd-clock .hand-m{animation:spin 3s linear infinite;transform-origin:32px 32px}
+  .pd-clock .hand-h{animation:spin 36s linear infinite;transform-origin:32px 32px}
+  .pd-bag svg{animation:bagHop 1.4s cubic-bezier(.3,1.6,.5,1) infinite;transform-origin:50% 100%}
+  .pd-bag .spk{animation:twinkle 1.4s ease-in-out infinite}
+  .pd-bag .k2{animation-delay:.45s}.pd-bag .k3{animation-delay:.9s}
+  .pd-done svg{animation:popIn .5s cubic-bezier(.3,1.6,.5,1) backwards}
+  .confetti i{animation:confetti .9s cubic-bezier(.2,.7,.3,1) var(--d) forwards}
+  .favbtn.pop svg{animation:heart .5s cubic-bezier(.3,1.6,.5,1)}
+  .line-pop{animation:linePop .9s ease}
+}
+@keyframes spDraw{to{stroke-dashoffset:0}}
+@keyframes spFade{to{opacity:1}}
+@keyframes spUp{to{opacity:1;transform:none}}
+@keyframes scrFwd{from{opacity:0;transform:translateX(22px)}}
+@keyframes scrBack{from{opacity:0;transform:translateX(-22px)}}
+@keyframes scrFade{from{opacity:0}}
+@keyframes skel{0%{background-position:100% 0}100%{background-position:-100% 0}}
+@keyframes potBob{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes steam{0%{opacity:0;transform:translateY(6px) scaleY(.6)}30%{opacity:.9}100%{opacity:0;transform:translateY(-18px) scaleY(1.2) translateX(3px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes bagHop{0%,55%,100%{transform:translateY(0) scale(1)}20%{transform:translateY(-10px) scale(1.04,.96)}35%{transform:translateY(0) scale(1.06,.94)}}
+@keyframes twinkle{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1)}}
+@keyframes popIn{from{transform:scale(.3);opacity:0}}
+@keyframes confetti{0%{opacity:1;transform:translate(-50%,-50%) rotate(var(--a)) translateY(0)}100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--a)) translateY(-46px) rotate(220deg)}}
+@keyframes heart{0%{transform:scale(1)}35%{transform:scale(1.45)}60%{transform:scale(.9)}100%{transform:scale(1)}}
+@keyframes linePop{0%{background:color-mix(in srgb,var(--brand) 22%,transparent);transform:scale(.98)}100%{background:transparent;transform:none}}

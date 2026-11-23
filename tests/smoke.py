@@ -699,6 +699,12 @@ async def main() -> int:
         await pg.click(f"[data-me-edit='{tid}']"); await pg.fill("#me-price", "4,60"); await pg.click("[data-me-form] button[type=submit]"); await pg.wait_for_timeout(200)
         check(await pg.evaluate(f"itemById(localById('teeb'), '{tid}').price") == 4.6, "el creador también edita el menú de un local")
 
+        # animaciones: transición al navegar, pedido en vivo y esqueletos
+        await pg.evaluate("go('comida')"); await pg.wait_for_timeout(30)
+        check("scr-fwd" in await pg.evaluate("document.querySelector('#comida .content').className"), "la pantalla nueva entra con una transición")
+        check(await pg.evaluate("pdAnim('preparando', {}, 0).includes('pd-pot') && pdAnim('listo', {}, 0).includes('pd-bag') && pdAnim('retirado', { pickedAt: 1000 }, 2000).includes('confetti')"), "el seguimiento del pedido tiene su animación por estado")
+        check(await pg.evaluate("skel('kpis', 2).includes('skel-card') && !document.getElementById('splash')"), "esqueletos de carga y la bienvenida se retira sola")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 

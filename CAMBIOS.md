@@ -2,6 +2,12 @@
 
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
+## 23 nov 2026
+- Transiciones suaves al cambiar de pantalla.
+- Pedido animado: olla, bolsa lista y confeti.
+- Corazón, carrito y saldo con micro-animaciones.
+- Bienvenida con el logo y esqueletos de carga.
+
 ## 22 nov 2026
 - Opciones de varias selecciones con tope (extras).
 

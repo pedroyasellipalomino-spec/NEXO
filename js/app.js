@@ -320,8 +320,10 @@ function show(id) {
     if (dual) { try { localStorage.setItem(K("nexo-mode"), need ? "gestion" : "usuario"); } catch (err) {} }
   }
   if (current && current !== id) previous = current;
+  const navBack = goingBack, navFrom = current;
   current = id; trailPush(id);
   screens.forEach(s => { document.getElementById(s).hidden = s !== id; });
+  try { screenAnim(id, navFrom, navBack); } catch (err) {}
   try { fillRecentDays(document.getElementById(id)); } catch (err) {}
   if (id === "recarga" && typeof renderRecarga === "function") renderRecarga();
   if (id === "afiliar" && typeof renderAf === "function") renderAf();
@@ -476,7 +478,7 @@ const bcvDateTxt = () => { const [y, m, d] = BCV.date.split("-").map(Number); re
 const bcvStale = () => { const t = new Date(); return BCV.date < `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; };
 const bsTag = usd => `<span class="bsv">${bsOf(usd)}</span>`;
 function renderWallet() {
-  document.querySelectorAll("[data-wallet]").forEach(el => el.textContent = money(WALLET));
+  document.querySelectorAll("[data-wallet]").forEach(el => countTo(el, WALLET));
   const sel = document.querySelector("#planList .opt.plan.on");
   if (sel) try { updatePlan(sel); } catch (err) { /* el plan aún no se ha cargado */ }
   try { renderWalletPay(); } catch (err) {}
@@ -2522,7 +2524,7 @@ function addFromDetalle() {
       toast(`Añadimos ${name}. Vaciamos el carrito de ${pl ? pl.name : "el otro local"}: cada pedido es de un solo local.`, { action: "Deshacer", onAction: () => { cart = prevCart; saveCart(); toast("Recuperamos tu carrito anterior."); if (current === "carrito") renderCarrito(); else go("carrito"); } });
     } else toast(`Añadimos ${name} a tu carrito.`);
   }
-  editLine = null; saveFoodNav(); saveCart(); go("carrito");
+  editLine = null; saveFoodNav(); saveCart(); cartPop = line.item; go("carrito");
 }
 
 /* Carrito y pago */
@@ -2558,7 +2560,7 @@ function renderCarrito() {
         <div class="row start">${foodArt(l.id, "xs")}<b class="h3">${esc(l.name)}</b></div>
         <p class="small" style="margin-top:-8px">${l.place} · ${plural(n, "producto", "productos")}</p>
         ${cart.lines.map((x, i) => { const li = lineInfo(l, x); if (!li) return ""; return `<div class="sep"></div>
-          <div class="row start" style="align-items:flex-start">${prodArt(li.it.id, li.it.icon, "xs")}
+          <div class="row start${x.item === cartPop && i === cart.lines.map(y => y.item).lastIndexOf(cartPop) ? " line-pop" : ""}" style="align-items:flex-start">${prodArt(li.it.id, li.it.icon, "xs")}
             <div><b style="font-size:15px;font-weight:600">${esc(li.it.name)}</b>${li.opts.map(o => `<p class="small">${esc(o)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}<p class="mono" style="font-weight:600;margin-top:2px">${money(li.total)}</p></div></div>
           <div class="row"><span class="qty"><button type="button" aria-label="Quitar uno" data-cart-qty="${i}:-1"><i data-lucide="minus"></i></button>${x.qty}<button type="button" aria-label="Agregar uno" data-cart-qty="${i}:1"><i data-lucide="plus"></i></button></span>
             <div class="row" style="gap:16px"><button class="link b" type="button" data-cart-edit="${i}" style="font-size:12px">Editar</button><button class="link" type="button" style="color:var(--muted);font-size:12px" data-cart-del="${i}">Eliminar</button></div></div>`; }).join("")}
@@ -2604,7 +2606,7 @@ function renderCarrito() {
       <button class="btn" type="button" id="cartPay"${blocked || (payMethod === "wallet" && WALLET < total) ? " disabled" : ""}><i data-lucide="${pk.mode === "sched" ? "calendar-clock" : payMethod === "wallet" ? "wallet" : "arrow-right"}"></i>${pk.mode === "sched" ? (payMethod === "transfer" ? "Programar y transferir" : "Programar y pagar") : payMethod === "wallet" ? "Pagar con wallet" : payMethod === "card" ? "Pagar con tarjeta" : "Continuar con transferencia"} · ${money(total)}</button>
       <p class="tiny center"><i data-lucide="lock-keyhole"></i> ${payMethod === "wallet" ? "Se descuenta de tu wallet Nexo al confirmar." : payMethod === "card" ? "Prototipo: el cobro es simulado." : "Aún no se realizará ningún cobro."}</p>
     </div>`;
-  icons();
+  icons(); cartPop = null;
 }
 
 /* Pedidos: se crean al pagar y se muestran en comprobante y factura */
@@ -3425,7 +3427,7 @@ function renderCreador() {
   if (real && !sbMoves) {
     // con cuenta real nunca se muestran números de ejemplo: se espera a los pagos reales
     sbLoadMoves();
-    document.getElementById("crKpis").innerHTML = `<p class="small">Cargando los datos reales…</p>`;
+    document.getElementById("crKpis").innerHTML = skel("kpis", 4);
     document.getElementById("crCompare").textContent = "Datos reales";
     ["crChart", "crMix"].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
     return;
@@ -3619,7 +3621,7 @@ function renderMovimientos(fromLoad) {
     const tx = allTransactions();
     box.innerHTML = `<div class="tk-row tk-head mv"><span>Fecha</span><span>Concepto</span><span>Método</span><span>Monto</span><span>Comisión</span></div>`
       + (tx.map(x => `<div class="tk-row mv"><span class="tiny">${x.t ? fullDate(x.t) : "—"}</span><span class="tk-main row start" style="gap:10px">${x.amount < 0 ? `<span class="svc-chip t-refund" aria-hidden="true"><i data-lucide="rotate-ccw"></i></span>` : x.service === "recarga" ? `<span class="svc-chip t-brand" aria-hidden="true"><i data-lucide="wallet"></i></span>` : svcChip(x.service ? PAY_SVC[x.service] : "Comida")}<span style="min-width:0"><b style="font-size:12px">${esc(x.concept)}</b><span class="tiny" style="display:block">${esc(x.who)}</span></span></span><span class="small">${esc(x.method)}</span><span><b class="${x.amount < 0 ? "neg" : ""}" style="font-size:13px">${x.amount < 0 ? "−" + money(-x.amount) : money(x.amount)}</b>${x.status && !["Pagado", "Acreditada", "Aprobado"].includes(x.status) ? `<span class="pill ${x.status === "En revisión" ? "warn" : x.status === "Rechazado" ? "bad" : "neutral"} mv-st">${x.status}</span>` : ""}</span><span class="small">${x.fee === null ? "—" : money(x.fee)}</span></div>`).join("")
-        || (sbMovesOn() && !sbMoves ? `<p class="small" style="padding:18px">Cargando los movimientos reales…</p>` : emptyState("receipt-text", "Aún no hay compras", sbMovesOn() ? "Cuando alguien pague con su cuenta en la app publicada, aparecerá aquí al instante." : "Cuando un estudiante pague un pedido de comida, aparecerá aquí. Los totales del Resumen son datos de ejemplo.")));
+        || (sbMovesOn() && !sbMoves ? skel("rows", 6) : emptyState("receipt-text", "Aún no hay compras", sbMovesOn() ? "Cuando alguien pague con su cuenta en la app publicada, aparecerá aquí al instante." : "Cuando un estudiante pague un pedido de comida, aparecerá aquí. Los totales del Resumen son datos de ejemplo.")));
     if (sbMovesOn() && sbMoves) {
       const ok = tx.filter(x => x.fee !== null), vol = ok.reduce((a, x) => a + x.amount, 0), fee = ok.reduce((a, x) => a + x.fee, 0), rev = tx.filter(x => x.status === "En revisión").length;
       box.insertAdjacentHTML("afterbegin", `<div class="mv-sum"><span class="pill ok"><i data-lucide="database"></i>&nbsp;Datos reales</span><span class="small">${ok.length} ${ok.length === 1 ? "pago confirmado" : "pagos confirmados"} · <b>${money(vol)}</b> · comisión de Nexo <b>${money(fee)}</b>${rev ? ` · ${rev} en revisión` : ""}</span></div>`);
@@ -3784,7 +3786,7 @@ function renderPedido() {
     <div class="stack s14">
       <div class="card">
         <div class="row" style="align-items:flex-start"><span class="small">Pedido ${o.num} · ${esc(l.name)}</span><span class="pill ${ORDER_STATE[st][1]}">${ORDER_STATE[st][0]}</span></div>
-        <div class="row start" style="gap:14px;align-items:center">${["preparando", "programado"].includes(st) && o.paidAt && now - o.paidAt < 90000 ? successMark("sm") : ""}<div><h1 class="h1">${title}</h1><p class="lead">${lead}</p></div></div>
+        <div class="row start" style="gap:14px;align-items:center">${["preparando", "programado"].includes(st) && o.paidAt && now - o.paidAt < 90000 ? successMark("sm") : pdAnim(st, o, now)}<div><h1 class="h1">${title}</h1><p class="lead">${lead}</p></div></div>
         ${st === "preparando" ? `<div class="track" role="progressbar" aria-label="Progreso de la preparación" aria-valuenow="${Math.round(prog)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${prog}%"></i></div>` : ""}
         <ol class="steps-v"${st === "cancelado" ? " hidden" : ""}>
           ${o.paidAt ? step(true, false, "Pago confirmado", hhmm(o.paidAt)) : ""}
@@ -4785,6 +4787,7 @@ document.addEventListener("click", e => {
     const undo = () => { favs = was ? [...favs, k] : favs.filter(x => x !== k); saveFavs(); if (current === "local") renderLocal(); if (current === "comida") renderFoodAgain(); };
     toast(was ? `Quitamos ${it ? it.name : "el producto"} de tus favoritos.` : `Guardamos ${it ? it.name : "el producto"} en tus favoritos. Lo verás en Comida y kioscos.`, was ? { action: "Deshacer", onAction: undo } : {});
     if (current === "local") renderLocal(); if (current === "comida") renderFoodAgain();
+    if (!was) document.querySelectorAll(`[data-fav="${CSS.escape(k)}"]`).forEach(b => { b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); });
     return;
   }
   const fo = e.target.closest("[data-fav-open]");
@@ -5580,7 +5583,7 @@ async function renderDueno() {
   if (!sb || !account || !account.sb) { acts.innerHTML = ""; body.innerHTML = `<div class="notice warn"><i data-lucide="globe"></i><p>Los datos reales solo se ven en la app publicada: abre la app publicada (<strong>pedroyasellipalomino-spec.github.io/NEXO</strong>) y entra con tu cuenta de dueño.</p></div>`; icons(); return; }
   if (dnBusy) return; dnBusy = true;
   acts.innerHTML = `<button class="btn ghost sm" type="button" data-dn-refresh><i data-lucide="refresh-cw"></i>Actualizar</button>`;
-  if (!body.querySelector(".dn-kpis")) body.innerHTML = `<p class="small">Cargando datos reales…</p>`;
+  if (!body.querySelector(".dn-kpis")) body.innerHTML = skel("kpis", 4) + skel("rows", 5);
   icons();
   const [st, us, ex] = await Promise.all([sb.rpc("owner_stats"), sb.from("profiles").select("id,full_name,email,carnet,carnet_status,role,local_id,disabled,created_at").order("created_at", { ascending: false }), sb.rpc("owner_extra")]).catch(e => [{ error: e }, {}, {}]);
   dnBusy = false;
@@ -5851,7 +5854,7 @@ function sbCarnetRow(row) {
 }
 function caPhotoHTML(x) {
   const src = x.photo || (x.path && sbCarnetUrl[x.path]);
-  if (!src) return `<div class="ca-photo" data-ca-photo="${esc(x.id)}"><span class="tiny">${x.path ? "Cargando la foto…" : "Sin foto"}</span></div>`;
+  if (!src) return `<div class="ca-photo" data-ca-photo="${esc(x.id)}">${x.path ? '<span class="skel skel-fill" aria-label="Cargando la foto"></span>' : '<span class="tiny">Sin foto</span>'}</div>`;
   return `<button class="ca-photo${caBig === x.id ? " big" : ""}" type="button" data-ca-zoom="${esc(x.id)}" aria-label="${caBig === x.id ? "Reducir" : "Ampliar"} la foto del carnet de ${esc(x.who)}"><img src="${src}" alt="Carnet de ${esc(x.who)}"><span class="ca-zoom" aria-hidden="true"><i data-lucide="${caBig === x.id ? "minimize-2" : "maximize-2"}"></i></span></button>`;
 }
 function renderCarnets() {
@@ -5864,7 +5867,7 @@ function renderCarnets() {
     + k("Total revisados", done.length, sbShared() ? "Cuentas reales" : "Cuentas de esta demostración", "id-card");
   document.getElementById("caTabs").innerHTML = [["pend", `Por verificar · ${pend.length}`], ["done", "Revisados"]].map(([t, l]) => `<button class="pill ${t === caTab ? "ok" : "neutral"}" type="button" data-ca-tab="${t}">${l}</button>`).join("");
   const list = caTab === "pend" ? pend.slice().sort((a, b) => a.sent - b.sent) : done.slice().sort((a, b) => b.decided - a.decided);
-  if (sbShared() && !sbCarnets) { document.getElementById("caList").innerHTML = `<div class="card"><p class="small">Cargando los carnets…</p></div>`; return; }
+  if (sbShared() && !sbCarnets) { document.getElementById("caList").innerHTML = skel("rows", 3); return; }
   document.getElementById("caList").innerHTML = list.map(x => {
     const state = x.st === "pendiente" ? `<span class="pill warn">En revisión</span>` : x.st === "ok" ? `<span class="pill ok">Aprobado</span>` : `<span class="pill bad">Rechazado</span>`;
     const actions = x.st !== "pendiente"
@@ -6307,6 +6310,55 @@ document.addEventListener("click", e => {
   try { sessionStorage.setItem("nexo-mnlocal", mnLocal); } catch (err) {}
   renderMenus();
 });
+
+
+/* ---------- Animaciones (23/11/2026) ----------
+   Todas respetan "reducir movimiento" (CSS en @media (prefers-reduced-motion: no-preference) y RM_OFF aquí).
+   · screenAnim: la pantalla nueva entra deslizando hacia adelante o, con "Volver", hacia atrás (.scr-fwd/.scr-back
+     sobre .content en las pantallas con marco, para no romper la barra fija).
+   · pdAnim: seguimiento del pedido — olla humeando (preparando), reloj (programado), bolsa que salta (listo),
+     confeti al retirarlo (pickedAt hace menos de 10 s) y plato vacío al cancelar.
+   · Micro: corazón que late (.favbtn.pop), saldo del wallet que cuenta (countTo), línea recién añadida al carrito
+     (cartPop → .line-pop), botones que se hunden (:active ya existía).
+   · Bienvenida #splash (una vez por pestaña, sessionStorage nexo-splash; pointer-events:none, no bloquea) y
+     esqueletos brillantes (skel) mientras cargan los datos reales. */
+var RM_OFF = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (err) { return false; } })();
+function screenAnim(id, from, back) {
+  if (RM_OFF || !from || from === id) return;
+  const sec = document.getElementById(id), el = sec.querySelector(":scope > .main > .content") || sec.querySelector(".content") || sec;
+  el.classList.remove("scr-fwd", "scr-back"); void el.offsetWidth; el.classList.add(back ? "scr-back" : "scr-fwd");
+  setTimeout(() => el.classList.remove("scr-fwd", "scr-back"), 420);
+}
+function pdAnim(st, o, now) {
+  if (st === "preparando") return `<span class="pd-anim pd-pot" aria-hidden="true"><i class="stm s1"></i><i class="stm s2"></i><i class="stm s3"></i><svg viewBox="0 0 64 64"><path d="M12 30h40v10a14 14 0 0 1-14 14H26a14 14 0 0 1-14-14z" fill="var(--brand)"/><rect x="8" y="26" width="48" height="6" rx="3" fill="var(--deep)"/><rect x="28" y="20" width="8" height="6" rx="2" fill="var(--deep)"/><path d="M8 34H4M60 34h-4" stroke="var(--deep)" stroke-width="4" stroke-linecap="round"/></svg></span>`;
+  if (st === "programado") return `<span class="pd-anim pd-clock" aria-hidden="true"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="24" fill="var(--mint-bg)" stroke="var(--brand)" stroke-width="4"/><path class="hand-m" d="M32 32V16" stroke="var(--deep)" stroke-width="4" stroke-linecap="round"/><path class="hand-h" d="M32 32h10" stroke="var(--deep)" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="3" fill="var(--deep)"/></svg></span>`;
+  if (st === "listo") return `<span class="pd-anim pd-bag" aria-hidden="true"><i class="spk k1"></i><i class="spk k2"></i><i class="spk k3"></i><svg viewBox="0 0 64 64"><path d="M14 22h36l-3 32H17z" fill="var(--brand)"/><path d="M24 26v-6a8 8 0 0 1 16 0v6" fill="none" stroke="var(--deep)" stroke-width="4" stroke-linecap="round"/><path d="M25 38l5 5 9-10" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+  if (st === "retirado") return `<span class="pd-anim pd-done" aria-hidden="true">${o.pickedAt && now - o.pickedAt < 10000 ? `<span class="confetti">${Array.from({ length: 14 }, (_, i) => `<i style="--a:${i * 26}deg;--d:${(i % 4) * 60}ms;--c:${["#3DBE85", "#eda100", "#2a78d6", "#eb6834"][i % 4]}"></i>`).join("")}</span>` : ""}<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="24" fill="var(--brand)"/><path d="M21 33l8 8 14-16" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+  if (st === "cancelado") return `<span class="pd-anim pd-off" aria-hidden="true"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="var(--bg)" stroke="var(--line)" stroke-width="4"/><path d="M24 24l16 16M40 24 24 40" stroke="var(--muted)" stroke-width="4" stroke-linecap="round"/></svg></span>`;
+  return "";
+}
+// El saldo cuenta hasta el valor nuevo (solo si el elemento se ve y el cambio es razonable)
+function countTo(el, to) {
+  const from = parseFloat(String(el.dataset.v ?? "").replace(",", ".")); el.dataset.v = String(to);
+  if (RM_OFF || isNaN(from) || from === to || !el.offsetParent || Math.abs(to - from) > 5000) { el.textContent = money(to); return; }
+  const t0 = performance.now(), dur = 650;
+  const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = money(from + (to - from) * e); if (k < 1 && el.dataset.v === String(to)) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+var cartPop = null;
+// Esqueletos de carga: "kpis" (tarjetas) o "rows" (filas)
+function skel(kind, n) {
+  return kind === "kpis"
+    ? `<div class="kpis skel-wrap" aria-busy="true" aria-label="Cargando">${Array.from({ length: n }, () => `<div class="card skel-card"><span class="skel w40"></span><span class="skel h28 w60"></span><span class="skel w80"></span></div>`).join("")}</div>`
+    : `<div class="card skel-wrap" aria-busy="true" aria-label="Cargando">${Array.from({ length: n }, () => `<div class="skel-row"><span class="skel circ"></span><span class="grow"><span class="skel w60"></span><span class="skel w40"></span></span><span class="skel w20"></span></div>`).join("")}</div>`;
+}
+(function splash() {
+  const sp = document.getElementById("splash"); if (!sp) return;
+  let seen = false; try { seen = !!sessionStorage.getItem("nexo-splash"); sessionStorage.setItem("nexo-splash", "1"); } catch (err) {}
+  if (seen || RM_OFF) { sp.remove(); return; }
+  sp.classList.add("on");
+  setTimeout(() => { sp.classList.add("out"); setTimeout(() => sp.remove(), 450); }, 1250);
+})();
 
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {
