@@ -1411,13 +1411,12 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 
 /* Palabra de marca: "nex" en Manrope con el eslabón como "o" (propuesta de identidad).
    Claro: texto verde Nexo #0F3D2E y eslabón esmeralda #1F7A55. Oscuro: niebla #EEF4F0 y verde señal #3DBE85. */
-.wordmark{--wm-ring:#1F7A55;display:inline-block;font-family:"Manrope",system-ui,sans-serif;font-weight:700;font-size:30px;line-height:1;letter-spacing:-.025em;color:#0F3D2E;white-space:nowrap}
+.wordmark{--wm-ring:#1F7A55;display:inline-block;font-family:"Manrope",system-ui,sans-serif;font-weight:700;font-size:24px;line-height:1;letter-spacing:-.025em;color:#0F3D2E;white-space:nowrap}
 .wm-o{display:inline-block;width:1.125em;height:.725em;margin-left:.01em;vertical-align:-.1125em;overflow:visible}
 .wm-ring{stroke:var(--wm-ring)}
 .side .wordmark,.campus .wordmark{--wm-ring:#3DBE85;color:#EEF4F0}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wordmark{--wm-ring:#3DBE85;color:#EEF4F0}}
 :root[data-theme="dark"] .wordmark{--wm-ring:#3DBE85;color:#EEF4F0}
-.mbar .wordmark{font-size:26px}
 
 /* Mis reservas de canchas */
 .my-courts{gap:4px}
@@ -1791,4 +1790,14 @@ html[data-motion="off"] .payfx,html[data-motion="off"] #splash{display:none}
   .campus .hn-core{box-shadow:0 4px 12px rgba(0,0,0,.25)!important;animation:none!important}
   .campus h2{font-size:15px!important;text-align:left!important;margin:0}
   .campus .hh-orb,.campus .orb{display:none}
+}
+
+/* Zona del reloj y la batería (app instalada, 24/11/2026): se deja una sola vez, en la barra de arriba de cada
+   pantalla (antes se sumaba al documento y a la barra y la cabecera quedaba gigante). Logo a 24 px en todas partes. */
+.mbar{min-height:56px}
+html.standalone .screen:not(.app) .topbar{padding-top:env(safe-area-inset-top,0px)}
+@media (min-width:700px){
+  html.standalone .deskbar{height:calc(80px + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px)}
+  html.standalone .side{padding-top:calc(30px + env(safe-area-inset-top,0px))}
+  html.standalone .screen.app > .main > .content{padding-bottom:calc(36px + env(safe-area-inset-bottom,0px))}
 }

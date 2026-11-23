@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 24 nov 2026
+- App en iPhone: barra superior sin espacio doble.
+- Logo de Nexo a un mismo tamaño en todas partes.
 - Arreglo: bienvenida de Inicio aplastada en iPad.
 - iPad: menú y barra fijos; solo se mueve el contenido.
 - Teléfono: franja verde del inicio de sesión más baja.
