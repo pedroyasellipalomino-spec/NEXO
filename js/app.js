@@ -47,6 +47,21 @@ const STAFF_NAV = {
 };
 const ROLE_LABEL = { owner: "Dueño", local: "Comercio", creator: "Creador", admin: "Administrador", mod: "Moderador", estudiante: "Estudiante" };
 const ROLE_HOME = { owner: "dueno", local: "local-pedidos", creator: "creador", admin: "gestion", mod: "moderacion", estudiante: "inicio" };
+/* Barra inferior de gestión en móvil: nombres cortos y como mucho 3 secciones + "Más" (hoja con todas y Salir).
+   Si la sección abierta no está entre las 3 primeras, ocupa el tercer lugar. */
+const TB_SHORT = { "Tickets abiertos": "Tickets", "Moderadores": "Equipo", "Pagos por validar": "Caja", "Equipo y tickets": "Equipo", "Cuentas de prueba": "Pruebas", "Configuración": "Ajustes", "Menú y horario": "Menú", "Datos reales": "Datos" };
+function staffTabsHTML(nav, active) {
+  const mk = n => `<button type="button" data-go="${n[3]}" class="${n[0] === active ? "on" : ""}" aria-label="${n[2]}"><i data-lucide="${n[1]}"></i>${TB_SHORT[n[2]] || n[2]}</button>`;
+  if (nav.length <= 3) return nav.map(mk).join("") + `<button type="button" data-logout><i data-lucide="log-out"></i>Salir</button>`;
+  const show = nav.slice(0, 3), cur = nav.find(n => n[0] === active);
+  if (cur && !show.includes(cur)) show[2] = cur;
+  return show.map(mk).join("") + `<button type="button" data-tb-more aria-haspopup="menu" aria-expanded="false"><i data-lucide="ellipsis"></i>Más</button>`;
+}
+function tbMoreHTML(nav, active) {
+  const item = (attrs, icon, label, on) => `<button class="um-item${on ? " on" : ""}" type="button" role="menuitem" ${attrs}${on ? ' aria-current="page"' : ""}><i data-lucide="${icon}"></i><span class="grow">${label}</span>${on ? '<i data-lucide="check"></i>' : ""}</button>`;
+  return `<p class="tiny" style="padding:4px 10px 2px;font-weight:600">Secciones de gestión</p><div class="um-list" style="border-top:0">${nav.map(n => item(`data-um-go="${n[3]}"`, n[1], n[2], n[0] === active)).join("")}</div>
+    <div class="um-list">${item("data-logout", "log-out", "Salir")}</div>`;
+}
 
 document.querySelectorAll("[data-account]").forEach(el => el.append(document.getElementById("account-tpl").content.cloneNode(true)));
 
@@ -110,8 +125,8 @@ document.querySelectorAll("section.app").forEach(sec => {
   const bar = document.createElement("nav");
   bar.className = "tabbar";
   bar.setAttribute("aria-label", "Navegación principal");
-  bar.innerHTML = (staff ? nav : TABS).map(n => `<button type="button" data-go="${n[3]}" class="${n[0]===tab?'on':''}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`).join("")
-    + (staff ? `<button type="button" data-logout><i data-lucide="log-out"></i>Salir</button>` : "");
+  bar.innerHTML = staff ? staffTabsHTML(nav, tab) : TABS.map(n => `<button type="button" data-go="${n[3]}" class="${n[0]===tab?'on':''}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`).join("");
+  if (staff) bar.dataset.staff = staff;
   bar.insertAdjacentHTML("afterbegin", `<span class="tb-ind" aria-hidden="true"></span>`);
   main.append(bar);
   sec.append(side, main);
@@ -4175,11 +4190,11 @@ function userMenuHTML() {
     <div class="um-list">${item(`data-logout`, "log-out", "Cerrar sesión")}</div>`;
 }
 let umOpen = null;
-function openUserMenu(btn) {
+function openUserMenu(btn, html) {
   closeUserMenu();
   const m = document.createElement("div");
-  m.className = "usermenu"; m.setAttribute("role", "menu"); m.setAttribute("aria-label", "Menú de usuario");
-  m.innerHTML = userMenuHTML();
+  m.className = "usermenu"; m.setAttribute("role", "menu"); m.setAttribute("aria-label", html ? "Más secciones" : "Menú de usuario");
+  m.innerHTML = html || userMenuHTML();
   document.body.append(m);
   const r = btn.getBoundingClientRect(), mobile = innerWidth < 700;
   if (mobile) m.classList.add("sheet");
@@ -4202,6 +4217,13 @@ function closeUserMenu() {
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-usermenu]");
   if (t) { e.preventDefault(); umOpen && umOpen.btn === t ? closeUserMenu() : openUserMenu(t); return; }
+  const mo = e.target.closest("[data-tb-more]");
+  if (mo) {
+    e.preventDefault();
+    if (umOpen && umOpen.btn === mo) { closeUserMenu(); return; }
+    const sec = mo.closest("section"), role = mo.closest(".tabbar").dataset.staff;
+    openUserMenu(mo, tbMoreHTML(STAFF_NAV[role] || [], sec.id)); return;
+  }
   if (umOpen && e.target.closest(".um-shade")) { closeUserMenu(); return; }
   const g = e.target.closest("[data-um-go]");
   if (g) { closeUserMenu(); go(g.dataset.umGo); return; }
@@ -4431,7 +4453,7 @@ function relabelForCreator(role = "creator", secId = "validar") {
   if (sec.dataset.navFor === role) return;
   const nav = STAFF_NAV[role], RL = ROLE_LABEL[role] || "Creador", mk = n => `<button type="button" data-go="${n[3]}" class="${n[0] === secId ? "on" : ""}"><i data-lucide="${n[1]}"></i>${n[2]}</button>`;
   const sideNav = sec.querySelector(".side .nav"); if (sideNav) sideNav.innerHTML = nav.map(mk).join("") + `<button type="button" class="mode-nav" data-mode-switch="usuario"><i data-lucide="user-round"></i>Usar Nexo como usuario</button>`;
-  const bar = sec.querySelector(".tabbar"); if (bar) bar.innerHTML = nav.map(mk).join("") + `<button type="button" data-logout><i data-lucide="log-out"></i>Salir</button>`;
+  const bar = sec.querySelector(".tabbar"); if (bar) { bar.innerHTML = `<span class="tb-ind" aria-hidden="true"></span>` + staffTabsHTML(nav, secId); bar.dataset.staff = role; }
   sec.querySelectorAll(".side .user span:last-child").forEach(el => el.textContent = RL + " · Menú");
   sec.querySelectorAll(".mbar .pill, .deskbar .acts .pill:not(.modebtn)").forEach(el => el.textContent = el.textContent.includes("Acceso") ? "Acceso: " + RL : RL);
   const c = sec.querySelector(".deskbar .crumbs span"); if (c) c.innerHTML = `Gestión&nbsp;&nbsp;/&nbsp;&nbsp;${RL}&nbsp;&nbsp;/&nbsp;&nbsp;${sec.dataset.title}`;

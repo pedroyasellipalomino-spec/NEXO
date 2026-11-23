@@ -3,6 +3,9 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 23 nov 2026
+- Barra de gestión en móvil con botón «Más».
+- Textos pequeños subidos a 12 px.
+- Avisos flotantes ya no tapan la barra.
 - Animaciones más rápidas y sutiles.
 - Interruptor de animaciones en Mi cuenta.
 - Credencial que gira y se voltea a la placa.
