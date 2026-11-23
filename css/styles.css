@@ -748,8 +748,13 @@ button.tk-row.on{background:var(--mint-bg)}
 .msg.note b{color:var(--warn-fg)}
 .msg.note b svg{font-size:12px;vertical-align:-1px}
 .note-in{background:var(--warn-bg);border-color:var(--warn-fg)}
-@media (min-width:700px){.mod-grid{grid-template-columns:280px minmax(0,1fr)}}
-@media (min-width:1100px){.mod-grid{grid-template-columns:280px minmax(0,1fr) 284px}}
+/* Moderación: una columna hasta 999 px (iPad vertical: el menú lateral deja ~580 px), bandeja + conversación
+   con los detalles debajo hasta 1399 px (iPad horizontal y Pro), y tres columnas desde 1400 px */
+@media (min-width:700px){.mod-grid{grid-template-columns:minmax(0,1fr)}.mod-grid > :last-child{grid-column:auto}}
+@media (min-width:1000px){.mod-grid{grid-template-columns:270px minmax(0,1fr)}.mod-grid > :last-child{grid-column:2}}
+@media (min-width:1400px){.mod-grid{grid-template-columns:280px minmax(0,1fr) 284px}.mod-grid > :last-child{grid-column:auto}}
+.md-send{flex-wrap:wrap}
+.md-send .btn{flex:1 1 150px;width:auto}
 /* Diálogo de confirmación (askConfirm) */
 .cdlg-wrap{position:fixed;inset:0;z-index:60;background:rgba(10,30,30,.45);display:grid;place-items:center;padding:16px;animation:in .14s ease}
 .cdlg{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:0 18px 50px rgba(10,48,46,.25);padding:22px;max-width:400px;width:100%;display:flex;flex-direction:column;gap:10px}
@@ -946,7 +951,7 @@ button.card.tap:hover .svc-go svg{transform:translateX(3px)}
 .hh-orb.o2{width:200px;height:200px;left:-60px;bottom:-110px;background:radial-gradient(circle,rgba(18,179,156,.55),rgba(18,179,156,0) 70%);animation:orb 15s ease-in-out infinite reverse}
 .hh-orb.o3{width:120px;height:120px;left:46%;top:-50px;background:radial-gradient(circle,rgba(224,161,6,.28),rgba(224,161,6,0) 70%);animation:orb 18s ease-in-out infinite}
 @keyframes orb{0%,100%{transform:translate(0,0)}50%{transform:translate(-18px,14px)}}
-.hh-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.hh-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
 .hh-tile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:14px 16px;border-radius:16px;color:#fff;cursor:pointer;font:inherit;
   background:linear-gradient(160deg,rgba(255,255,255,.18),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.25);backdrop-filter:blur(10px);transition:transform .2s cubic-bezier(.2,.8,.2,1),background .2s}
 .hh-tile:hover{transform:translateY(-3px);background:linear-gradient(160deg,rgba(255,255,255,.26),rgba(255,255,255,.1))}
@@ -1718,3 +1723,23 @@ html[data-motion="off"] .payfx,html[data-motion="off"] #splash{display:none}
   .remember input{width:22px;height:22px}
 }
 .input select{align-self:stretch;min-height:46px}
+
+/* iPad vertical (700–999 px): el menú lateral deja ~580 px, así que las tablas se ven como tarjetas (igual que en
+   el teléfono), los indicadores van de a 2, las migas no se parten y el tablero del comercio va en una columna. */
+@media (min-width:700px) and (max-width:999px){
+  .tk-head{display:none!important}
+  .tk-row{grid-template-columns:116px minmax(0,1fr);min-height:0}
+  .tk-row.eq{grid-template-columns:minmax(0,1fr) auto}
+  .tk-row.rs{grid-template-columns:78px minmax(0,1fr)}
+  .tk-lbl{display:inline}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kpis > :last-child:nth-child(odd){grid-column:1 / -1}
+  .deskbar{padding-inline:24px}
+  .deskbar .acts{gap:12px}
+  .deskbar .acts > .pill:not(.modebtn){display:none}
+  .lp-board{grid-template-columns:minmax(0,1fr)}
+  .lp-board > :last-child{grid-column:auto}
+}
+.deskbar .crumbs > span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+/* iPad horizontal y Pro: el tablero del comercio en 3 columnas solo cuando caben */
+@media (min-width:1100px) and (max-width:1299px){.lp-board{grid-template-columns:1fr 1fr}.lp-board > :last-child{grid-column:1 / -1}}

@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 23 nov 2026
+- iPad: moderación, tablas y tablero reacomodados.
+- iPad: tarjetas de Inicio en tres columnas.
 - Enlaces y botones pequeños, más fáciles de tocar.
 - Barra de gestión en móvil con botón «Más».
 - Textos pequeños subidos a 12 px.
