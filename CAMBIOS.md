@@ -3,6 +3,10 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 23 nov 2026
+- Credencial que gira y se voltea a la placa.
+- Cancha iluminada y pelota que rebota al reservar.
+- Inicio en cascada y anillo del plan que se llena.
+- Pago confirmado: moneda al wallet o recibo impreso.
 - Transiciones suaves al cambiar de pantalla.
 - Pedido animado: olla, bolsa lista y confeti.
 - Corazón, carrito y saldo con micro-animaciones.

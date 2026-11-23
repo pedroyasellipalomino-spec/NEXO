@@ -705,6 +705,15 @@ async def main() -> int:
         check(await pg.evaluate("pdAnim('preparando', {}, 0).includes('pd-pot') && pdAnim('listo', {}, 0).includes('pd-bag') && pdAnim('retirado', { pickedAt: 1000 }, 2000).includes('confetti')"), "el seguimiento del pedido tiene su animación por estado")
         check(await pg.evaluate("skel('kpis', 2).includes('skel-card') && !document.getElementById('splash')"), "esqueletos de carga y la bienvenida se retira sola")
 
+        await pg.evaluate("go('acceso')"); await pg.wait_for_timeout(200)
+        if await pg.locator("#acceso [data-pass-flip]").is_visible():
+            await pg.click("#acceso [data-pass-flip]"); await pg.wait_for_timeout(700)
+            check(await pg.evaluate("document.querySelector('#acceso [data-pass-flip]').classList.contains('show-back')"), "la credencial se voltea al tocarla")
+        await pg.evaluate("go('qr')"); await pg.wait_for_timeout(200)
+        check(await pg.locator("#qrCourt .qr-ball svg").count() == 1, "el comprobante de canchas muestra la cancha iluminada")
+        await pg.evaluate("payFx('in', '$10,00')"); await pg.wait_for_timeout(100)
+        check(await pg.locator(".payfx.in .pf-coin").count() == 1, "el pago confirmado muestra su animación")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 

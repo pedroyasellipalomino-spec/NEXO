@@ -359,6 +359,8 @@ function show(id) {
   if (id === "carnet") try { renderCarnet(); } catch (err) {}
   if (id === "revision") try { renderCourtPay(); } catch (err) {}
   if (id === "pruebas") try { renderPruebas(); } catch (err) {}
+  if (id === "qr") try { renderQrCourt(); } catch (err) {}
+  if (id === "acceso") try { document.querySelectorAll("[data-pass-flip].show-back").forEach(p => p.classList.remove("show-back")); } catch (err) {}
   if (id === "menus") try { renderMenus(); } catch (err) {}
   if (id === "recarga") try { renderWalletHist(); } catch (err) {}
   if (id === "carnets") try { renderCarnets(); } catch (err) {}
@@ -794,6 +796,7 @@ function addMovement(title, detail, amount, pill, pillCls, extra = {}) {
   try { sbSaveState(); } catch (err) {}
   drawMovement(m);
   refreshActivity();
+  try { payFxFor(m); } catch (err) {}
   try { renderWalletHist(); } catch (err) {}
 }
 function refreshActivity() {
@@ -6359,6 +6362,47 @@ function skel(kind, n) {
   sp.classList.add("on");
   setTimeout(() => { sp.classList.add("out"); setTimeout(() => sp.remove(), 450); }, 1250);
 })();
+
+
+/* ---------- Más animaciones (23/11/2026) ----------
+   · Credencial (#acceso): entra girando (.pass, CSS), el QR brilla y al tocarla (o Enter/Espacio) se voltea a la cara
+     de la placa en grande (.pass-back; passFlip hace el giro en dos mitades y cambia .show-back a mitad de camino).
+   · Comprobante de canchas (#qr): la cancha dibujada se ilumina con reflectores y la pelota rebota (renderQrCourt).
+   · Inicio: accesos y tarjetas en cascada y el anillo del plan se llena (CSS; @property --p).
+   · Pago confirmado: payFxFor(movimiento) desde addMovement → moneda que cae en el wallet (recargas y pagos con wallet)
+     o recibo que se imprime (tarjeta); no bloquea (pointer-events:none) y se quita sola. */
+function passFlip(p) {
+  if (RM_OFF) { p.classList.toggle("show-back"); return; }
+  if (p.classList.contains("flipping")) return;
+  p.classList.add("flipping");
+  setTimeout(() => { p.classList.toggle("show-back"); }, 260);
+  setTimeout(() => p.classList.remove("flipping"), 560);
+}
+document.addEventListener("click", e => { const p = e.target.closest("[data-pass-flip]"); if (p && !e.target.closest("button, a")) passFlip(p); });
+document.addEventListener("keydown", e => { const p = e.target.closest && e.target.closest("[data-pass-flip]"); if (p && e.target === p && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); passFlip(p); } });
+function renderQrCourt() {
+  const box = document.getElementById("qrCourt"); if (!box) return;
+  let sp = "futbol"; try { sp = res.sport || sp; } catch (err) {}
+  box.innerHTML = `<span class="beam b1"></span><span class="beam b2"></span><div class="qc-art">${courtArt(sp)}</div><span class="qr-ball">${ballArt(sp)}</span>`;
+}
+function payFxFor(m) {
+  if (RM_OFF || !m || m.pill !== "Pagado" && m.pill !== "Acreditada") return;
+  const amt = String(m.amount || ""), coinIn = m.title === "Recarga de wallet" && amt.startsWith("+");
+  let wallet = /wallet nexo/i.test(m.detail || "");
+  try { if (m.order) { const o = orders.find(x => x.id === m.order); wallet = wallet || (o && o.method === "wallet"); } } catch (err) {}
+  if (!coinIn && !amt.startsWith("−")) return;
+  payFx(coinIn ? "in" : wallet ? "out" : "receipt", amt.replace(/^[−+]/, ""));
+}
+function payFx(kind, amt) {
+  document.querySelectorAll(".payfx").forEach(x => x.remove());
+  const w = document.createElement("div"); w.className = "payfx " + kind; w.setAttribute("aria-hidden", "true");
+  w.innerHTML = kind === "receipt"
+    ? `<div class="pf-slot"></div><div class="pf-paper"><b>Nexo</b><i></i><i></i><i class="s"></i><span>${esc(amt)}</span><em>PAGADO</em></div>`
+    : `<div class="pf-coin">$</div><div class="pf-wallet"><svg viewBox="0 0 64 48"><rect x="4" y="8" width="56" height="36" rx="8" fill="#1F7A55"/><rect x="4" y="8" width="56" height="10" rx="5" fill="#0F3D2E"/><rect x="40" y="22" width="20" height="12" rx="4" fill="#3DBE85"/><circle cx="48" cy="28" r="2.5" fill="#0F3D2E"/></svg><span>${kind === "in" ? "+" : "−"}${esc(amt)}</span></div>`;
+  document.body.append(w);
+  setTimeout(() => w.classList.add("bye"), 1500);
+  setTimeout(() => w.remove(), 1900);
+}
 
 
 document.querySelectorAll("form[data-submit]").forEach(f => f.addEventListener("submit", e => {

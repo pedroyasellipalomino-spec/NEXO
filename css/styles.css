@@ -1627,3 +1627,72 @@ button.card.tap:hover .food-art svg{transform:scale(1.06) rotate(-2deg)}
 @keyframes confetti{0%{opacity:1;transform:translate(-50%,-50%) rotate(var(--a)) translateY(0)}100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--a)) translateY(-46px) rotate(220deg)}}
 @keyframes heart{0%{transform:scale(1)}35%{transform:scale(1.45)}60%{transform:scale(.9)}100%{transform:scale(1)}}
 @keyframes linePop{0%{background:color-mix(in srgb,var(--brand) 22%,transparent);transform:scale(.98)}100%{background:transparent;transform:none}}
+
+/* ---------- Más animaciones (23/11/2026) ---------- */
+@property --p{syntax:"<number>";inherits:false;initial-value:0}
+.pass{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pass:focus-visible{outline:3px solid #3DBE85;outline-offset:3px}
+.pass-back{display:none}
+.pass.show-back > :not(.pass-back){visibility:hidden}
+.pass.show-back .pass-back{display:flex;position:absolute;inset:0;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px}
+.pass-plate.big{transform:scale(1.6);margin:18px 0}
+.pass-back > b{font-size:17px}
+.pb-hint{color:rgba(255,255,255,.8);margin-top:6px}
+.pass-qr .qr{position:relative;overflow:hidden}
+.qr-court{position:relative;width:200px;height:124px;margin-bottom:-4px}
+.qr-court .qc-art{position:absolute;inset:12px 10px 0;border-radius:14px;overflow:hidden;box-shadow:0 10px 24px rgba(15,61,46,.22)}
+.qr-court .qc-art svg{width:100%;height:100%;display:block}
+.qr-court .beam{position:absolute;top:-14px;width:70px;height:150px;background:linear-gradient(180deg,rgba(255,244,190,.85),rgba(255,244,190,0));clip-path:polygon(42% 0,58% 0,100% 100%,0 100%);opacity:0;z-index:2;mix-blend-mode:screen}
+.qr-court .b1{left:-6px;transform:rotate(-18deg)}.qr-court .b2{right:-6px;transform:rotate(18deg)}
+.qr-ball{position:absolute;left:50%;top:44px;width:30px;height:30px;margin-left:-15px;z-index:3}
+.qr-ball svg{width:30px;height:30px}
+.payfx{position:fixed;left:50%;top:38%;z-index:998;pointer-events:none;width:150px;height:150px;margin-left:-75px;display:grid;place-items:center;transition:opacity .35s ease,transform .35s ease}
+.payfx.bye{opacity:0;transform:translateY(-12px)}
+.pf-wallet{position:absolute;bottom:8px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.pf-wallet svg{width:84px;height:64px;filter:drop-shadow(0 8px 16px rgba(15,61,46,.3))}
+.pf-wallet span{font:700 15px/1 Manrope,Inter,sans-serif;color:var(--ink);background:var(--surface);padding:4px 10px;border-radius:999px;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.pf-coin{position:absolute;top:0;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font:800 20px/1 Manrope,Inter,sans-serif;color:#7a5200;background:radial-gradient(circle at 35% 30%,#ffe08a,#eda100 70%);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15),0 4px 10px rgba(0,0,0,.2);z-index:2}
+.payfx.out .pf-coin{top:auto;bottom:40px}
+.pf-slot{position:absolute;top:18px;width:120px;height:14px;border-radius:7px;background:var(--deep);box-shadow:0 6px 14px rgba(0,0,0,.25);z-index:2}
+.pf-paper{position:absolute;top:24px;width:96px;padding:12px 10px 14px;background:#fff;color:#0F3D2E;border-radius:0 0 8px 8px;display:flex;flex-direction:column;gap:6px;align-items:center;box-shadow:0 10px 20px rgba(0,0,0,.18);clip-path:inset(0 0 100% 0)}
+.pf-paper b{font:700 13px/1 Manrope,Inter,sans-serif}
+.pf-paper i{display:block;width:100%;height:5px;border-radius:3px;background:#D3E2DA}
+.pf-paper i.s{width:60%}
+.pf-paper span{font:700 16px/1 Inter,sans-serif}
+.pf-paper em{font:800 10px/1 Inter,sans-serif;letter-spacing:.12em;color:#1F7A55;border:2px solid #1F7A55;border-radius:4px;padding:3px 6px;transform:rotate(-8deg);font-style:normal;opacity:0}
+@media (prefers-reduced-motion: no-preference){
+  #acceso .pass{animation:passIn .8s cubic-bezier(.2,.8,.2,1) backwards;transform-origin:50% 60%}
+  .pass.flipping{animation:passFlip .56s ease-in-out}
+  .pass-qr .qr::after{content:"";position:absolute;inset:-20%;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.75) 50%,transparent 60%);transform:translateX(-120%);animation:qrShine 3.2s ease-in-out 1s infinite}
+  .qr-court .qc-art{animation:courtOn 1.1s ease .2s backwards}
+  .qr-court .beam{animation:beam 1.4s ease .25s forwards}
+  .qr-court .b2{animation-delay:.45s}
+  .qr-ball{animation:ballBounce 1.1s cubic-bezier(.3,.0,.6,1) .5s 3 backwards}
+  #inicio .svc-tiles .svt,#inicio .hh-tile{animation:cascade .5s cubic-bezier(.2,.8,.2,1) backwards}
+  #inicio .svc-tiles .svt:nth-child(2),#inicio .hh-tile:nth-child(2){animation-delay:.07s}
+  #inicio .svc-tiles .svt:nth-child(3),#inicio .hh-tile:nth-child(3){animation-delay:.14s}
+  #inicio .svc-tiles .svt:nth-child(4),#inicio .hh-tile:nth-child(4){animation-delay:.21s}
+  #inicio .svc-tiles .svt:nth-child(5){animation-delay:.28s}#inicio .svc-tiles .svt:nth-child(6){animation-delay:.35s}
+  #inicio .hh-ring{animation:ringFill 1.2s cubic-bezier(.2,.8,.2,1) .3s backwards}
+  .payfx{animation:fxIn .25s ease backwards}
+  .payfx.in .pf-coin{animation:coinIn .9s cubic-bezier(.5,0,.6,1.4) .1s backwards}
+  .payfx.out .pf-coin{animation:coinOut .9s cubic-bezier(.3,.6,.4,1) .2s both}
+  .pf-wallet svg{animation:walletJig .4s ease .85s}
+  .pf-paper{animation:print 1s steps(8,end) .15s forwards}
+  .pf-paper em{animation:stamp .3s cubic-bezier(.3,1.6,.5,1) 1.1s forwards}
+}
+@media (prefers-reduced-motion: reduce){.payfx{display:none}}
+@keyframes passIn{from{opacity:0;transform:perspective(900px) rotateY(-70deg) rotateX(8deg) scale(.9)}}
+@keyframes passFlip{0%{transform:perspective(900px) rotateY(0)}46%{transform:perspective(900px) rotateY(90deg)}54%{transform:perspective(900px) rotateY(-90deg)}100%{transform:perspective(900px) rotateY(0)}}
+@keyframes qrShine{0%,70%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+@keyframes courtOn{from{filter:brightness(.35) saturate(.6)}}
+@keyframes beam{0%{opacity:0}30%{opacity:.9}100%{opacity:.45}}
+@keyframes ballBounce{0%{transform:translateY(-46px)}45%{transform:translateY(22px) scale(1.1,.9)}60%{transform:translateY(8px)}100%{transform:translateY(0)}}
+@keyframes cascade{from{opacity:0;transform:translateY(14px) scale(.97)}}
+@keyframes ringFill{from{--p:0}}
+@keyframes fxIn{from{opacity:0;transform:scale(.8)}}
+@keyframes coinIn{0%{transform:translateY(-40px) rotateY(0);opacity:0}20%{opacity:1}80%{transform:translateY(66px) rotateY(720deg);opacity:1}100%{transform:translateY(72px) rotateY(720deg);opacity:0}}
+@keyframes coinOut{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-70px) rotateY(540deg);opacity:0}}
+@keyframes walletJig{30%{transform:scale(1.08,.92)}60%{transform:scale(.97,1.04)}}
+@keyframes print{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes stamp{from{opacity:0;transform:rotate(-8deg) scale(1.8)}to{opacity:1;transform:rotate(-8deg) scale(1)}}

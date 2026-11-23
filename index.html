@@ -871,7 +871,7 @@
   <div class="cols" data-plan="on">
     <div class="stack">
       <h2 class="sr-only">Credencial de estacionamiento</h2>
-      <div class="pass" role="group" aria-label="Credencial de estacionamiento">
+      <div class="pass" role="button" tabindex="0" aria-label="Credencial de estacionamiento. Tócala para ver la placa en grande" data-pass-flip>
         <div class="pass-head">
           <div class="pass-brand"><span class="emblem"><svg class="nexo-mark" viewBox="155 29 90 58" fill="none" aria-hidden="true"><rect x="162" y="36" width="38" height="44" rx="19" stroke="#3DBE85" stroke-width="10"/><rect x="188" y="47" width="50" height="22" rx="11" stroke="#EEF4F0" stroke-width="10"/><path d="M200 61A19 19 0 0 1 187.5 78.9" stroke="#3DBE85" stroke-width="10"/></svg></span><div><b>nexo</b><span>Estacionamiento</span></div></div>
           <span class="pass-plan">Plan <span data-planv="lname">mensual</span></span>
@@ -883,6 +883,7 @@
         <div class="pass-row"><div><span class="pass-lbl">Vehículo</span><b data-veh="full">Toyota Yaris 2019</b></div><div><span class="pass-lbl">Válido hasta</span><b><span data-planv="end">01 dic 2026</span></b></div></div>
         <div class="pass-cut" aria-hidden="true"></div>
         <div class="pass-qr"><div class="qr"><canvas data-qr="ACC-AB123CD-20241010186" width="29" height="29"></canvas></div><p>Muestra este código en el lector del acceso vehicular</p><span class="pass-note">QR ilustrativo · No válido para entrar</span></div>
+        <div class="pass-back" aria-hidden="true"><span class="pass-lbl">Placa registrada</span><div class="pass-plate big"><span>VENEZUELA</span><b data-veh="plate">AB123CD</b></div><b data-veh="full">Toyota Yaris 2019</b><span class="pass-lbl">Válido hasta <span data-planv="end">01 dic</span></span><span class="tiny pb-hint">Toca para volver</span></div>
       </div>
       <div class="card">
         <h2 class="h2">Cómo usar tu credencial</h2>
@@ -1191,6 +1192,7 @@
 <section class="screen app" id="qr" data-title="Comprobante" data-back="inicio" data-tab="servicios" data-crumb="Canchas  /  Comprobante" hidden>
   <div class="stack" style="max-width:520px;width:100%;margin-inline:auto">
     <div class="stack s14" style="align-items:center;text-align:center">
+      <div class="qr-court" id="qrCourt" aria-hidden="true"></div>
       <span class="okmark" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="ok-ring" cx="32" cy="32" r="26"/><path class="ok-tick" d="M21 33l7.5 7.5L44 25"/></svg><i></i><i></i><i></i><i></i><i></i><i></i></span>
       <h1 class="h1" style="font-size:27px">¡Tu cancha está lista!</h1>
       <p class="small" style="font-size:13px;margin-top:-8px">Reserva confirmada · Comprobante de ejemplo</p>
