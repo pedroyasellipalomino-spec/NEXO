@@ -1776,6 +1776,8 @@ html[data-motion="off"] .payfx,html[data-motion="off"] #splash{display:none}
   .screen.app > .main{height:100%;overflow:hidden}
   .screen.app > .main > .deskbar{flex-shrink:0}
   .screen.app > .main > .content{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  /* .content es flex en columna: con altura fija los bloques se encogían (la cabecera de Inicio quedaba en 60 px) */
+  .screen.app > .main > .content > *{flex-shrink:0}
 }
 
 /* Teléfono: la franja verde de las pantallas de acceso es una línea baja con el logo y la frase */

@@ -718,6 +718,12 @@ async def main() -> int:
         await pg.evaluate("payFx('in', '$10,00')"); await pg.wait_for_timeout(100)
         check(await pg.locator(".payfx.in .pf-coin").count() == 1, "el pago confirmado muestra su animación")
 
+        # iPad horizontal: con el marco fijo, la cabecera de Inicio no se encoge
+        await pg.set_viewport_size({"width": 1000, "height": 695})
+        await pg.evaluate("go('inicio')"); await pg.wait_for_timeout(400)
+        hh = await pg.evaluate("document.querySelector('#inicio .hero-home').offsetHeight")
+        check(await pg.evaluate("current") == "inicio" and hh > 250, f"la cabecera de Inicio se ve completa en iPad horizontal ({hh} px)")
+
         check(not errs, f"sin errores de JavaScript {errs if errs else ''}")
         await b.close()
 

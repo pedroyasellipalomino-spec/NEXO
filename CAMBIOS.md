@@ -3,6 +3,7 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 24 nov 2026
+- Arreglo: bienvenida de Inicio aplastada en iPad.
 - iPad: menú y barra fijos; solo se mueve el contenido.
 - Teléfono: franja verde del inicio de sesión más baja.
 
