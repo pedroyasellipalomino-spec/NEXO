@@ -1,4 +1,4 @@
--- Nexo · Pagos con tarjeta validados por Caja (24/11/2026, pedido del dueño).
+-- Nexo · Pagos con tarjeta validados por Caja (23/11/2026, pedido del dueño).
 -- Ningún pago con tarjeta (ni transferencia) cuenta como pagado hasta que administración, creador o dueño lo apruebe:
 --  · El saldo del wallet ya no sube desde la app (wallet_add solo descuenta): las recargas, con tarjeta o Pago Móvil,
 --    se suman cuando Caja las aprueba (caja_decide).

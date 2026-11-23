@@ -23,7 +23,7 @@ async def login(ctx, email):
 toasts="[...document.querySelectorAll('.toast')].map(t=>t.textContent).join(' | ')"
 async def main():
     stu=mk("e2.estudiante@nexo-pruebas.dev","Estudiante Dos","20259990011"); loc=mk("e2.local@nexo-pruebas.dev","Cocina Pincho"); mod=mk("e2.mod@nexo-pruebas.dev","Moderadora Dos")
-    # el estudiante paga con su wallet (desde el 24/11 la tarjeta queda en revisión hasta que Caja la aprueba: supabase_tarjeta.py)
+    # el estudiante paga con su wallet (desde el 23/11 la tarjeta queda en revisión hasta que Caja la aprueba: supabase_tarjeta.py)
     sql(f"select set_config('nexo.role_change','on',false); update public.profiles set role='local', local_id='pinchopan' where id='{loc}'; update public.profiles set role='mod' where id='{mod}';"
         f"insert into public.student_state (user_id, wallet) values ('{stu}', 30) on conflict (user_id) do update set wallet = 30;")
     async with async_playwright() as p:

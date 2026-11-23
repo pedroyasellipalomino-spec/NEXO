@@ -27,7 +27,7 @@ async def login(ctx, email):
     return pg
 async def main():
     stu = mk("e3.estudiante@nexo-pruebas.dev", "Estudiante Tres", "20259990033"); adm = mk("e3.caja@nexo-pruebas.dev", "Caja Tres"); otro = mk("e3.otro@nexo-pruebas.dev", "Otro Tres", "20259990034")
-    # saldo inicial de $10 puesto por el servidor (desde el 24/11 la app no puede sumarse saldo: las recargas pasan por Caja)
+    # saldo inicial de $10 puesto por el servidor (desde el 23/11 la app no puede sumarse saldo: las recargas pasan por Caja)
     sql(f"select set_config('nexo.role_change','on',false); update public.profiles set role='admin' where id='{adm}';"
         f"insert into public.student_state (user_id, wallet) values ('{stu}', 10) on conflict (user_id) do update set wallet = 10;")
     async with async_playwright() as p:

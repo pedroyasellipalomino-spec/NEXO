@@ -32,7 +32,7 @@ async def main():
         b = await p.chromium.launch(executable_path=os.environ.get("CHROME_PATH", "/opt/pw-browsers/chromium"))
         cs, cc, co = [await b.new_context(viewport={"width": 1366, "height": 900}) for _ in range(3)]
         ps = await login(cs, "e6.estudiante@nexo-pruebas.dev")
-        # desde el 24/11 solo lo pagado con el wallet entra como "Pagado"; tarjetas y transferencias, "En revisión"
+        # desde el 23/11 solo lo pagado con el wallet entra como "Pagado"; tarjetas y transferencias, "En revisión"
         await ps.evaluate("""() => {
           addMovement("Recarga de wallet", "Tarjeta Visa ···· 4242 · Aut. 123456", "+$10,00", "En revisión", "neutral", { icon: "wallet" });
           addMovement("Cancha de tenis 02", "Canchas · Vie 20 nov · 18:00–19:00 · Wallet Nexo", "−$12,60", "Pagado", "ok", { icon: "dribbble" });

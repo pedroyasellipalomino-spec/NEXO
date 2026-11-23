@@ -1766,7 +1766,7 @@ html[data-motion="off"] .payfx,html[data-motion="off"] #splash{display:none}
 :root[data-theme="dark"] .btn.danger-ghost{color:var(--danger)}
 :root[data-theme="dark"] .mix[class*="t-"] .row b{color:var(--ink)}
 
-/* Marco fijo en tableta y escritorio (24/11/2026): el menú lateral y la barra superior no se mueven; solo se
+/* Marco fijo en tableta y escritorio (23/11/2026): el menú lateral y la barra superior no se mueven; solo se
    desplaza el contenido (.content). Sin el rebote del navegador que arrastraba toda la página en el iPad. */
 @media (min-width:700px){
   html,body{overscroll-behavior:none}
@@ -1792,7 +1792,7 @@ html[data-motion="off"] .payfx,html[data-motion="off"] #splash{display:none}
   .campus .hh-orb,.campus .orb{display:none}
 }
 
-/* Zona del reloj y la batería (app instalada, 24/11/2026): se deja una sola vez, en la barra de arriba de cada
+/* Zona del reloj y la batería (app instalada, 23/11/2026): se deja una sola vez, en la barra de arriba de cada
    pantalla (antes se sumaba al documento y a la barra y la cabecera quedaba gigante). Logo a 24 px en todas partes. */
 .mbar{min-height:56px}
 html.standalone .screen:not(.app) .topbar{padding-top:env(safe-area-inset-top,0px)}
