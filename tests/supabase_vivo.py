@@ -23,16 +23,18 @@ async def login(ctx, email):
 toasts="[...document.querySelectorAll('.toast')].map(t=>t.textContent).join(' | ')"
 async def main():
     stu=mk("e2.estudiante@nexo-pruebas.dev","Estudiante Dos","20259990011"); loc=mk("e2.local@nexo-pruebas.dev","Cocina Pincho"); mod=mk("e2.mod@nexo-pruebas.dev","Moderadora Dos")
-    sql(f"select set_config('nexo.role_change','on',false); update public.profiles set role='local', local_id='pinchopan' where id='{loc}'; update public.profiles set role='mod' where id='{mod}';")
+    # el estudiante paga con su wallet (desde el 24/11 la tarjeta queda en revisión hasta que Caja la aprueba: supabase_tarjeta.py)
+    sql(f"select set_config('nexo.role_change','on',false); update public.profiles set role='local', local_id='pinchopan' where id='{loc}'; update public.profiles set role='mod' where id='{mod}';"
+        f"insert into public.student_state (user_id, wallet) values ('{stu}', 30) on conflict (user_id) do update set wallet = 30;")
     async with async_playwright() as p:
         b=await p.chromium.launch(executable_path=os.environ["CHROME_PATH"])
         cs, cl, cm = [await b.new_context(viewport={"width":1280,"height":900}) for _ in range(3)]
         ps=await login(cs,"e2.estudiante@nexo-pruebas.dev"); pl=await login(cl,"e2.local@nexo-pruebas.dev"); pm=await login(cm,"e2.mod@nexo-pruebas.dev")
         print("pantallas:", await ps.evaluate("location.hash"), await pl.evaluate("location.hash"), await pm.evaluate("location.hash"))
         print("comercio sin pedidos de ejemplo:", await pl.evaluate("allOrders().length"), "| moderadora sin tickets de ejemplo:", await pm.evaluate("tickets.length"))
-        # 1) estudiante pide y paga con tarjeta
+        # 1) estudiante pide y paga con su wallet
         await ps.evaluate("curLocal='pinchopan'; openItem('pincho'); go('detalle')"); await ps.wait_for_timeout(700)
-        await ps.click("#detAdd"); await ps.wait_for_timeout(700); await ps.click("#cartPay"); await ps.wait_for_timeout(3000)
+        await ps.click("#detAdd"); await ps.wait_for_timeout(700); await ps.evaluate("payMethod = 'wallet'; renderCarrito()"); await ps.wait_for_timeout(300); await ps.click("#cartPay"); await ps.wait_for_timeout(3000)
         oid=await ps.evaluate("trackId"); print("pedido creado:", oid, await ps.evaluate("location.hash"))
         print("en la base:", sql(f"select id, local_id, data->>'studentName' as nombre from public.orders where id='{oid}'"))
         await pl.wait_for_timeout(2500)

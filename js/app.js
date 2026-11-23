@@ -695,7 +695,8 @@ const ST = { externa: ["ok", "Pagada fuera de Nexo"], pagada: ["ok", "Pagada"], 
 function invLine(iv) {
   const s = statusOf(iv), p = pagos[iv.id];
   if (s === "pagada") return `Pagada el ${p.fecha} · ${p.via}${p.pp ? " · con pronto pago" : ""}`;
-  if (p && p.estado === "rechazada" && ["pronto", "pendiente", "vencida"].includes(s)) return `Transferencia rechazada: ${p.motivo}. Vuelve a pagarla · ${s === "pronto" ? `Pronto pago hasta el ${fmtDW(iv.ppEnd)}` : s === "pendiente" ? `Vence el ${fmtDW(iv.due)}` : `Venció el ${fmtDW(iv.due)}`}`;
+  if (p && p.estado === "rechazada" && ["pronto", "pendiente", "vencida"].includes(s)) return `${p.method === "tarjeta" ? "Pago con tarjeta rechazado" : "Transferencia rechazada"}: ${p.motivo}. Vuelve a pagarla · ${s === "pronto" ? `Pronto pago hasta el ${fmtDW(iv.ppEnd)}` : s === "pendiente" ? `Vence el ${fmtDW(iv.due)}` : `Venció el ${fmtDW(iv.due)}`}`;
+  if (s === "revision" && p.method === "tarjeta") return `Pago con tarjeta en revisión · ${escH(p.card || "Tarjeta")} · ${money(p.monto)}${p.ref ? ` · Aut. ${p.ref}` : ""}`;
   if (s === "revision") return `Transferencia en revisión · ${p.currency === "bs" ? `${bsAmt(p.paidAmount)} (${money(p.monto)})` : money(p.monto)}${p.ref ? ` · Ref. ${p.ref.slice(-6)}` : ""}`;
   if (s === "externa") return "Indicaste que la pagaste fuera de Nexo · Puedes cambiarlo en Mis materias";
   if (s === "futura") return `Se emite el ${fmtDW(iv.issue)} · Pronto pago hasta el ${fmtDW(iv.ppEnd)}`;
@@ -936,13 +937,14 @@ document.addEventListener("click", e => {
       } else affNote = " La tarjeta no se guardó.";
       document.getElementById("newCardForm").reset(); renderNC();
     } else label = cardLabel(cards.find(c => c.id === selectedCardId));
-    const t = day0(simDate);
+    // el cobro con tarjeta queda en revisión hasta que Caja lo apruebe
+    const aut = cardAut(), now = Date.now();
     let total = 0;
-    sel.forEach(iv => { const pp = statusOf(iv) === "pronto", m = amountOf(iv); total += m; pagos[iv.id] = { estado: "pagada", monto: m, fecha: fmtD(t), via: label, pp }; });
+    sel.forEach(iv => { const pp = statusOf(iv) === "pronto", m = amountOf(iv); total += m; pagos[iv.id] = { estado: "revision", monto: m, pp, method: "tarjeta", card: label, ref: aut, currency: "usd", paidAmount: m, date: isoOf(new Date()), sentAt: now }; });
     savePagos();
-    addMovement(sel.map(iv => `Factura de ${iv.mes}`).join(" + "), `Universidad · ${label}`, "−" + money(total), "Pagado", "ok");
+    addMovement(sel.map(iv => `Factura de ${iv.mes}`).join(" + "), `Universidad · ${label} · Aut. ${aut}`, "−" + money(total), "En revisión", "neutral");
     defaultSel(); renderDebt(); renderCards();
-    showDebtNotice("Pago confirmado.", `Pagaste ${money(total)} con ${label}. Tu saldo ya está actualizado.${affNote}`);
+    showDebtNotice("Pago en revisión.", `Registramos tu pago de ${money(total)} con ${label}. Caja lo valida y la factura queda pagada al aprobarlo.${affNote}`);
     go("materias");
     return;
   }
@@ -985,8 +987,8 @@ function buildNotifs() {
     const s = statusOf(iv), amt = money(amountOf(iv));
     if (t < iv.issue) push({ id: `inv-${iv.id}-soon`, cat: "universidad", when: addDays(iv.issue, -5), title: `La factura de ${iv.mes} se emite el ${fmtDW(iv.issue)}`, body: `Págala antes del ${fmtDW(iv.ppEnd)} y cada materia te cuesta ${money(PRICE_PP)} en lugar de ${money(PRICE_REG)}.`, go: "materias" });
     if (s === "pagada") { push({ id: `inv-${iv.id}-paid`, cat: "universidad", when: PAGOS0[iv.id] ? addDays(iv.issue, 2) : t, title: `Recibimos el pago de la factura de ${iv.mes}`, body: `${money(pagos[iv.id].monto)} · ${pagos[iv.id].via}${pagos[iv.id].pp ? " · con pronto pago" : ""}.`, go: "materias" }); }
-    if (pagos[iv.id] && pagos[iv.id].estado === "rechazada") push({ id: `inv-${iv.id}-rej-${pagos[iv.id].rejectedAt}`, cat: "universidad", alert: true, when: t, title: `Rechazamos tu transferencia de ${iv.mes}`, body: `${pagos[iv.id].motivo}. Revisa los datos y vuelve a pagarla.`, go: "materias" });
-    if (s === "revision") push({ id: `inv-${iv.id}-rev`, cat: "universidad", when: t, title: `Tu transferencia de ${iv.mes} está en revisión`, body: "Te avisaremos cuando la universidad la valide.", go: "materias" });
+    if (pagos[iv.id] && pagos[iv.id].estado === "rechazada") push({ id: `inv-${iv.id}-rej-${pagos[iv.id].rejectedAt}`, cat: "universidad", alert: true, when: t, title: `Rechazamos tu ${pagos[iv.id].method === "tarjeta" ? "pago con tarjeta" : "transferencia"} de ${iv.mes}`, body: `${pagos[iv.id].motivo}. Revisa los datos y vuelve a pagarla.`, go: "materias" });
+    if (s === "revision") push({ id: `inv-${iv.id}-rev`, cat: "universidad", when: t, title: `Tu ${pagos[iv.id] && pagos[iv.id].method === "tarjeta" ? "pago con tarjeta" : "transferencia"} de ${iv.mes} está en revisión`, body: "Te avisaremos cuando Caja lo valide.", go: "materias" });
     if (["pronto", "pendiente", "vencida"].includes(s) || (s === "pagada" || s === "revision") && t >= iv.issue) {
       push({ id: `inv-${iv.id}-issued`, cat: "universidad", when: iv.issue, title: `Ya puedes pagar la factura de ${iv.mes}`, body: `Pronto pago hasta el ${fmtDW(iv.ppEnd)}: ${money(PRICE_PP * MATERIAS.length)} en lugar de ${money(PRICE_REG * MATERIAS.length)}.`, go: s === "pagada" ? "materias" : "caja" });
     }
@@ -1002,7 +1004,7 @@ function buildNotifs() {
   push({ id: `food-believe-${isoD(t)}`, cat: "comida", when: addDays(t, -1), title: "Kiosco Believe · 2x1 en bebidas", body: "De 14:00 a 16:00. Válido en el kiosco.", go: "comida" });
   try { foodNotifs(t).forEach(push); } catch (err) {} // pedidos listos (módulo de comida)
   try { pendRec.filter(r => r.estado === "aprobada" || r.estado === "rechazada").forEach(r => push(r.estado === "aprobada"
-    ? { id: `rec-ok-${r.id}`, cat: "estacionamiento", when: t, title: `Acreditamos tu recarga de ${money(r.amount)}`, body: "Tu Pago Móvil fue validado y el saldo ya está en tu wallet Nexo.", go: "recarga" }
+    ? { id: `rec-ok-${r.id}`, cat: "estacionamiento", when: t, title: `Acreditamos tu recarga de ${money(r.amount)}`, body: `Caja validó tu ${r.method === "tarjeta" ? "pago con tarjeta" : "Pago Móvil"} y el saldo ya está en tu wallet Nexo.`, go: "recarga" }
     : { id: `rec-rej-${r.id}`, cat: "estacionamiento", alert: true, when: t, title: `Rechazamos tu recarga de ${money(r.amount)}`, body: `${r.motivo}. Revisa los datos y regístrala de nuevo.`, go: "recarga" })); } catch (err) {} // pendRec se define más abajo
   // Soporte
   if (isDemo) push({ id: "tk-1048", cat: "soporte", when: addDays(t, -1), title: "Lucía respondió tu solicitud TK-1048", body: "Cobro duplicado de almuerzo: estamos revisando tu comprobante.", go: "soporte" });
@@ -1188,6 +1190,8 @@ function askConfirm(o) {
 const RC_MIN = 5, RC_MAX = 100;
 let rcAmount = 10, rcMethod = "card", rcCardId = null, afReturn = "recarga";
 let pendRec = [];
+// Código de autorización simulado de un cobro con tarjeta (sirve de referencia para Caja)
+function cardAut() { try { const a = new Uint32Array(1); crypto.getRandomValues(a); return String(100000 + a[0] % 900000); } catch (err) { return String(100000 + Math.floor(Math.random() * 900000)); } }
 try { pendRec = JSON.parse(localStorage.getItem(K("nexo-pendrec")) || "[]") || []; } catch (err) {}
 const savePend = () => { try { localStorage.setItem(K("nexo-pendrec"), JSON.stringify(pendRec)); } catch (err) {} try { sbSaveState(); } catch (err) {} };
 const parseAmt = s => { const v = parseFloat(String(s).replace(/[^\d,.]/g, "").replace(/\./g, "").replace(",", ".")); return isNaN(v) ? 0 : v; };
@@ -1225,11 +1229,11 @@ function renderRecarga() {
   const cta = rcMethod === "pm" ? `Continuar a Pago Móvil` : card ? `Recargar ${money(rcAmount)}` : "Afiliar una tarjeta";
   rc("cta").forEach(el => el.textContent = ok ? cta : "Elige un monto válido");
   go.disabled = !ok; go.style.opacity = ok ? "" : ".5";
-  rc("foot").forEach(el => el.textContent = rcMethod === "pm" ? "Verás los datos de Pago Móvil de Nexo y registrarás tu pago." : "Prototipo: no se realiza ningún cobro real.");
+  rc("foot").forEach(el => el.textContent = rcMethod === "pm" ? "Verás los datos de Pago Móvil de Nexo y registrarás tu pago." : "Caja valida el cobro y el saldo se suma al aprobarlo. Prototipo: no se realiza ningún cobro real.");
   const pend = pendRec.filter(r => r.estado === "revision");
   const pn = document.getElementById("rcPending");
   pn.hidden = !pend.length;
-  if (pend.length) pn.querySelector('[data-rc="pendtext"]').textContent = ` ${pend.length === 1 ? "Tienes una recarga" : `Tienes ${pend.length} recargas`} por Pago Móvil de ${money(pend.reduce((a, r) => a + r.amount, 0))} esperando validación. Se sumará a tu saldo cuando la confirmemos.`;
+  if (pend.length) pn.querySelector('[data-rc="pendtext"]').textContent = ` ${pend.length === 1 ? "Tienes una recarga" : `Tienes ${pend.length} recargas`} de ${money(pend.reduce((a, r) => a + r.amount, 0))} esperando que Caja las valide. Se sumará${pend.length === 1 ? "" : "n"} a tu saldo cuando las apruebe.`;
   try { lucide.createIcons(); } catch (err) {}
 }
 document.getElementById("rcChips").addEventListener("click", e => {
@@ -1250,10 +1254,12 @@ document.getElementById("recarga").addEventListener("click", e => {
     if (rcMethod === "pm") { openPagoMovil(); return; }
     const card = cards.find(x => x.id === rcCardId);
     if (!card) { afReturn = "recarga"; go("afiliar"); return; }
-    WALLET = Math.round((WALLET + rcAmount) * 100) / 100; saveWallet(); renderWallet();
-    addMovement("Recarga de wallet", `Recarga · ${cardLabel(card)}`, "+" + money(rcAmount), "Pagado", "ok", { icon: "wallet", go: "recarga", goLabel: "Ver wallet →" });
-    toast(`Recargaste ${money(rcAmount)} con ${cardLabel(card)}. Tu saldo ahora es ${money(WALLET)}.`);
-    renderRecarga(); go("estacionamiento");
+    // el cobro con tarjeta queda en revisión: el saldo se suma cuando Caja lo aprueba
+    const aut = cardAut();
+    pendRec.push({ id: "r" + Date.now(), amount: rcAmount, method: "tarjeta", card: cardLabel(card), ref: aut, date: isoOf(new Date()), estado: "revision", sentAt: Date.now() }); savePend();
+    addMovement("Recarga de wallet", `Tarjeta ${cardLabel(card)} · Aut. ${aut}`, "+" + money(rcAmount), "En revisión", "neutral", { icon: "wallet", go: "recarga", goLabel: "Ver estado →" });
+    toast(`Registramos tu recarga de ${money(rcAmount)} con ${cardLabel(card)}. Caja la valida y el saldo se suma al aprobarla.`);
+    renderRecarga(); go("recarga");
   }
 });
 
@@ -2607,7 +2613,7 @@ function renderCarrito() {
         ${walletOpt(payMethod === "wallet", total, `data-pay-method="wallet"`)}
         <button class="card${payMethod === "card" ? " sel" : ""}" type="button" data-pay-method="card" style="text-align:left;${payMethod === "card" ? "border-color:var(--brand)" : ""}">
           <div class="row start"><span class="opt${payMethod === "card" ? " on" : ""}" style="padding:0;border:0;background:none;width:auto"><span class="dot"></span></span><i data-lucide="credit-card" style="color:var(--brand)"></i><b>Tarjeta</b></div>
-          <p style="font-size:13px">${esc(defCard)}</p><p class="small">Pago simulado: no se hará ningún cobro real.</p>
+          <p style="font-size:13px">${esc(defCard)}</p><p class="small">Caja valida el cobro y el local empieza tu pedido al aprobarlo. Pago simulado.</p>
         </button>
         <button class="card${payMethod === "transfer" ? " sel" : ""}" type="button" data-pay-method="transfer" style="text-align:left;${payMethod === "transfer" ? "border-color:var(--brand)" : ""}">
           <div class="row start"><span class="opt${payMethod === "transfer" ? " on" : ""}" style="padding:0;border:0;background:none;width:auto"><span class="dot"></span></span><i data-lucide="landmark" style="color:var(--brand)"></i><b>Transferencia bancaria</b></div>
@@ -2650,13 +2656,16 @@ function confirmOrder(o) {
   o.paidAt = Date.now(); o.code = pickupCode(o); o.studentName = user.full;
   if (pk.mode === "sched") { o.scheduledFor = slotTime(pk.day, pk.time); o.readyAt = o.scheduledFor; o.prepStart = o.scheduledFor - etaMax(lo) * MIN; }
   else o.readyAt = o.paidAt + prepMinutes(lo) * MIN;
+  // tarjeta o transferencia: el pago queda en revisión y el local no lo prepara hasta que Caja lo apruebe
+  const review = o.method === "card" || o.method === "transfer";
+  if (review) { o.payStatus = "revision"; o.payDate = isoOf(new Date()); if (o.method === "card") o.cardAut = cardAut(); }
   orders.push(o); saveOrders();
   cart = { local: null, lines: [] }; saveCart();
   curOrder = o.id;
   const l = localById(o.local), n = o.lines.reduce((a, x) => a + x.qty, 0);
-  addMovement(o.lines.length === 1 ? o.lines[0].name : `Pedido · ${plural(n, "producto", "productos")}`, `${l.name} · ${l.place}`, "−" + money(o.total), "Pagado", "ok",
+  addMovement(o.lines.length === 1 ? o.lines[0].name : `Pedido · ${plural(n, "producto", "productos")}`, `${l.name} · ${l.place}${o.method === "card" ? ` · ${o.card} · Aut. ${o.cardAut}` : o.method === "transfer" ? ` · Transferencia · Ref. ${String(o.ref || "").slice(-6)}` : o.method === "wallet" ? " · Wallet Nexo" : ""}`, "−" + money(o.total), review ? "En revisión" : "Pagado", review ? "neutral" : "ok",
     { icon: "utensils", go: "pedido", goLabel: "Ver pedido →", order: o.id, date: `${o.date} · ${o.time}` });
-  trackId = o.id; toast(o.scheduledFor ? `Pago confirmado. Tu pedido quedó programado para ${whenTxt(o.scheduledFor)}.` : "Pago confirmado. Ya están preparando tu pedido.");
+  trackId = o.id; toast(review ? "Registramos tu pago. Caja lo valida y el local empieza tu pedido en cuanto lo apruebe." : o.scheduledFor ? `Pago confirmado. Tu pedido quedó programado para ${whenTxt(o.scheduledFor)}.` : "Pago confirmado. Ya están preparando tu pedido.");
   go("pedido");
 }
 const orderLines = o => o.lines.map(x => `<div class="row start" style="align-items:flex-start">${prodArt(x.item, x.icon, "xs", x.name)}<div><b style="font-size:13px">${esc(x.name)}</b>${x.opts.map(t => `<p class="small">${esc(t)}</p>`).join("")}${x.note ? `<p class="small">Nota: ${esc(x.note)}</p>` : ""}<p class="small">Cantidad ${x.qty} · ${money(x.total)}</p></div></div>`).join("");
@@ -3772,16 +3781,18 @@ document.addEventListener("submit", e => {
 let trackId = null;
 function prepMinutes(l) { const n = ((l && l.eta) || "10").match(/\d+/g).map(Number); return Math.round(n.reduce((a, b) => a + b, 0) / n.length); }
 function pickupCode(o) { return String(1000 + ((+String(o.id).slice(1) || 0) * 7919) % 9000); }
-function orderStatus(o) { return o.cancelledAt ? "cancelado" : !o.readyAt || o.pickedAt ? "retirado" : Date.now() >= o.readyAt ? "listo" : o.prepStart && Date.now() < o.prepStart ? "programado" : "preparando"; }
-const activeOrders = () => orders.filter(o => ["programado", "preparando", "listo"].includes(orderStatus(o))).sort((a, b) => b.paidAt - a.paidAt);
-const ORDER_STATE = { programado: ["Programado", "neutral"], preparando: ["En preparación", "warn"], listo: ["Listo para retirar", "ok"], retirado: ["Retirado", "neutral"], cancelado: ["Cancelado", "bad"] };
+function orderStatus(o) { return o.cancelledAt ? "cancelado" : o.payStatus === "revision" ? "pago" : !o.readyAt || o.pickedAt ? "retirado" : Date.now() >= o.readyAt ? "listo" : o.prepStart && Date.now() < o.prepStart ? "programado" : "preparando"; }
+const activeOrders = () => orders.filter(o => ["pago", "programado", "preparando", "listo"].includes(orderStatus(o))).sort((a, b) => b.paidAt - a.paidAt);
+const ORDER_STATE = { pago: ["Pago en revisión", "warn"], programado: ["Programado", "neutral"], preparando: ["En preparación", "warn"], listo: ["Listo para retirar", "ok"], retirado: ["Retirado", "neutral"], cancelado: ["Cancelado", "bad"] };
 function foodNotifs(t) {
   return orders.filter(o => orderStatus(o) === "listo").map(o => {
     const l = localById(o.local);
     return { id: `order-ready-${o.id}`, cat: "comida", alert: true, when: t, title: `Tu pedido de ${l.name} está listo`, body: `Muestra el código ${o.code} en el mostrador · ${l.place}.`, go: "pedido", order: o.id };
   }).concat(orders.filter(o => o.cancelledAt && Date.now() - o.cancelledAt < 24 * 60 * MIN).map(o => {
     const l = localById(o.local);
-    return { id: `order-cancel-${o.id}`, cat: "comida", alert: true, when: t, title: `${l.name} canceló tu pedido ${o.num}`, body: `Te devolvimos ${money(o.total)} a tu método de pago.`, go: "pedido", order: o.id };
+    return o.payStatus === "rechazada"
+      ? { id: `order-cancel-${o.id}`, cat: "comida", alert: true, when: t, title: `Caja rechazó el pago de tu pedido ${o.num}`, body: `${o.payMotivo || "No pudimos validar el pago"}. El pedido se canceló; puedes pedirlo de nuevo.`, go: "pedido", order: o.id }
+      : { id: `order-cancel-${o.id}`, cat: "comida", alert: true, when: t, title: `${l.name} canceló tu pedido ${o.num}`, body: `Te devolvimos ${money(o.total)} a tu método de pago.`, go: "pedido", order: o.id };
   }));
 }
 function renderPedido() {
@@ -3797,8 +3808,11 @@ function renderPedido() {
   setFrame("pedido", "Tu pedido", ["Comida y kioscos", l.name, o.num]);
   const total = (o.readyAt || now) - (o.paidAt || now), left = Math.max(0, Math.ceil(((o.readyAt || now) - now) / MIN));
   const from = o.prepStart || o.paidAt, prog = st === "preparando" ? Math.min(96, Math.max(4, (now - from) / ((o.readyAt || now) - from) * 100)) : 100;
-  const title = st === "programado" ? "Tu pedido está programado" : st === "preparando" ? "Estamos preparando tu pedido" : st === "listo" ? "¡Tu pedido está listo!" : st === "cancelado" ? `${l.name} canceló tu pedido` : "Pedido retirado";
-  const lead = st === "programado" ? `Lo retiras ${whenTxt(o.readyAt)}. Empezarán a prepararlo a las ${hhmm(o.prepStart)}.`
+  const payRej = o.payStatus === "rechazada";
+  const title = st === "pago" ? "Estamos validando tu pago" : payRej ? "Caja rechazó tu pago" : st === "programado" ? "Tu pedido está programado" : st === "preparando" ? "Estamos preparando tu pedido" : st === "listo" ? "¡Tu pedido está listo!" : st === "cancelado" ? `${l.name} canceló tu pedido` : "Pedido retirado";
+  const lead = st === "pago" ? `${o.method === "card" ? `Cobro con ${o.card || "tarjeta"} · autorización ${o.cardAut || "—"}` : `Transferencia · Ref. ${String(o.ref || "").slice(-6)}`}. ${l.name} empieza a prepararlo en cuanto Caja apruebe el pago.`
+    : payRej ? `${o.payMotivo || "No pudimos validar el pago"}. El pedido se canceló y no se te cobró.`
+    : st === "programado" ? `Lo retiras ${whenTxt(o.readyAt)}. Empezarán a prepararlo a las ${hhmm(o.prepStart)}.`
     : st === "preparando" ? `Listo aprox. a las ${hhmm(o.readyAt)} · ${left <= 1 ? "falta 1 min" : `faltan ${left} min`}${o.delayMin ? ` · el local avisó una demora de ${o.delayMin} min` : ""}`
     : st === "listo" ? `Retíralo en el mostrador de ${l.name} · ${l.place}`
     : st === "cancelado" ? `Te devolvimos ${money(o.total)} a ${o.card || "tu método de pago"}. Llega en 3 a 5 días hábiles.`
@@ -3809,10 +3823,10 @@ function renderPedido() {
     <div class="stack s14">
       <div class="card">
         <div class="row" style="align-items:flex-start"><span class="small">Pedido ${o.num} · ${esc(l.name)}</span><span class="pill ${ORDER_STATE[st][1]}">${ORDER_STATE[st][0]}</span></div>
-        <div class="row start" style="gap:14px;align-items:center">${["preparando", "programado"].includes(st) && o.paidAt && now - o.paidAt < 90000 ? successMark("sm") : pdAnim(st, o, now)}<div><h1 class="h1">${title}</h1><p class="lead">${lead}</p></div></div>
+        <div class="row start" style="gap:14px;align-items:center">${["preparando", "programado"].includes(st) && o.paidAt && now - o.paidAt < 90000 ? successMark("sm") : pdAnim(st === "pago" ? "programado" : st, o, now)}<div><h1 class="h1">${title}</h1><p class="lead">${lead}</p></div></div>
         ${st === "preparando" ? `<div class="track" role="progressbar" aria-label="Progreso de la preparación" aria-valuenow="${Math.round(prog)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${prog}%"></i></div>` : ""}
         <ol class="steps-v"${st === "cancelado" ? " hidden" : ""}>
-          ${o.paidAt ? step(true, false, "Pago confirmado", hhmm(o.paidAt)) : ""}
+          ${st === "pago" ? step(false, true, "Pago en revisión", `Registrado a las ${hhmm(o.paidAt)}`) : o.paidAt ? step(true, false, o.payStatus === "ok" ? "Pago validado por Caja" : "Pago confirmado", hhmm(o.paidAt)) : ""}
           ${o.scheduledFor ? step(st !== "programado", st === "programado", "Programado", `Retiro ${whenTxt(o.scheduledFor)}`) : ""}
           ${step(!["programado", "preparando"].includes(st), st === "preparando", "En preparación", o.prepStart ? (st === "programado" ? `Desde las ${hhmm(o.prepStart)}` : `Desde las ${hhmm(o.prepStart)} · ${l.eta}`) : o.paidAt ? `Desde las ${hhmm(o.paidAt)} · ${l.eta}` : "")}
           ${step(st === "retirado", st === "listo", "Listo para retirar", o.readyAt ? (["programado", "preparando"].includes(st) ? `Estimado: ${hhmm(o.readyAt)}` : hhmm(o.readyAt)) : "")}
@@ -3831,9 +3845,10 @@ function renderPedido() {
         <h2 class="h2">Código de retiro</h2>
         ${st === "listo" ? `<div class="qr"><canvas width="29" height="29" data-qr="${o.num}" role="img" aria-label="Código QR del pedido ${o.num}"></canvas></div>` : ""}
         <b class="pcode" aria-label="Código ${o.code.split("").join(" ")}">${o.code}</b>
-        <p class="small" style="font-size:13px">${st === "listo" ? `Muéstralo en el mostrador de ${esc(l.name)}. Solo sirve para este pedido.` : ["programado", "preparando"].includes(st) ? "Te avisaremos cuando esté listo. El código QR aparece en ese momento." : "Este código ya se usó."}</p>
+        <p class="small" style="font-size:13px">${st === "listo" ? `Muéstralo en el mostrador de ${esc(l.name)}. Solo sirve para este pedido.` : ["pago", "programado", "preparando"].includes(st) ? "Te avisaremos cuando esté listo. El código QR aparece en ese momento." : "Este código ya se usó."}</p>
       </div>
       <div class="card"><div class="row start">${foodArt(l.id, "xs")}<b class="h3">${esc(l.name)}</b></div><p class="small" style="font-size:13px">${l.place} · Campus Central · Planta baja · Hoy ${todayHours(l)}</p></div>
+      ${st === "pago" ? `<div class="notice"><i data-lucide="shield-check"></i><p>Para cuidar tu dinero, Caja confirma cada pago con tarjeta o transferencia antes de que el local prepare el pedido. Suele tardar pocos minutos en horario de atención.</p></div>` : ""}
       ${st === "cancelado" ? `<div class="notice warn"><i data-lucide="ban"></i><p>Si tienes dudas sobre la cancelación, escríbenos desde <button class="link b" type="button" data-go="soporte" style="font-size:12px">Soporte</button>.</p></div>` : ""}
       ${["programado", "preparando"].includes(st) ? `<div class="notice demo-only"><i data-lucide="flask-conical"></i><p>Prototipo: <button class="link b" type="button" data-sim-ready="${o.id}" style="font-size:12px">simular que el pedido ya está listo</button> para no esperar ${l.eta}.</p></div>` : ""}
       ${orders.length > 1 ? `<button class="link b" type="button" data-go="actividad">Ver todos mis pedidos en Actividad →</button>` : ""}
@@ -3846,8 +3861,8 @@ function renderFoodOrders() {
   box.hidden = !act.length;
   box.innerHTML = act.map(o => {
     const l = localById(o.local), st = orderStatus(o);
-    return `<div class="card${st === "listo" ? " sel" : ""}"><div class="row"><h3 class="h3">${st === "listo" ? "Tu pedido está listo" : st === "programado" ? "Tu pedido programado" : "Tu pedido en curso"}</h3><span class="pill ${ORDER_STATE[st][1]}">${ORDER_STATE[st][0]}</span></div>
-      <p class="small" style="font-size:13px">${esc(l.name)} · ${st === "listo" ? `Código ${o.code}` : st === "programado" ? `Retiro ${whenTxt(o.readyAt)}` : `Listo aprox. a las ${hhmm(o.readyAt)}`}</p>
+    return `<div class="card${st === "listo" ? " sel" : ""}"><div class="row"><h3 class="h3">${st === "listo" ? "Tu pedido está listo" : st === "pago" ? "Validando tu pago" : st === "programado" ? "Tu pedido programado" : "Tu pedido en curso"}</h3><span class="pill ${ORDER_STATE[st][1]}">${ORDER_STATE[st][0]}</span></div>
+      <p class="small" style="font-size:13px">${esc(l.name)} · ${st === "listo" ? `Código ${o.code}` : st === "pago" ? "Empieza a prepararse cuando Caja apruebe el pago" : st === "programado" ? `Retiro ${whenTxt(o.readyAt)}` : `Listo aprox. a las ${hhmm(o.readyAt)}`}</p>
       <button class="btn${st === "listo" ? "" : " ghost"}" type="button" data-go="pedido" data-order="${o.id}"><i data-lucide="${st === "listo" ? "qr-code" : "clock"}"></i>${st === "listo" ? "Ver código de retiro" : "Ver pedido"}</button></div>`;
   }).join("");
   icons();
@@ -3857,9 +3872,10 @@ function checkOrders() {
   let changed = false;
   orders.forEach(o => {
     const open = () => { trackId = o.id; go("pedido"); };
+    if (o.payStatus === "ok" && !o.payNotified) { o.payNotified = true; changed = true; toast(`Caja aprobó tu pago. ${o.scheduledFor && orderStatus(o) === "programado" ? "Tu pedido quedó programado." : `${localById(o.local).name} ya está preparando tu pedido.`}`, { action: "Ver pedido", onAction: open }); }
     if (o.prepStart && orderStatus(o) === "preparando" && !o.prepNotified) { o.prepNotified = true; changed = true; toast(`${localById(o.local).name} empezó a preparar tu pedido programado.`, { action: "Ver pedido", onAction: open }); }
     if (orderStatus(o) === "listo" && !o.readyNotified) { o.readyNotified = true; changed = true; toast(`Tu pedido de ${localById(o.local).name} está listo. Código ${o.code}.`, { persist: true, action: "Ver código", onAction: open }); }
-    if (o.cancelledAt && !o.cancelNotified) { o.cancelNotified = true; changed = true; toast(`${localById(o.local).name} canceló tu pedido. Te devolvimos ${money(o.total)}.`, { persist: true, action: "Ver detalle", onAction: open }); }
+    if (o.cancelledAt && !o.cancelNotified) { o.cancelNotified = true; changed = true; toast(o.payStatus === "rechazada" ? `Caja rechazó el pago de tu pedido: ${o.payMotivo || "no pudimos validarlo"}.` : `${localById(o.local).name} canceló tu pedido. Te devolvimos ${money(o.total)}.`, { persist: true, action: "Ver detalle", onAction: open }); }
   });
   if (changed) { saveOrders(); try { renderNotifs(); } catch (err) {} }
   if (current === "pedido") renderPedido();
@@ -3931,9 +3947,10 @@ function renderLocalPedidos() {
   seedLocalOrders(l);
   const mine = allOrders().filter(x => x.o.local === l.id && x.o.readyAt), today = day0(new Date()).getTime();
   const by = st => mine.filter(x => orderStatus(x.o) === st);
-  const prep = [...by("preparando"), ...by("programado")].sort((a, b) => a.o.readyAt - b.o.readyAt), ready = by("listo").sort((a, b) => a.o.readyAt - b.o.readyAt);
+  const prep = [...by("pago"), ...by("preparando"), ...by("programado")].sort((a, b) => (orderStatus(a.o) === "pago") - (orderStatus(b.o) === "pago") || a.o.readyAt - b.o.readyAt), ready = by("listo").sort((a, b) => a.o.readyAt - b.o.readyAt);
   const done = mine.filter(x => ["retirado", "cancelado"].includes(orderStatus(x.o)) && (x.o.pickedAt || x.o.cancelledAt || 0) >= today).sort((a, b) => (b.o.pickedAt || b.o.cancelledAt) - (a.o.pickedAt || a.o.cancelledAt));
-  const sales = mine.filter(x => x.o.paidAt >= today && !x.o.cancelledAt).reduce((a, x) => a + x.o.total, 0);
+  const paid = x => x.o.paidAt >= today && !x.o.cancelledAt && x.o.payStatus !== "revision";
+  const sales = mine.filter(paid).reduce((a, x) => a + x.o.total, 0);
   document.getElementById("lpTitle").textContent = isPaused(l.id) ? "Pedidos en pausa" : "Pedidos de hoy";
   document.getElementById("lpLead").textContent = `${l.name} · ${l.place} · Hoy ${todayHours(l)}`;
   document.getElementById("lpArt").innerHTML = foodArt(l.id, "sm");
@@ -3941,15 +3958,18 @@ function renderLocalPedidos() {
     ? `<button class="btn" type="button" data-lp-pause="0"><i data-lucide="circle-play"></i>Reanudar pedidos</button>`
     : `<button class="btn ghost" type="button" data-lp-pause="1"><i data-lucide="circle-pause"></i>Pausar pedidos</button>`;
   const k = (label, val, sub, ic) => `<div class="card kpi static sk"><div class="row start" style="gap:10px">${skIc(ic)}<span class="small">${label}</span></div><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
-  document.getElementById("lpKpis").innerHTML = k("En preparación", prep.length, prep.length ? `El próximo a las ${hhmm(prep[0].o.readyAt)}` : "Nada en cocina", "chef-hat")
+  document.getElementById("lpKpis").innerHTML = k("En preparación", prep.filter(x => orderStatus(x.o) !== "pago").length, prep.some(x => orderStatus(x.o) !== "pago") ? `El próximo a las ${hhmm(prep.find(x => orderStatus(x.o) !== "pago").o.readyAt)}` : by("pago").length ? `${by("pago").length} esperando que Caja valide el pago` : "Nada en cocina", "chef-hat")
     + k("Listos para retirar", ready.length, ready.length ? "Esperando al estudiante" : "Ninguno esperando", "package-check")
-    + k("Ventas de hoy", money(sales), `${mine.filter(x => x.o.paidAt >= today && !x.o.cancelledAt).length} pedidos pagados`, "banknote");
+    + k("Ventas de hoy", money(sales), `${mine.filter(paid).length} pedidos pagados${by("pago").length ? ` · ${by("pago").length} por validar` : ""}`, "banknote");
   const lines = o => o.lines.map(x => `<div class="lp-line">${prodArt(x.item, x.icon || "utensils", "xs", x.name)}<p style="font-size:13px"><b>${x.qty} ×</b> ${esc(x.name)}${(x.opts || []).length ? `<span class="tiny" style="display:block">${x.opts.map(esc).join(" · ")}</span>` : ""}${x.note ? `<span class="note">Nota: ${esc(x.note)}</span>` : ""}</p></div>`).join("");
   const who = x => esc(x.o.studentName || nameOf(x.email));
   const card = (x, st) => {
     const o = x.o, left = Math.max(0, Math.ceil((o.readyAt - Date.now()) / MIN)), key = `${x.email}|${o.id}`;
     const head = `<div class="row"><span class="tk-ref">${o.num}</span><span class="tiny">${who(x)} · ${o.time}</span></div>`;
     const confirm = lpConfirm === key ? `<div class="confirm"><p>¿Cancelar el pedido y devolver ${money(o.total)} a ${esc(o.card || "su método de pago")}? Le avisaremos al estudiante.</p><div class="row"><button class="btn ghost" type="button" data-lp-no>Volver</button><button class="btn" type="button" data-lp-cancel-yes="${key}">Cancelar pedido</button></div></div>` : "";
+    if (orderStatus(o) === "pago") return `<div class="card lp-card st-sched">${head}${lines(o)}
+      <div class="row"><span class="pill warn"><i data-lucide="shield-check"></i>&nbsp;Pago en revisión</span><b>${money(o.total)}</b></div>
+      <p class="tiny">Caja está validando el pago ${o.method === "card" ? "con tarjeta" : "por transferencia"}. No lo prepares todavía: te avisamos en cuanto lo apruebe.</p></div>`;
     if (st === "preparando" && orderStatus(o) === "programado") return `<div class="card lp-card st-sched">${head}${lines(o)}
       <div class="row"><span class="pill neutral"><i data-lucide="calendar-clock"></i>&nbsp;Programado · retiro ${whenTxt(o.readyAt)}</span><b>${money(o.total)}</b></div>
       <p class="tiny">Empieza a prepararlo a las ${hhmm(o.prepStart)}.</p>
@@ -3965,7 +3985,7 @@ function renderLocalPedidos() {
       <div class="row"><span class="pill ok">Listo desde las ${hhmm(o.readyAt)}</span><b>${money(o.total)}</b></div>
       ${lpDeliver === key ? `<form class="stack s14" data-lp-code="${key}"><label class="small" style="font-weight:600">Pide el código de 4 dígitos al estudiante</label><div class="row"><div class="input" style="flex:1"><input inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000" aria-label="Código de retiro"></div><button class="btn" type="submit" style="width:auto;padding:0 18px">Entregar</button></div><button class="link" type="button" data-lp-deliver="">Cerrar</button></form>`
         : `<button class="btn" type="button" data-lp-deliver="${key}"><i data-lucide="hand-platter"></i>Entregar pedido</button>`}</div>`;
-    return `<div class="row lp-done"><div><span class="tk-ref">${o.num}</span> <span class="tiny">${who(x)}</span></div><span class="tiny">${o.cancelledAt ? `Cancelado · ${hhmm(o.cancelledAt)}` : `Entregado · ${hhmm(o.pickedAt)}`}</span><b class="${o.cancelledAt ? "neg" : ""}" style="font-size:12px">${o.cancelledAt ? "−" : ""}${money(o.total)}</b></div>`;
+    return `<div class="row lp-done"><div><span class="tk-ref">${o.num}</span> <span class="tiny">${who(x)}</span></div><span class="tiny">${o.cancelledAt ? `${o.payStatus === "rechazada" ? "Pago rechazado" : "Cancelado"} · ${hhmm(o.cancelledAt)}` : `Entregado · ${hhmm(o.pickedAt)}`}</span><b class="${o.cancelledAt ? "neg" : ""}" style="font-size:12px">${o.cancelledAt ? "−" : ""}${money(o.total)}</b></div>`;
   };
   const col = (title, icon, list, st, empty) => `<div class="stack s14 lp-col st-${st === "listo" ? "ready" : "prep"}"><div class="row"><h2 class="sec lp-colh"><span class="lp-ic"><i data-lucide="${icon}"></i></span>${title}</h2><span class="pill neutral">${list.length}</span></div>${list.map(x => card(x, st)).join("") || `<p class="small lp-empty">${empty}</p>`}</div>`;
   document.getElementById("lpBoard").innerHTML = col("En preparación", "chef-hat", prep, "preparando", "No hay pedidos en cocina.") + col("Listos para retirar", "package-check", ready, "listo", "Nada esperando retiro.")
@@ -4059,6 +4079,7 @@ window.addEventListener("storage", e => {
   if (e.key === "nexo-localstate" && !sbShared()) { loadLocalState(); applyMenus(); } // con cuenta real el estado de los locales viene de Supabase
   if (e.key === K("nexo-orders")) { try { orders = JSON.parse(e.newValue || "[]") || []; } catch (err) {} }
   if (e.key === "nexo-tickets") { try { tickets = JSON.parse(e.newValue || "[]") || tickets; } catch (err) {} }
+  if (e.key === K("nexo-courts")) { try { myCourts = JSON.parse(e.newValue || "[]") || []; courtPayCheck(); renderMyCourts(); } catch (err) {} }
   if (!(e.key.startsWith("nexo-orders:") || e.key === "nexo-localstate" || e.key === "nexo-tickets")) return;
   const r = { comida: () => { renderFoodList(); renderFoodOrders(); }, local: renderLocal, carrito: renderCarrito, pedido: renderPedido, soporte: renderSoporte, "local-pedidos": renderLocalPedidos, "local-menu": renderLocalMenu, gestion: renderGestion, moderacion: renderModeracion, "creador-equipo": renderCreadorEquipo }[current];
   try { checkOrders(); } catch (err) {}
@@ -4386,7 +4407,8 @@ document.getElementById("utForm").addEventListener("submit", e => {
 /* ---------- Caja: validar pagos en revisión (administración y creador) ----------
    Lee de todas las cuentas: facturas universitarias (nexo-pagos:<correo>, estado "revision") y recargas de wallet
    por Pago Móvil (nexo-pendrec:<correo>). Aprobar o rechazar actualiza los datos, el movimiento y el saldo del estudiante. */
-const VL_REASONS = ["El monto no coincide con el comprobante", "No encontramos la referencia en el banco", "El comprobante no se lee bien", "La transferencia llegó a otra cuenta"];
+const VL_REASONS = ["El monto no coincide con el comprobante", "No encontramos la referencia en el banco", "El comprobante no se lee bien", "La transferencia llegó a otra cuenta", "El banco rechazó el cobro con tarjeta", "No encontramos el cobro con esa autorización"];
+const VL_KIND = { recarga: ["t-car", "wallet"], factura: ["t-uni", "graduation-cap"], pedido: ["t-food", "utensils"], cancha: ["t-court", "dribbble"] };
 const MES_DE = id => (MONTHS.find(m => m.id === id) || { mes: id }).mes;
 function seedCaja() {
   if (sbShared()) return; // con cuenta real, Caja solo muestra pagos reales
@@ -4396,6 +4418,35 @@ function seedCaja() {
   put("nexo-pagos:sofia.diaz@correo.unimet.edu.ve", p => ({ ...(p || {}), nov: { estado: "revision", monto: 480, pp: false, ref: "0045671234", bank: "Banesco · 0134", currency: "usd", paidAmount: 480, receipt: "transferencia_noviembre.pdf", date: d(2), sentAt: n - 2 * 864e5, studentName: "Sofía Díaz" } }));
   put("nexo-pagos:valeria.ruiz@correo.unimet.edu.ve", p => ({ ...(p || {}), nov: { estado: "revision", monto: 300, pp: true, ref: "7788123400", bank: "Banco de Venezuela · 0102", currency: "bs", paidAmount: Math.round(300 * bcvRate() * 100) / 100, bcvRate: bcvRate(), receipt: "pago_nov.jpg", date: d(1), sentAt: n - 864e5, studentName: "Valeria Ruiz" } }));
   put("nexo-pendrec:luis.perez@correo.unimet.edu.ve", r => [...(r || []), { id: "r" + (n - 5 * 36e5), amount: 20, ref: "0098765432", bank: "Mercantil · 0105", date: d(0), bs: Math.round(20 * bcvRate() * 100) / 100, estado: "revision", sentAt: n - 5 * 36e5, studentName: "Luis Pérez" }]);
+}
+/* Pagos con tarjeta (24/11/2026): recargas, facturas, pedidos y canchas pagados con tarjeta (y los pedidos por
+   transferencia) quedan "en revisión" hasta que Caja los aprueba. Cada tipo se convierte en un elemento de Caja. */
+const PAY_DONE = (st, a, b) => ({ estado: st, validatedAt: a.validatedAt, validatedBy: a.validatedBy, rejectedAt: a.rejectedAt, rejectedBy: a.rejectedBy, motivo: a.motivo, ...b });
+function recargaItem(r, key, email, who) {
+  const card = r.method === "tarjeta";
+  return { kind: "recarga", key, email, id: r.id, p: { ...r, currency: card ? "usd" : "bs", paidAmount: card ? r.amount : r.bs, receipt: null }, who, usd: r.amount, title: `Recarga de wallet · ${card ? "Tarjeta" : "Pago Móvil"}`, sent: r.sentAt || +String(r.id).slice(1) || 0, done: r.estado !== "revision" };
+}
+function orderPayItem(o, key, email, who) {
+  if (!o || !o.payStatus) return null;
+  const l = localById(o.local) || { name: "Comida" }, ps = o.payStatus;
+  const p = { estado: ps === "revision" ? "revision" : ps === "ok" ? "pagada" : "rechazada", method: o.method === "card" ? "tarjeta" : "transfer", card: o.card, ref: o.method === "card" ? o.cardAut : o.ref, bank: o.bank, currency: o.currency || "usd", paidAmount: o.paidAmount || o.total, bcvRate: o.bcvRate, receipt: o.receipt, receiptPath: o.receiptPath,
+    date: o.payDate, validatedAt: o.payValidatedAt, validatedBy: o.payValidatedBy, rejectedAt: o.payRejectedAt, rejectedBy: o.payRejectedBy, motivo: o.payMotivo };
+  if (p.estado !== "revision" && !p.validatedAt && !p.rejectedAt) return null;
+  return { kind: "pedido", key, email, id: o.id, p, who, usd: o.total, title: `Pedido ${o.num} · ${l.name}`, sent: o.paidAt || +String(o.id).slice(1) || 0, done: p.estado !== "revision", o };
+}
+function courtPayItem(c, key, email, who) {
+  if (!c || !c.payStatus) return null;
+  const sp = SPORTS[c.sport] || { court: "Cancha" }, ps = c.payStatus;
+  const p = { estado: ps === "revision" ? "revision" : ps === "ok" ? "pagada" : "rechazada", method: "tarjeta", card: c.card, ref: c.aut, currency: "usd", paidAmount: c.price, date: c.payDate,
+    validatedAt: c.payValidatedAt, validatedBy: c.payValidatedBy, rejectedAt: c.payRejectedAt, rejectedBy: c.payRejectedBy, motivo: c.payMotivo };
+  if (p.estado !== "revision" && !p.validatedAt && !p.rejectedAt) return null;
+  return { kind: "cancha", key, email, id: String(c.id), p, who, usd: c.price, title: `${sp.court} · ${courtDate(c)} · ${courtHours(c)}`, sent: c.sentAt || 0, done: p.estado !== "revision", c };
+}
+// Al aprobar un pedido: empieza la preparación ahora (o a su hora si es programado y aún hay tiempo)
+function orderApprovePatch(o, now) {
+  const lo = localById(o.local);
+  if (o.scheduledFor && o.scheduledFor - etaMax(lo) * MIN > now) return { paidAt: now, readyAt: o.scheduledFor, prepStart: o.scheduledFor - etaMax(lo) * MIN };
+  return { paidAt: now, readyAt: now + prepMinutes(lo) * MIN, ...(o.scheduledFor ? { prepStart: now } : {}) };
 }
 function cajaItems() {
   if (sbShared()) return sbCajaItems();
@@ -4408,7 +4459,15 @@ function cajaItems() {
       }
       if (k.startsWith("nexo-pendrec:")) {
         const email = k.slice(13), list = JSON.parse(localStorage.getItem(k) || "[]") || [];
-        list.forEach(r => out.push({ kind: "recarga", key: k, email, id: r.id, p: { ...r, currency: "bs", paidAmount: r.bs, receipt: null }, who: r.studentName || nameOf(email), usd: r.amount, title: "Recarga de wallet · Pago Móvil", sent: r.sentAt || +String(r.id).slice(1) || 0, done: r.estado !== "revision" }));
+        list.forEach(r => out.push(recargaItem(r, k, email, r.studentName || nameOf(email))));
+      }
+      if (k.startsWith("nexo-orders:")) {
+        const email = k.slice(12), list = JSON.parse(localStorage.getItem(k) || "[]") || [];
+        list.forEach(o => { const it = orderPayItem(o, k, email, o.studentName || nameOf(email)); if (it) out.push(it); });
+      }
+      if (k.startsWith("nexo-courts:")) {
+        const email = k.slice(12), list = JSON.parse(localStorage.getItem(k) || "[]") || [];
+        list.forEach(c => { const it = courtPayItem(c, k, email, c.studentName || nameOf(email)); if (it) out.push(it); });
       }
     });
   } catch (err) {}
@@ -4422,9 +4481,9 @@ function renderValidar() {
   const doneToday = all.filter(x => x.done && ((x.p.validatedAt || x.p.rejectedAt || 0) >= today));
   const k = (label, val, sub, ic) => `<div class="card kpi static sk"><div class="row start" style="gap:10px">${skIc(ic)}<span class="small">${label}</span></div><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
   document.getElementById("vlKpis").innerHTML = k("Por validar", pend.length, pend.length ? `El más antiguo: ${ago(Math.min(...pend.map(x => x.sent)))}` : "Todo al día", "hourglass")
-    + k("Monto por validar", money(pend.reduce((a, x) => a + x.usd, 0)), `${pend.filter(x => x.p.currency === "bs").length} en bolívares`, "banknote")
+    + k("Monto por validar", money(pend.reduce((a, x) => a + x.usd, 0)), `${pend.filter(x => x.p.method === "tarjeta").length} con tarjeta · ${pend.filter(x => x.p.currency === "bs").length} en bolívares`, "banknote")
     + k("Revisados hoy", doneToday.length, `${doneToday.filter(x => x.p.estado === "pagada" || x.p.estado === "aprobada").length} aprobados · ${doneToday.filter(x => x.p.estado === "rechazada").length} rechazados`, "badge-check");
-  const tabs = [["pend", `Por validar · ${pend.length}`], ["factura", "Facturas"], ["recarga", "Recargas"], ["done", "Revisados"]];
+  const tabs = [["pend", `Por validar · ${pend.length}`], ["factura", "Facturas"], ["recarga", "Recargas"], ["pedido", "Comida"], ["cancha", "Canchas"], ["done", "Revisados"]];
   document.getElementById("vlTabs").innerHTML = tabs.map(([t, l]) => `<button class="pill ${t === vlTab ? "ok" : "neutral"}" type="button" data-vl-tab="${t}">${l}</button>`).join("");
   const list = all.filter(x => vlTab === "pend" ? !x.done : vlTab === "done" ? x.done : !x.done && x.kind === vlTab);
   renderVlBulk(list);
@@ -4439,17 +4498,18 @@ function renderValidar() {
            <p class="tiny">El estudiante verá este motivo y podrá registrar el pago de nuevo.</p>
            <div class="row"><button class="btn ghost" type="button" data-vl-no>Volver</button><button class="btn" type="submit" style="background:var(--danger);border-color:var(--danger)">Rechazar pago</button></div></form>`
         : `<div class="row"><button class="btn ghost" type="button" data-vl-rej="${key}"><i data-lucide="circle-x"></i>Rechazar</button><button class="btn" type="button" data-vl-ok="${key}"><i data-lucide="badge-check"></i>Aprobar ${money(x.usd)}</button></div>`;
-    return `<div class="card vl-item ${x.kind === "recarga" ? "t-car" : "t-uni"}">
-      <div class="row" style="align-items:flex-start"><div class="row start" style="align-items:flex-start;gap:10px">${x.done ? "" : `<input type="checkbox" class="vl-check" data-vl-sel="${key}" aria-label="Seleccionar el pago de ${esc(x.who)}" ${vlSel.has(key) ? "checked" : ""}>`}<span class="svc-chip"><i data-lucide="${x.kind === "recarga" ? "wallet" : "graduation-cap"}"></i></span><div><b class="h3">${esc(x.who)}</b><p class="small">${esc(x.title)}${p.pp ? " · con pronto pago" : ""}</p></div></div>${state}</div>
+    const card = p.method === "tarjeta", VK = VL_KIND[x.kind];
+    return `<div class="card vl-item ${VK[0]}">
+      <div class="row" style="align-items:flex-start"><div class="row start" style="align-items:flex-start;gap:10px">${x.done ? "" : `<input type="checkbox" class="vl-check" data-vl-sel="${key}" aria-label="Seleccionar el pago de ${esc(x.who)}" ${vlSel.has(key) ? "checked" : ""}>`}<span class="svc-chip"><i data-lucide="${VK[1]}"></i></span><div><b class="h3">${esc(x.who)}</b><p class="small">${esc(x.title)}${p.pp ? " · con pronto pago" : ""}</p></div></div>${state}</div>
       <div class="vl-grid">
         <div><span class="tiny">Monto</span><b>${money(x.usd)}</b>${bs ? `<span class="tiny">${bsAmt(p.paidAmount)}${p.bcvRate ? ` · tasa ${bsAmt(p.bcvRate)}` : ""}</span>` : ""}</div>
-        <div><span class="tiny">Método</span><b>${x.kind === "recarga" ? "Pago Móvil" : bs ? "Transferencia en Bs." : "Transferencia en USD"}</b><span class="tiny">${esc(p.bank || "—")}</span></div>
-        <div><span class="tiny">Referencia</span><b class="mono">${esc(p.ref || "—")}</b><span class="tiny">${p.date ? `Pagado el ${fmtD(new Date(p.date + "T12:00"))}` : ""}</span></div>
-        <div><span class="tiny">Comprobante</span>${p.receipt && p.receiptPath ? `<button class="link b" type="button" data-vl-receipt="${esc(p.receiptPath)}" style="font-size:12px"><i data-lucide="file-text"></i> ${esc(p.receipt)}</button>` : p.receipt ? `<button class="link b" type="button" data-toast="Vista previa de ${esc(p.receipt)} no disponible en el prototipo." style="font-size:12px"><i data-lucide="file-text"></i> ${esc(p.receipt)}</button>` : `<b style="font-size:12px">Datos del Pago Móvil</b>`}<span class="tiny">Enviado ${ago(x.sent).toLowerCase()}</span></div>
+        <div><span class="tiny">Método</span><b>${card ? "Tarjeta" : x.kind === "recarga" ? "Pago Móvil" : bs ? "Transferencia en Bs." : "Transferencia en USD"}</b><span class="tiny">${esc((card ? p.card : p.bank) || "—")}</span></div>
+        <div><span class="tiny">${card ? "Autorización" : "Referencia"}</span><b class="mono">${esc(p.ref || "—")}</b><span class="tiny">${p.date ? `Pagado el ${fmtD(new Date(p.date + "T12:00"))}` : ""}</span></div>
+        <div><span class="tiny">Comprobante</span>${card ? `<b style="font-size:12px">Cobro con tarjeta</b>` : p.receipt && p.receiptPath ? `<button class="link b" type="button" data-vl-receipt="${esc(p.receiptPath)}" style="font-size:12px"><i data-lucide="file-text"></i> ${esc(p.receipt)}</button>` : p.receipt ? `<button class="link b" type="button" data-toast="Vista previa de ${esc(p.receipt)} no disponible en el prototipo." style="font-size:12px"><i data-lucide="file-text"></i> ${esc(p.receipt)}</button>` : `<b style="font-size:12px">Datos del Pago Móvil</b>`}<span class="tiny">Enviado ${ago(x.sent).toLowerCase()}</span></div>
       </div>
       ${actions}
     </div>`;
-  }).join("") || `<div class="card" style="align-items:flex-start"><span class="ico lg"><i data-lucide="badge-check"></i></span><h2 class="h2">${vlTab === "done" ? "Aún no hay pagos revisados" : "No hay pagos por validar"}</h2><p class="small" style="font-size:13px">${vlTab === "done" ? "Los pagos que apruebes o rechaces aparecerán aquí." : "Cuando un estudiante registre una transferencia o un Pago Móvil, aparecerá aquí."}</p></div>`;
+  }).join("") || `<div class="card" style="align-items:flex-start"><span class="ico lg"><i data-lucide="badge-check"></i></span><h2 class="h2">${vlTab === "done" ? "Aún no hay pagos revisados" : "No hay pagos por validar"}</h2><p class="small" style="font-size:13px">${vlTab === "done" ? "Los pagos que apruebes o rechaces aparecerán aquí." : "Cuando un estudiante pague con tarjeta, transferencia o Pago Móvil, aparecerá aquí."}</p></div>`;
   icons();
 }
 function relabelForCreator(role = "creator", secId = "validar") {
@@ -4466,6 +4526,8 @@ function relabelForCreator(role = "creator", secId = "validar") {
 }
 function vlUpdateMove(email, match, pill, cls) {
   try { const k = "nexo-moves:" + email, mv = JSON.parse(localStorage.getItem(k) || "[]") || []; const m = mv.slice().reverse().find(x => x.pill === "En revisión" && match(x)); if (m) { m.pill = pill; m.pillCls = cls; localStorage.setItem(k, JSON.stringify(mv)); } } catch (err) {}
+  // si Caja decide un pago de su propia cuenta (personal en modo usuario), también en esta pestaña
+  try { if (email === sessionEmail) { const m = moves.slice().reverse().find(x => x.pill === "En revisión" && match(x)); if (m) { m.pill = pill; m.pillCls = cls; refreshActivity(); } } } catch (err) {}
 }
 function vlDecide(key, ok, motivo, quiet = false) {
   if (key.startsWith("sb:")) return sbCajaDecide(key, ok, motivo, quiet);
@@ -4474,11 +4536,23 @@ function vlDecide(key, ok, motivo, quiet = false) {
   const ref6 = (item.p.ref || "").slice(-6);
   if (item.kind === "factura") {
     const pg = JSON.parse(localStorage.getItem(sk) || "{}"), p = pg[id];
-    pg[id] = ok ? { ...p, estado: "pagada", fecha: fmtD(new Date(now)), via: p.currency === "bs" ? "Transferencia en Bs." : "Transferencia", validatedAt: now, validatedBy: me }
+    pg[id] = ok ? { ...p, estado: "pagada", fecha: fmtD(new Date(now)), via: p.method === "tarjeta" ? (p.card || "Tarjeta") : p.currency === "bs" ? "Transferencia en Bs." : "Transferencia", validatedAt: now, validatedBy: me }
                 : { ...p, estado: "rechazada", motivo, rejectedAt: now, rejectedBy: me };
     localStorage.setItem(sk, JSON.stringify(pg));
     vlUpdateMove(item.email, m => m.title.includes(`Factura de ${MES_DE(id)}`) && (!ref6 || (m.detail || "").includes(ref6)), ok ? "Pagado" : "Rechazado", ok ? "ok" : "warn");
     if (item.email === sessionEmail) { pagos = { ...pagos, [id]: pg[id] }; }
+  } else if (item.kind === "pedido") {
+    const list = JSON.parse(localStorage.getItem(sk) || "[]"), o = list.find(x => x.id === id);
+    Object.assign(o, ok ? { ...orderApprovePatch(o, now), payStatus: "ok", payValidatedAt: now, payValidatedBy: me } : { payStatus: "rechazada", payMotivo: motivo, payRejectedAt: now, payRejectedBy: me, cancelledAt: now });
+    localStorage.setItem(sk, JSON.stringify(list));
+    if (item.email === sessionEmail) { const j = orders.findIndex(x => x.id === id); if (j >= 0) orders[j] = o; }
+    vlUpdateMove(item.email, m => m.order === id, ok ? "Pagado" : "Rechazado", ok ? "ok" : "warn");
+  } else if (item.kind === "cancha") {
+    const list = JSON.parse(localStorage.getItem(sk) || "[]"), c = list.find(x => String(x.id) === id);
+    Object.assign(c, ok ? { payStatus: "ok", payValidatedAt: now, payValidatedBy: me } : { payStatus: "rechazada", payMotivo: motivo, payRejectedAt: now, payRejectedBy: me });
+    localStorage.setItem(sk, JSON.stringify(list));
+    if (item.email === sessionEmail) { const j = myCourts.findIndex(x => String(x.id) === id); if (j >= 0) myCourts[j] = c; }
+    vlUpdateMove(item.email, m => String(m.court) === id, ok ? "Pagado" : "Rechazado", ok ? "ok" : "warn");
   } else {
     const list = JSON.parse(localStorage.getItem(sk) || "[]"), r = list.find(x => x.id === id);
     Object.assign(r, ok ? { estado: "aprobada", validatedAt: now, validatedBy: me } : { estado: "rechazada", motivo, rejectedAt: now, rejectedBy: me });
@@ -4489,7 +4563,7 @@ function vlDecide(key, ok, motivo, quiet = false) {
     }
     vlUpdateMove(item.email, m => m.title === "Recarga de wallet" && (m.detail || "").includes(ref6), ok ? "Acreditada" : "Rechazada", ok ? "ok" : "warn");
   }
-  logAudit("caja", ok ? `Aprobó ${item.title.toLowerCase()} de ${item.who} (${money(item.usd)}, ref. ${item.p.ref}).` : `Rechazó ${item.title.toLowerCase()} de ${item.who}: ${motivo}.`);
+  logAudit("caja", ok ? `Aprobó ${item.title.toLowerCase()} de ${item.who} (${money(item.usd)}, ${item.p.method === "tarjeta" ? "aut." : "ref."} ${item.p.ref}).` : `Rechazó ${item.title.toLowerCase()} de ${item.who}: ${motivo}.`);
   vlReject = null; vlSel.delete(key);
   if (quiet) return item;
   toast(ok ? `Aprobaste el pago de ${item.who} por ${money(item.usd)}.` : `Rechazaste el pago de ${item.who}. Le avisaremos el motivo.`);
@@ -4660,7 +4734,8 @@ function homeItems() {
   try {
     activeOrders().forEach(o => {
       const s = orderStatus(o), l = localById(o.local), ln = l ? l.name : "el local";
-      out.push(s === "listo"
+      out.push(s === "pago" ? { pr: 3, icon: "shield-check", title: `Validando el pago de tu pedido en ${ln}`, body: "El local lo empieza en cuanto Caja apruebe el pago.", cta: "Ver pedido", attrs: `data-home-order="${o.id}"` }
+        : s === "listo"
         ? { pr: 0, tone: "ok", icon: "package-check", title: `Tu pedido de ${ln} está listo`, body: `Código de retiro ${o.code}. Muéstralo al retirar.`, cta: "Ver código", attrs: `data-home-order="${o.id}"` }
         : { pr: 3, icon: s === "programado" ? "calendar-clock" : "chef-hat", title: s === "programado" ? `Pedido programado en ${ln}` : `Están preparando tu pedido de ${ln}`, body: s === "programado" ? `Retíralo ${whenTxt(o.scheduledFor)}.` : `Estará listo cerca de las ${hhmm(o.readyAt)}.`, cta: "Ver pedido", attrs: `data-home-order="${o.id}"` });
     });
@@ -4669,7 +4744,7 @@ function homeItems() {
     if (account && account.carnet) activeInvoices().forEach(iv => {
       const s = statusOf(iv), p = pagos[iv.id], amt = money(amountOf(iv));
       const rej = p && p.estado === "rechazada" && ["pronto", "pendiente", "vencida"].includes(s);
-      if (rej) out.push({ pr: 1, tone: "bad", icon: "circle-x", title: `Rechazamos tu transferencia de ${iv.mes}`, body: `${p.motivo}. Vuelve a pagarla por ${amt}.`, cta: "Pagar", go: "caja" });
+      if (rej) out.push({ pr: 1, tone: "bad", icon: "circle-x", title: `Rechazamos tu ${p.method === "tarjeta" ? "pago con tarjeta" : "transferencia"} de ${iv.mes}`, body: `${p.motivo}. Vuelve a pagarla por ${amt}.`, cta: "Pagar", go: "caja" });
       else if (s === "vencida") out.push({ pr: 1, tone: "warn", icon: "receipt-text", title: `Tu factura de ${iv.mes} está vencida`, body: `Venció el ${fmtDW(iv.due)}. Págala por ${amt} para quedar al día.`, cta: "Pagar", go: "caja" });
       else if (s === "pronto") { const d = Math.round((day0(iv.ppEnd) - t) / 864e5); out.push({ pr: d <= 1 ? 2 : 4, tone: d <= 1 ? "warn" : "", icon: "badge-percent", title: d === 0 ? "El pronto pago termina hoy" : d === 1 ? "El pronto pago termina mañana" : `Pronto pago de ${iv.mes} hasta el ${fmtDW(iv.ppEnd)}`, body: `Paga ${amt} y ahorra ${money((PRICE_REG - PRICE_PP) * MATERIAS.length)}.`, cta: "Pagar", go: "caja" }); }
       else if (s === "pendiente") { const d = Math.round((day0(iv.due) - t) / 864e5); out.push({ pr: d <= 3 ? 2 : 4, tone: d <= 3 ? "warn" : "", icon: "receipt-text", title: d === 0 ? `Tu factura de ${iv.mes} vence hoy` : `Tu factura de ${iv.mes} vence ${d === 1 ? "mañana" : `en ${d} días`}`, body: `${amt} · vence el ${fmtDW(iv.due)}.`, cta: "Pagar", go: "caja" }); }
@@ -4904,7 +4979,7 @@ function liveKeys() {
     }
     if (["admin", "creator", "owner"].includes(LIVE_ROLE)) caItems().filter(x => x.st === "pendiente").forEach(x => add(`ca:${x.id}:${x.sent}`, { text: `Carnet por verificar: ${x.who} · ${x.carnet}`, go: "carnets" }));
     if (["admin", "creator", "owner"].includes(LIVE_ROLE)) cajaItems().filter(x => !x.done).forEach(x => add(`cj:${x.kind}:${x.key}:${x.id}`, { text: `Pago por validar: ${x.title} de ${x.who} · ${money(x.usd)}`, go: "validar" }));
-    if (LIVE_ROLE === "local" && account.local) allOrders().filter(({ o }) => o.local === account.local && o.paidAt && !o.cancelledAt && !o.pickedAt).forEach(({ o }) => add("lo:" + o.id, { text: `Pedido nuevo ${o.num} · ${money(o.total)}`, go: "local-pedidos" }));
+    if (LIVE_ROLE === "local" && account.local) allOrders().filter(({ o }) => o.local === account.local && o.paidAt && !o.cancelledAt && !o.pickedAt && o.payStatus !== "revision").forEach(({ o }) => add("lo:" + o.id, { text: `Pedido nuevo ${o.num} · ${money(o.total)}${o.payStatus === "ok" ? " · pago validado" : ""}`, go: "local-pedidos" }));
   } catch (err) {}
   return out;
 }
@@ -5226,8 +5301,11 @@ document.addEventListener("click", e => {
   const sp = SPORTS[res.sport], fee = Math.round(sp.price * 5) / 100, end = pad2(parseInt(res.slot) + 1) + ":00", total = Math.round((sp.price + fee) * 100) / 100, w = courtMethodNow() === "wallet";
   if (w) { WALLET = Math.round((WALLET - total) * 100) / 100; saveWallet(); renderWallet(); }
   courtPaidLabel(w);
-  addMovement(sp.court, `Canchas · ${res.dname} ${res.day} ${resMes()} · ${res.slot}–${end}${w ? " · Wallet Nexo" : ""}`, "−" + money(total), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
-  rememberCourt({ id: "c" + Date.now(), sport: res.sport, iso: courtIso(), slot: res.slot, price: total, ...(w ? { wallet: true } : {}) });
+  // con tarjeta: el horario queda apartado y el pago en revisión hasta que Caja lo apruebe
+  const id = "c" + Date.now(), aut = w ? null : cardAut(), card = cards.length ? cardLabel(cards[0]) : "Tarjeta";
+  courtLastReview = !w;
+  addMovement(sp.court, `Canchas · ${res.dname} ${res.day} ${resMes()} · ${res.slot}–${end}${w ? " · Wallet Nexo" : ` · ${card} · Aut. ${aut}`}`, "−" + money(total), w ? "Pagado" : "En revisión", w ? "ok" : "neutral", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →", court: id });
+  rememberCourt({ id, sport: res.sport, iso: courtIso(), slot: res.slot, price: total, ...(w ? { wallet: true } : { payStatus: "revision", aut, card, sentAt: Date.now(), payDate: isoOf(new Date()), studentName: user.full }) });
 });
 // Mi cuenta: los cambios de una cuenta real se guardan también en Supabase
 function sbSaveProfile(changes) {
@@ -5322,6 +5400,7 @@ async function sbSharedInit() {
         if (i >= 0) orders[i] = row.data; else orders.push(row.data);
         try { localStorage.setItem(K("nexo-orders"), JSON.stringify(orders)); } catch (err) {}
       }
+      if (row.data.payStatus) sbCajaRefresh();
       sbRefreshScreens();
     })
     .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, ({ new: row }) => {
@@ -5333,7 +5412,7 @@ async function sbSharedInit() {
       sbLive("t" + row.id, echo);
       sbRefreshScreens();
     })
-    .on("postgres_changes", { event: "*", schema: "public", table: "court_bookings" }, () => { sbLoadCourts(); })
+    .on("postgres_changes", { event: "*", schema: "public", table: "court_bookings" }, ({ new: row }) => { sbLoadCourts(); if (row && row.pay_status && row.pay_status !== "ok" || row && row.pay_decided_at) sbCajaRefresh(); })
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, ({ new: row }) => { try { sbCarnetRow(row); } catch (err) {} })
     .on("postgres_changes", { event: "*", schema: "public", table: "local_state" }, ({ new: row }) => {
       if (!row || !row.local_id || sbPending("ls" + row.local_id)) return;
@@ -5420,10 +5499,16 @@ async function sbStateInit() {
   sbStateDirty = false;
 }
 // Caja
+var sbCajaExtra = { orders: [], courts: [] };
 async function sbLoadCaja() {
   const { data, error } = await sb.from("caja_state").select("user_id,full_name,email,pagos,pendrec,updated_at");
   if (!error && data) sbCajaRows = data;
+  const x = await sb.rpc("caja_extra").then(r => r, err => ({ error: err }));
+  if (!x.error && x.data) sbCajaExtra = { orders: x.data.orders || [], courts: x.data.courts || [] };
 }
+// Pedidos y canchas cambian a menudo: se recargan para Caja con un respiro de 1,5 s
+let sbCajaTimer = null;
+function sbCajaRefresh() { if (!sbIsCaja()) return; clearTimeout(sbCajaTimer); sbCajaTimer = setTimeout(() => sbLoadCaja().then(() => { sbLive("cjx"); if (current === "validar") renderValidar(); }), 1500); }
 function sbCajaItems() {
   const out = [];
   sbCajaRows.forEach(row => {
@@ -5432,7 +5517,14 @@ function sbCajaItems() {
       if (p && ["revision", "pagada", "rechazada"].includes(p.estado) && (p.estado === "revision" || p.validatedAt || p.rejectedAt))
         out.push({ kind: "factura", key: "sb:" + row.user_id, email: row.email, id, p, who: p.studentName || name, usd: p.monto, title: `Factura de ${MES_DE(id)}`, sent: p.sentAt || (p.date ? new Date(p.date + "T12:00").getTime() : 0), done: p.estado !== "revision" });
     });
-    (row.pendrec || []).forEach(r => out.push({ kind: "recarga", key: "sb:" + row.user_id, email: row.email, id: r.id, p: { ...r, currency: "bs", paidAmount: r.bs, receipt: null }, who: name, usd: r.amount, title: "Recarga de wallet · Pago Móvil", sent: r.sentAt || 0, done: r.estado !== "revision" }));
+    (row.pendrec || []).forEach(r => out.push(recargaItem(r, "sb:" + row.user_id, row.email, name)));
+  });
+  (sbCajaExtra.orders || []).forEach(r => { const it = orderPayItem(r.data, "sb:" + r.user_id, r.email, r.data.studentName || r.name || r.email || "Estudiante"); if (it) out.push(it); });
+  (sbCajaExtra.courts || []).forEach(r => {
+    const dec = r.decided_at ? new Date(r.decided_at).getTime() : null, ps = r.pay_status;
+    const c = { id: r.id, sport: r.sport, iso: r.day, slot: r.slot, price: +r.price, payStatus: ps, card: "Tarjeta", sentAt: new Date(r.created_at).getTime(), payDate: String(r.created_at).slice(0, 10),
+      ...(ps === "ok" && dec ? { payValidatedAt: dec, payValidatedBy: r.decided_by } : {}), ...(ps === "rechazada" && dec ? { payRejectedAt: dec, payRejectedBy: r.decided_by, payMotivo: r.motivo } : {}) };
+    const it = courtPayItem(c, "sb:" + r.user_id, r.email, r.name || r.email || "Estudiante"); if (it) out.push(it);
   });
   return out.sort((a, b) => b.sent - a.sent);
 }
@@ -5440,6 +5532,24 @@ function sbCajaDecide(key, ok, motivo, quiet) {
   const i = key.lastIndexOf("|"), sk = key.slice(0, i), id = key.slice(i + 1), uid = sk.slice(3);
   const item = sbCajaItems().find(x => x.key === sk && x.id === id); if (!item || item.done) return;
   const now = Date.now(), me = user.full;
+  if (item.kind === "pedido" || item.kind === "cancha") {
+    const fail = error => { toast(/Ya revisado/.test(error.message) ? `Otra persona de Caja ya revisó el pago de ${item.who}.` : "No pudimos guardar la decisión. Inténtalo de nuevo."); sbLoadCaja().then(() => { if (current === "validar") renderValidar(); }); };
+    if (item.kind === "pedido") {
+      const r = sbCajaExtra.orders.find(x => x.id === id), patch = ok ? orderApprovePatch(item.o, now) : {};
+      if (r) r.data = { ...r.data, ...patch, ...(ok ? { payStatus: "ok", payValidatedAt: now, payValidatedBy: me } : { payStatus: "rechazada", payMotivo: motivo, payRejectedAt: now, payRejectedBy: me, cancelledAt: now }) };
+      sb.rpc("order_pay_decide", { p_id: id, ok, motivo: motivo || null, p_patch: patch }).then(({ error }) => { if (error) fail(error); });
+    } else {
+      const r = sbCajaExtra.courts.find(x => String(x.id) === id);
+      if (r) Object.assign(r, { pay_status: ok ? "ok" : "rechazada", decided_at: new Date(now).toISOString(), decided_by: me, motivo: ok ? null : motivo });
+      sb.rpc("court_decide", { p_id: id, ok, motivo: motivo || null }).then(({ error }) => { if (error) fail(error); });
+    }
+    logAudit("caja", ok ? `Aprobó ${item.title.toLowerCase()} de ${item.who} (${money(item.usd)}, aut. ${item.p.ref || "—"}).` : `Rechazó ${item.title.toLowerCase()} de ${item.who}: ${motivo}.`);
+    vlReject = null; vlSel.delete(key);
+    if (quiet) return item;
+    toast(ok ? `Aprobaste el pago de ${item.who} por ${money(item.usd)}.` : `Rechazaste el pago de ${item.who}. Le avisaremos el motivo.`);
+    renderValidar();
+    return item;
+  }
   // se marca al instante; si el servidor lo rechaza, se recarga la lista
   Object.assign(item.p, ok ? { estado: item.kind === "factura" ? "pagada" : "aprobada", validatedAt: now, validatedBy: me } : { estado: "rechazada", motivo, rejectedAt: now, rejectedBy: me });
   const row = sbCajaRows.find(r => r.user_id === uid);
@@ -5495,8 +5605,12 @@ function sbCourtDays() {
 async function sbLoadCourts() {
   const { data, error } = await sb.from("court_bookings").select("sport,day,slot").is("cancelled_at", null).gte("day", isoDay(new Date()));
   if (!error && data) sbCourtRows = data;
-  const mine = await sb.from("court_bookings").select("id,sport,day,slot,price,paid_with").eq("user_id", account.sb).is("cancelled_at", null).gte("day", isoDay(new Date()));
-  if (!mine.error && mine.data) { myCourts = mine.data.map(r => ({ id: r.id, sport: r.sport, iso: r.day, slot: r.slot, price: +r.price, ...(r.paid_with === "wallet" ? { wallet: true } : {}) })); saveMyCourts(); }
+  const mine = await sb.from("court_bookings").select("id,sport,day,slot,price,paid_with,pay_status,pay_motivo,cancelled_at").eq("user_id", account.sb).gte("day", isoDay(new Date())).or("cancelled_at.is.null,pay_status.eq.rechazada");
+  if (!mine.error && mine.data) {
+    const prev = myCourts;
+    myCourts = mine.data.map(r => { const old = prev.find(x => x.id === r.id) || {}; return { id: r.id, sport: r.sport, iso: r.day, slot: r.slot, price: +r.price, ...(r.paid_with === "wallet" ? { wallet: true } : { payStatus: r.pay_status, payMotivo: r.pay_motivo, aut: old.aut, card: old.card, rejSeen: old.rejSeen }) }; });
+    saveMyCourts(); courtPayCheck();
+  }
   if (["reserva", "revision"].includes(current)) renderReserva();
 }
 async function sbCourtsInit() {
@@ -5520,8 +5634,10 @@ document.addEventListener("click", e => {
     if (w) { WALLET = r2(WALLET - total); sbWalletKnown = r2(sbWalletKnown - total); sbWalletLocal(); }
     courtPaidLabel(w);
     sbCourtRows.push({ sport: res.sport, day: res.iso, slot: res.slot });
-    if (data && data.id) rememberCourt({ id: data.id, sport: res.sport, iso: res.iso, slot: res.slot, price: total, ...(w ? { wallet: true } : {}) });
-    addMovement(sp.court, `Canchas · ${res.dname} ${res.day} ${resMes()} · ${res.slot}–${end}${w ? " · Wallet Nexo" : ""}`, "−" + money(total), "Pagado", "ok", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →" });
+    const card = cards.length ? cardLabel(cards[0]) : "Tarjeta", aut = w ? null : cardAut();
+    courtLastReview = !w;
+    if (data && data.id) rememberCourt({ id: data.id, sport: res.sport, iso: res.iso, slot: res.slot, price: total, ...(w ? { wallet: true } : { payStatus: "revision", aut, card, sentAt: Date.now() }) });
+    addMovement(sp.court, `Canchas · ${res.dname} ${res.day} ${resMes()} · ${res.slot}–${end}${w ? " · Wallet Nexo" : ` · ${card} · Aut. ${aut}`}`, "−" + money(total), w ? "Pagado" : "En revisión", w ? "ok" : "neutral", { icon: "dribbble", go: "qr", goLabel: "Ver comprobante →", ...(data && data.id ? { court: data.id } : {}) });
     go("qr");
   });
 }, true);
@@ -5687,8 +5803,17 @@ function courtNow() { const n = new Date(); if (sbShared()) return n; const d = 
 const courtStart = c => new Date(`${c.iso}T${c.slot}:00`);
 const courtEnd = c => courtStart(c).getTime() + 3600e3;
 const courtCanCancel = c => courtStart(c) - courtNow() >= 2 * 3600e3;
-function upcomingCourts() { const now = courtNow().getTime(); return myCourts.filter(c => courtEnd(c) > now).sort((a, b) => courtStart(a) - courtStart(b)); }
-function myCourtSlots(sport) { try { const iso = courtIso(); return myCourts.filter(c => c.sport === sport && c.iso === iso).map(c => c.slot); } catch (err) { return []; } }
+function upcomingCourts() { const now = courtNow().getTime(); return myCourts.filter(c => courtEnd(c) > now && c.payStatus !== "rechazada").sort((a, b) => courtStart(a) - courtStart(b)); }
+function myCourtSlots(sport) { try { const iso = courtIso(); return myCourts.filter(c => c.sport === sport && c.iso === iso && c.payStatus !== "rechazada").map(c => c.slot); } catch (err) { return []; } }
+function courtPayCheck() {
+  let ch = false;
+  myCourts.forEach(c => {
+    const sp = SPORTS[c.sport] || { court: "Cancha" };
+    if (c.payStatus === "rechazada" && !c.rejSeen) { c.rejSeen = true; ch = true; toast(`Caja rechazó el pago de tu reserva de ${sp.court} (${courtDate(c)} · ${courtHours(c)})${c.payMotivo ? `: ${c.payMotivo}` : ""}. La hora quedó libre.`, { persist: true, action: "Reservar otra", onAction: () => go("reserva") }); }
+    if (c.payStatus === "ok" && c.aut && !c.okSeen) { c.okSeen = true; ch = true; toast(`Caja aprobó el pago de tu reserva de ${sp.court} · ${courtDate(c)} · ${courtHours(c)}.`); }
+  });
+  if (ch) saveMyCourts();
+}
 function rememberCourt(c) { myCourts = [...myCourts.filter(x => x.id !== c.id), c]; saveMyCourts(); try { renderMyCourts(); } catch (err) {} }
 const DN_CORTO = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const courtDate = c => { const d = new Date(c.iso + "T12:00"); return `${DN_CORTO[d.getDay()]} ${d.getDate()} ${MES_CORTO[d.getMonth()]}`; };
@@ -5702,7 +5827,7 @@ function renderMyCourts() {
   box.innerHTML = `<div class="row"><h2 class="sec">Mis reservas</h2><span class="tiny">Cancela sin cargo hasta 2 horas antes</span></div>
     ${list.map(c => { const sp = SPORTS[c.sport] || { court: "Cancha" }, live = courtStart(c).getTime() <= now;
       return `<div class="mc-row"><span class="mc-ball">${ballArt(c.sport)}</span>
-        <div class="grow" style="min-width:0"><b style="font-size:14px">${esc(sp.court)}</b><span class="tiny" style="display:block">${courtDate(c)} · ${courtHours(c)} · ${money(c.price)}</span></div>
+        <div class="grow" style="min-width:0"><b style="font-size:14px">${esc(sp.court)}</b><span class="tiny" style="display:block">${courtDate(c)} · ${courtHours(c)} · ${money(c.price)}</span>${c.payStatus === "revision" ? `<span class="pill warn" style="margin-top:4px">Pago en revisión</span>` : ""}</div>
         ${live ? `<span class="pill ok">En curso</span>` : courtCanCancel(c) ? `<button class="btn ghost sm" type="button" data-court-cancel="${esc(c.id)}"><i data-lucide="calendar-x"></i>Cancelar</button>` : `<span class="pill neutral" title="Faltan menos de 2 horas">Empieza pronto</span>`}</div>`; }).join("")}`;
   icons();
 }
@@ -5991,7 +6116,7 @@ function renderCourtPay() {
   box.innerHTML = walletOpt(m === "wallet", total, `data-court-method="wallet"`)
     + `<button class="card${m === "card" ? " sel" : ""}" type="button" data-court-method="card" style="text-align:left;${m === "card" ? "border-color:var(--brand)" : ""}">
         <div class="row start"><span class="opt${m === "card" ? " on" : ""}" style="padding:0;border:0;background:none;width:auto"><span class="dot"></span></span><i data-lucide="credit-card" style="color:var(--brand)"></i><b>Tarjeta</b></div>
-        <p style="font-size:13px">${esc(card)}</p><p class="small">Pago simulado: no se hará ningún cobro real.</p></button>`;
+        <p style="font-size:13px">${esc(card)}</p><p class="small">Tu hora queda apartada y Caja valida el cobro. Pago simulado.</p></button>`;
   const short = m === "wallet" && WALLET < total;
   document.querySelectorAll("#revision [data-court-pay]").forEach(b => { if (short) { b.disabled = true; b.dataset.walletOff = "1"; } else if (b.dataset.walletOff) { b.disabled = false; delete b.dataset.walletOff; } });
   icons();
@@ -6419,8 +6544,15 @@ function passFlip(p) {
 }
 document.addEventListener("click", e => { const p = e.target.closest("[data-pass-flip]"); if (p && !e.target.closest("button, a")) passFlip(p); });
 document.addEventListener("keydown", e => { const p = e.target.closest && e.target.closest("[data-pass-flip]"); if (p && e.target === p && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); passFlip(p); } });
+var courtLastReview = false;
 function renderQrCourt() {
   const box = document.getElementById("qrCourt"); if (!box) return;
+  const rv = !!courtLastReview, set = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+  set("qrTitle", rv ? "Tu horario quedó apartado" : "¡Tu cancha está lista!");
+  set("qrSub", rv ? "Pago con tarjeta en revisión · Caja lo valida" : "Reserva confirmada · Comprobante de ejemplo");
+  const pill = document.getElementById("qrPill"); if (pill) { pill.className = "pill " + (rv ? "warn" : "ok"); pill.textContent = rv ? "Pago en revisión" : "Pago exitoso · Demo"; }
+  const nt = document.getElementById("qrReview"); if (nt) nt.hidden = !rv;
+  const om = document.querySelector("#qr .okmark"); if (om) om.hidden = rv;
   let sp = "futbol"; try { sp = res.sport || sp; } catch (err) {}
   box.innerHTML = `<span class="beam b1"></span><span class="beam b2"></span><div class="qc-art">${courtArt(sp)}</div><span class="qr-ball">${ballArt(sp)}</span>`;
 }

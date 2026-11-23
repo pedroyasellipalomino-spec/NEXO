@@ -1110,7 +1110,7 @@
         <div class="kv total"><span>Total</span><b data-pay="total">$160,00</b></div>
         <div class="kv"><span>Pagas con</span><b data-pay="card">Visa ···· 4242</b></div>
         <button class="btn" type="button" data-pay-card><i data-lucide="lock-keyhole"></i><span data-pay="cta">Pagar $160,00</span></button>
-        <p class="tiny">Al confirmar, la factura se marca como pagada y tu saldo se actualiza en toda la app.</p>
+        <p class="tiny">Al confirmar, el pago queda en revisión: Caja valida el cobro con tarjeta y la factura se marca como pagada al aprobarlo.</p>
       </div>
     </div>
   </div>
@@ -1193,12 +1193,13 @@
     <div class="stack s14" style="align-items:center;text-align:center">
       <div class="qr-court" id="qrCourt" aria-hidden="true"></div>
       <span class="okmark" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="ok-ring" cx="32" cy="32" r="26"/><path class="ok-tick" d="M21 33l7.5 7.5L44 25"/></svg><i></i><i></i><i></i><i></i><i></i><i></i></span>
-      <h1 class="h1" style="font-size:27px">¡Tu cancha está lista!</h1>
-      <p class="small" style="font-size:13px;margin-top:-8px">Reserva confirmada · Comprobante de ejemplo</p>
+      <h1 class="h1" style="font-size:27px" id="qrTitle">¡Tu cancha está lista!</h1>
+      <p class="small" style="font-size:13px;margin-top:-8px" id="qrSub">Reserva confirmada · Comprobante de ejemplo</p>
     </div>
     <div class="card">
       <div class="stack s14" style="align-items:center;text-align:center">
-        <span class="pill ok">Pago exitoso · Demo</span>
+        <span class="pill ok" id="qrPill">Pago exitoso · Demo</span>
+        <p class="notice" id="qrReview" hidden style="text-align:left"><i data-lucide="shield-check"></i><span>Apartamos tu horario. Caja valida el cobro con tarjeta y el QR sirve en cuanto lo apruebe; si se rechaza, la hora se libera.</span></p>
         <div class="qr"><canvas data-qr="NX-261112-0842" width="29" height="29"></canvas></div>
         <p class="mono" style="font-size:15px">NX-261112-0842</p>
         <p class="small">Presenta este QR en la entrada de la cancha. Válido para el turno reservado.</p>
@@ -1387,7 +1388,7 @@
 
 <!-- G12 · Administración y creador · Pagos por validar (sin diseño en Figma) -->
 <section class="screen app" id="validar" data-staff="admin" data-title="Pagos por validar" data-tab="validar" data-crumb="Gestión  /  Caja  /  Pagos por validar" hidden>
-  <div><h1 class="h1">Pagos por validar</h1><p class="lead">Transferencias y Pago Móvil que esperan confirmación de Caja.</p></div>
+  <div><h1 class="h1">Pagos por validar</h1><p class="lead">Tarjetas, transferencias y Pago Móvil que esperan confirmación de Caja.</p></div>
   <div class="kpis" id="vlKpis"></div>
   <div class="chips" id="vlTabs"></div>
   <div class="stack s14" id="vlList"></div>

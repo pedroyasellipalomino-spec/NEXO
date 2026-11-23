@@ -27,18 +27,18 @@ async def login(ctx, email):
     return pg
 async def main():
     stu = mk("e3.estudiante@nexo-pruebas.dev", "Estudiante Tres", "20259990033"); adm = mk("e3.caja@nexo-pruebas.dev", "Caja Tres"); otro = mk("e3.otro@nexo-pruebas.dev", "Otro Tres", "20259990034")
-    sql(f"select set_config('nexo.role_change','on',false); update public.profiles set role='admin' where id='{adm}';")
+    # saldo inicial de $10 puesto por el servidor (desde el 24/11 la app no puede sumarse saldo: las recargas pasan por Caja)
+    sql(f"select set_config('nexo.role_change','on',false); update public.profiles set role='admin' where id='{adm}';"
+        f"insert into public.student_state (user_id, wallet) values ('{stu}', 10) on conflict (user_id) do update set wallet = 10;")
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=os.environ.get("CHROME_PATH", "/opt/pw-browsers/chromium"))
         cs, ca, co = [await b.new_context(viewport={"width": 1280, "height": 900}) for _ in range(3)]
         ps = await login(cs, "e3.estudiante@nexo-pruebas.dev")
         await ps.wait_for_timeout(2000)
-        check("el estudiante arranca con wallet 0 en el servidor", await ps.evaluate("WALLET") == 0)
+        check("el estudiante arranca con el saldo del servidor ($10)", await ps.evaluate("WALLET") == 10)
         # 1) materias, recarga con tarjeta, factura por transferencia con comprobante y recarga por Pago Móvil
         await ps.evaluate("""() => {
           MATERIAS = [{ n: "Física II", c: "BPTFI02" }]; saveMaterias();
-          WALLET = Math.round((WALLET + 10) * 100) / 100; saveWallet();
-          addMovement("Recarga de wallet", "Estacionamiento · Visa ····4242", "+$10,00", "Pagado", "ok", { icon: "wallet" });
           const f = new File(["%PDF-1.4 prueba de comprobante"], "transferencia.pdf", { type: "application/pdf" });
           const path = sbUploadReceipt(f, "factura");
           pagos.nov = { estado: "revision", monto: 160, pp: false, ref: "0012345678", bank: "Banesco · 0134", currency: "usd", paidAmount: 160, receipt: "transferencia.pdf", receiptPath: path, studentName: user.full, date: "2026-11-12", sentAt: Date.now() }; savePagos();
@@ -48,11 +48,11 @@ async def main():
         }""")
         await ps.wait_for_timeout(4000)
         row = sql(f"select wallet, pagos->'nov'->>'estado' f, jsonb_array_length(pendrec) r, jsonb_array_length(moves) m, materias->'list'->0->>'c' mat, pagos->'nov'->>'receiptPath' rp from public.student_state where user_id='{stu}'")[0]
-        check("el servidor guarda wallet, factura, recarga, movimientos y materias", float(row["wallet"]) == 10 and row["f"] == "revision" and row["r"] == 1 and row["m"] == 3 and row["mat"] == "BPTFI02", str(row))
+        check("el servidor guarda wallet, factura, recarga, movimientos y materias", float(row["wallet"]) == 10 and row["f"] == "revision" and row["r"] == 1 and row["m"] == 2 and row["mat"] == "BPTFI02", str(row))
         obj = sql(f"select count(*) n from storage.objects where bucket_id='comprobantes' and name = '{row['rp']}'")[0]["n"]
         check("el comprobante quedó en Storage, en la carpeta del estudiante", obj == 1 and row["rp"].startswith(stu + "/"), str(row["rp"]))
         pay = sql(f"select service, status from public.payments where user_id='{stu}' order by created_at")
-        check("los pagos del dueño quedan anotados (recarga, factura en revisión, recarga en revisión)", sorted((x["service"], x["status"]) for x in pay) == [("materias", "En revisión"), ("recarga", "En revisión"), ("recarga", "Pagado")], str(pay))
+        check("los pagos del dueño quedan anotados (recarga, factura en revisión, recarga en revisión)", sorted((x["service"], x["status"]) for x in pay) == [("materias", "En revisión"), ("recarga", "En revisión")], str(pay))
         # 2) Caja
         pa = await login(ca, "e3.caja@nexo-pruebas.dev")
         await pa.evaluate("go('validar')"); await pa.wait_for_timeout(1500)
@@ -69,15 +69,15 @@ async def main():
         st = await ps.evaluate("({ w: WALLET, f: pagos.nov.estado, mot: pagos.nov.motivo, pills: moves.map(m => m.pill).join('|'), dom: [...document.querySelectorAll('#actividad .move .pill')].map(p => p.textContent).join('|'), notif: buildNotifs().filter(n => /rechaz|acredit|aprob/i.test(n.title + n.body)).length })")
         check("en vivo: el estudiante recibe el saldo de la recarga aprobada ($30)", st["w"] == 30, str(st))
         check("en vivo: la factura queda rechazada con el motivo", st["f"] == "rechazada" and "monto" in (st["mot"] or ""), str(st))
-        check("en vivo: los movimientos cambian a Acreditada y Rechazado", st["pills"] == "Pagado|Rechazado|Acreditada" and "Acreditada" in st["dom"] and "Rechazado" in st["dom"], str(st))
+        check("en vivo: los movimientos cambian a Acreditada y Rechazado", st["pills"] == "Rechazado|Acreditada" and "Acreditada" in st["dom"] and "Rechazado" in st["dom"], str(st))
         check("el estudiante tiene avisos de las decisiones", st["notif"] >= 1, str(st))
         pay = sql(f"select status from public.payments where user_id='{stu}' order by created_at")
-        check("los pagos del dueño pasan a su estado final", sorted(x["status"] for x in pay) == ["Acreditada", "Pagado", "Rechazado"], str(pay))
+        check("los pagos del dueño pasan a su estado final", sorted(x["status"] for x in pay) == ["Acreditada", "Rechazado"], str(pay))
         dbl = await pa.evaluate(f"sb.rpc('caja_decide', {{ target: '{stu}', kind: 'factura', item_id: 'nov', ok: true, motivo: null, fecha: 'x', match: 'Factura de noviembre' }}).then(r => r.error && r.error.message)")
         check("no se puede decidir dos veces el mismo pago", "Ya revisado" in (dbl or ""), str(dbl))
         # 3) un guardado viejo del estudiante no deshace lo que decidió Caja
         stale = await ps.evaluate("""() => { const pg = JSON.parse(JSON.stringify(pagos)); pg.nov.estado = 'revision'; delete pg.nov.rejectedAt; const mv = moves.map(m => ({ ...m, pill: m.pill === 'Rechazado' ? 'En revisión' : m.pill }));
-           return sb.rpc('save_my_state', { p_pagos: pg, p_pendrec: pendRec.map(r => ({ ...r, estado: 'revision' })), p_moves: mv }).then(r => r.data && [r.data.pagos.nov.estado, r.data.pendrec[0].estado, r.data.moves[1].pill].join(',')); }""")
+           return sb.rpc('save_my_state', { p_pagos: pg, p_pendrec: pendRec.map(r => ({ ...r, estado: 'revision' })), p_moves: mv }).then(r => r.data && [r.data.pagos.nov.estado, r.data.pendrec[0].estado, r.data.moves[0].pill].join(',')); }""")
         check("un guardado atrasado no pisa las decisiones de Caja", stale == "rechazada,aprobada,Rechazado", str(stale))
         # 4) reembolso del personal llega a la Actividad del estudiante
         await pa.evaluate("pushStudentMove('e3.estudiante@nexo-pruebas.dev', { title: 'Reembolso · TK-PRUEBA', detail: 'Pincho Pan', amount: '+$5,00', pill: 'Reembolsado', pillCls: 'ok', date: '13 nov 2026', icon: 'rotate-ccw' })")
@@ -92,7 +92,7 @@ async def main():
           otro: (await sb.from('student_state').select('user_id').neq('user_id', '{stu}')).data?.length || 0,
           push: (await sb.rpc('push_move', {{ target: '{otro}', p_move: {{ id: 'x', title: 'falso' }} }})).error?.message }})""")
         check("el estudiante no puede usar Caja", "Solo Caja" in (sec["caja"] or ""), str(sec))
-        check("el wallet no acepta montos fuera de rango ni quedar negativo", "rango" in (sec["grande"] or "") and "insuficiente" in (sec["negativo"] or ""), str(sec))
+        check("el wallet no se recarga desde la app ni queda negativo", "Caja" in (sec["grande"] or "") and "insuficiente" in (sec["negativo"] or ""), str(sec))
         check("nadie escribe la tabla directo, ni ve el estado de otros", sec["directo"] == 0 and sec["otro"] == 0, str(sec))
         check("un estudiante no puede anotar movimientos a otro", "permiso" in (sec["push"] or ""), str(sec))
         po = await login(co, "e3.otro@nexo-pruebas.dev")

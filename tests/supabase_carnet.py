@@ -54,7 +54,7 @@ async def main():
         stt = sql(f"select pagos, materias, plan, vehicle from public.student_state where user_id = '{lng}'")
         check("el servidor no deja pagar facturas, inscribir materias ni comprar plan sin carnet verificado", stt and not (stt[0]["pagos"] or {}).get("2026-nov") and stt[0]["plan"] is None and stt[0]["vehicle"] is None and "FAKE" not in json.dumps(stt[0]["materias"]), str(stt))
         r7 = await pl.evaluate("sb.from('payments').insert({ service: 'materias', amount: 150, status: 'Pagado', method: 'tarjeta', detail: 'truco' }).then(r => r.error ? 'bloqueado' : 'ok')")
-        r8 = await pl.evaluate("sb.from('payments').insert({ service: 'comida', amount: 5, status: 'Pagado', method: 'tarjeta', detail: 'prueba' }).then(r => r.error ? r.error.message : 'ok')")
+        r8 = await pl.evaluate("sb.from('payments').insert({ service: 'comida', amount: 5, status: 'En revisión', method: 'tarjeta', detail: 'prueba' }).then(r => r.error ? r.error.message : 'ok')")
         check("sin carnet verificado no anota pagos de materias, pero sí de comida", r7 == "bloqueado" and r8 == "ok", f"{r7} {r8}")
         # el estudiante envía la foto desde la app
         PNG = await ps.evaluate("(() => { const c = document.createElement('canvas'); c.width = 600; c.height = 380; const g = c.getContext('2d'); g.fillStyle = '#1F7A55'; g.fillRect(0, 0, 600, 380); g.fillStyle = '#fff'; g.font = 'bold 40px sans-serif'; g.fillText('9810234', 30, 200); return c.toDataURL('image/png').split(',')[1]; })()")

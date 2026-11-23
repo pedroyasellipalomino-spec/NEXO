@@ -108,7 +108,12 @@ async def main() -> int:
         await pg.click("#cartPay")
         await pg.wait_for_timeout(300)
         pd = await pg.inner_text("#pdBody")
-        check(await pg.evaluate("location.hash") == "#pedido" and "Mi Punto Grill" in pd and "En preparación" in pd, "pagar con tarjeta lleva al seguimiento del pedido")
+        check(await pg.evaluate("location.hash") == "#pedido" and "Mi Punto Grill" in pd and "Estamos validando tu pago" in pd and await pg.evaluate("orderStatus(orders[orders.length - 1])") == "pago", "pagar con tarjeta deja el pedido con el pago en revisión")
+        caja = await pg.evaluate("cajaItems().filter(x => x.kind === 'pedido' && !x.done).map(x => x.key + '|' + x.id)")
+        check(len(caja) == 1, "Caja ve el pedido pagado con tarjeta por validar")
+        await pg.evaluate(f"vlDecide({caja[0]!r}, true, null, true); checkOrders()")
+        await pg.wait_for_timeout(200)
+        check(await pg.evaluate("orderStatus(orders[orders.length - 1])") == "preparando" and await pg.evaluate("moves.find(m => m.order === orders[orders.length - 1].id).pill") == "Pagado", "al aprobarlo Caja, el local empieza a prepararlo y el movimiento queda pagado")
         oculto = not await pg.locator("[data-sim-ready]").is_visible()
         await pg.goto(URL + "#perfil")
         await pg.wait_for_timeout(200)
@@ -235,6 +240,10 @@ async def main() -> int:
         codigo = await pg.evaluate("JSON.parse(localStorage.getItem('nexo-orders:ana.torres@correo.unimet.edu.ve')).slice(-1)[0].code")
         await login("pinchopan@comercio.nexo", "demo-local-01")
         check(await pg.evaluate("location.hash") == "#local-pedidos", "el comercio entra a su tablero de pedidos")
+        tablero = await pg.inner_text("#lpBoard")
+        check("Pago en revisión" in tablero and not await pg.evaluate("[...document.querySelectorAll('[data-lp-ready]')].some(b => b.dataset.lpReady.startsWith('ana'))"), "con el pago en revisión el local lo ve pero no puede prepararlo")
+        await pg.evaluate("(() => { const x = cajaItems().find(i => i.kind === 'pedido' && !i.done && i.email.startsWith('ana')); vlDecide(x.key + '|' + x.id, true, null, true); renderLocalPedidos(); })()")
+        await pg.wait_for_timeout(200)
         clave = await pg.evaluate("[...document.querySelectorAll('[data-lp-ready]')].map(b => b.dataset.lpReady).find(k => k.startsWith('ana'))")
         check(bool(clave), "el comercio ve el pedido del estudiante")
         await pg.click(f"[data-lp-ready='{clave}']")
@@ -360,6 +369,9 @@ async def main() -> int:
         await pg.select_option("#pk-time", index=2)
         await pg.click("#cartPay")
         await pg.wait_for_timeout(400)
+        # Caja aprueba el pago con tarjeta y el pedido queda programado para su hora
+        await pg.evaluate("(() => { const o = orders[orders.length - 1]; vlDecide('nexo-orders:' + sessionEmail + '|' + o.id, true, null, true); renderPedido(); })()")
+        await pg.wait_for_timeout(200)
         check("Tu pedido está programado" in await pg.inner_text("#pdBody"), "se puede programar el retiro de un pedido")
 
         # pago universitario por transferencia en bolívares a tasa BCV
@@ -649,6 +661,22 @@ async def main() -> int:
         await pg.evaluate("WALLET = 1; saveWallet(); go('revision')"); await pg.wait_for_timeout(300)
         await pg.click("[data-court-method=wallet]"); await pg.wait_for_timeout(200)
         check(await pg.evaluate("document.querySelector('#revision [data-court-pay]').disabled"), "sin saldo suficiente no deja pagar con wallet")
+
+        # tarjeta: la cancha queda apartada en revisión y Caja la rechaza (la hora se libera)
+        await pg.click("[data-court-method=card]"); await pg.wait_for_timeout(200)
+        await pg.click("#revision [data-court-pay]"); await pg.wait_for_timeout(400)
+        cc = await pg.evaluate("myCourts[myCourts.length - 1]")
+        check(cc.get("payStatus") == "revision" and await pg.inner_text("#qrTitle") == "Tu horario quedó apartado" and await pg.evaluate(f"moves.find(m => m.court === {cc['id']!r}).pill") == "En revisión", "la cancha con tarjeta queda apartada con el pago en revisión")
+        await pg.evaluate(f"vlDecide('nexo-courts:' + sessionEmail + '|' + {cc['id']!r}, false, 'El banco rechazó el cobro con tarjeta', true)")
+        check(await pg.evaluate(f"!myCourtSlots({cc['sport']!r}).includes({cc['slot']!r}) && moves.find(m => m.court === {cc['id']!r}).pill === 'Rechazado'"), "si Caja rechaza el pago, la hora se libera")
+        # tarjeta: la recarga no suma saldo hasta que Caja la aprueba
+        await pg.evaluate("cards.push({ id: 'cT', brand: 'visa', last4: '4242', exp: '12/28', type: 'Crédito' }); saveCards(); rcCardId = 'cT'; rcMethod = 'card'; rcAmount = 10; go('recarga'); renderRecarga()"); await pg.wait_for_timeout(300)
+        w0 = await pg.evaluate("WALLET")
+        await pg.click("#rcGo"); await pg.wait_for_timeout(300)
+        rec = await pg.evaluate("pendRec[pendRec.length - 1]")
+        check(await pg.evaluate("WALLET") == w0 and rec.get("method") == "tarjeta" and rec.get("estado") == "revision", "la recarga con tarjeta queda en revisión sin sumar saldo")
+        await pg.evaluate(f"vlDecide('nexo-pendrec:' + sessionEmail + '|' + {rec['id']!r}, true, null, true)")
+        check(abs(await pg.evaluate("parseFloat(localStorage.getItem('nexo-wallet:' + sessionEmail))") - (w0 + 10)) < 0.01, "al aprobarla Caja, el saldo se suma")
 
 
         # cada comercio edita su menú y el estudiante lo ve
