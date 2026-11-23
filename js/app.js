@@ -5033,7 +5033,7 @@ renderInstallUI();
    4 pasos (Explora, Pide, Paga, Entra) que avanzan solos cada 4,5 s; se pausan al pasar el mouse, al enfocar
    o con el botón; con prefers-reduced-motion no avanzan solos. */
 const TOUR_MS = 4500;
-let tourI = 0, tourTimer = null, tourPaused = matchMedia("(prefers-reduced-motion: reduce)").matches, tourHover = false;
+let tourI = 0, tourTimer = null, tourPaused = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches || localStorage.getItem("nexo-motion") === "off"; } catch (err) { return false; } })(), tourHover = false;
 function tourGo(i) {
   const t = document.getElementById("tour"); if (!t) return;
   tourI = (i + 4) % 4;
@@ -6325,12 +6325,24 @@ document.addEventListener("click", e => {
      (cartPop → .line-pop), botones que se hunden (:active ya existía).
    · Bienvenida #splash (una vez por pestaña, sessionStorage nexo-splash; pointer-events:none, no bloquea) y
      esqueletos brillantes (skel) mientras cargan los datos reales. */
-var RM_OFF = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (err) { return false; } })();
+// RM_OFF: el sistema pide reducir movimiento o la persona apagó las animaciones en Mi cuenta (nexo-motion, global)
+function motionPref() { try { return localStorage.getItem("nexo-motion") === "off" ? "off" : "on"; } catch (err) { return "on"; } }
+var RM_SYS = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (err) { return false; } })();
+var RM_OFF = RM_SYS || motionPref() === "off";
+function syncMotionUI() { document.querySelectorAll("[data-motion-set]").forEach(b => { b.setAttribute("aria-checked", String(!RM_OFF)); b.disabled = RM_SYS; b.title = RM_SYS ? "Tu dispositivo pide reducir el movimiento" : ""; }); }
+syncMotionUI();
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-motion-set]"); if (!b || RM_SYS) return;
+  const off = !RM_OFF; RM_OFF = off;
+  try { if (off) localStorage.setItem("nexo-motion", "off"); else localStorage.removeItem("nexo-motion"); } catch (err) {}
+  if (off) document.documentElement.setAttribute("data-motion", "off"); else document.documentElement.removeAttribute("data-motion");
+  syncMotionUI(); toast(off ? "Animaciones apagadas." : "Animaciones activadas.");
+});
 function screenAnim(id, from, back) {
   if (RM_OFF || !from || from === id) return;
   const sec = document.getElementById(id), el = sec.querySelector(":scope > .main > .content") || sec.querySelector(".content") || sec;
   el.classList.remove("scr-fwd", "scr-back"); void el.offsetWidth; el.classList.add(back ? "scr-back" : "scr-fwd");
-  setTimeout(() => el.classList.remove("scr-fwd", "scr-back"), 420);
+  setTimeout(() => el.classList.remove("scr-fwd", "scr-back"), 260);
 }
 function pdAnim(st, o, now) {
   if (st === "preparando") return `<span class="pd-anim pd-pot" aria-hidden="true"><i class="stm s1"></i><i class="stm s2"></i><i class="stm s3"></i><svg viewBox="0 0 64 64"><path d="M12 30h40v10a14 14 0 0 1-14 14H26a14 14 0 0 1-14-14z" fill="var(--brand)"/><rect x="8" y="26" width="48" height="6" rx="3" fill="var(--deep)"/><rect x="28" y="20" width="8" height="6" rx="2" fill="var(--deep)"/><path d="M8 34H4M60 34h-4" stroke="var(--deep)" stroke-width="4" stroke-linecap="round"/></svg></span>`;
@@ -6344,7 +6356,7 @@ function pdAnim(st, o, now) {
 function countTo(el, to) {
   const from = parseFloat(String(el.dataset.v ?? "").replace(",", ".")); el.dataset.v = String(to);
   if (RM_OFF || isNaN(from) || from === to || !el.offsetParent || Math.abs(to - from) > 5000) { el.textContent = money(to); return; }
-  const t0 = performance.now(), dur = 650;
+  const t0 = performance.now(), dur = 450;
   const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = money(from + (to - from) * e); if (k < 1 && el.dataset.v === String(to)) requestAnimationFrame(step); };
   requestAnimationFrame(step);
 }
@@ -6360,7 +6372,7 @@ function skel(kind, n) {
   let seen = false; try { seen = !!sessionStorage.getItem("nexo-splash"); sessionStorage.setItem("nexo-splash", "1"); } catch (err) {}
   if (seen || RM_OFF) { sp.remove(); return; }
   sp.classList.add("on");
-  setTimeout(() => { sp.classList.add("out"); setTimeout(() => sp.remove(), 450); }, 1250);
+  setTimeout(() => { sp.classList.add("out"); setTimeout(() => sp.remove(), 300); }, 800);
 })();
 
 
@@ -6375,8 +6387,8 @@ function passFlip(p) {
   if (RM_OFF) { p.classList.toggle("show-back"); return; }
   if (p.classList.contains("flipping")) return;
   p.classList.add("flipping");
-  setTimeout(() => { p.classList.toggle("show-back"); }, 260);
-  setTimeout(() => p.classList.remove("flipping"), 560);
+  setTimeout(() => { p.classList.toggle("show-back"); }, 200);
+  setTimeout(() => p.classList.remove("flipping"), 440);
 }
 document.addEventListener("click", e => { const p = e.target.closest("[data-pass-flip]"); if (p && !e.target.closest("button, a")) passFlip(p); });
 document.addEventListener("keydown", e => { const p = e.target.closest && e.target.closest("[data-pass-flip]"); if (p && e.target === p && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); passFlip(p); } });
@@ -6400,8 +6412,8 @@ function payFx(kind, amt) {
     ? `<div class="pf-slot"></div><div class="pf-paper"><b>Nexo</b><i></i><i></i><i class="s"></i><span>${esc(amt)}</span><em>PAGADO</em></div>`
     : `<div class="pf-coin">$</div><div class="pf-wallet"><svg viewBox="0 0 64 48"><rect x="4" y="8" width="56" height="36" rx="8" fill="#1F7A55"/><rect x="4" y="8" width="56" height="10" rx="5" fill="#0F3D2E"/><rect x="40" y="22" width="20" height="12" rx="4" fill="#3DBE85"/><circle cx="48" cy="28" r="2.5" fill="#0F3D2E"/></svg><span>${kind === "in" ? "+" : "−"}${esc(amt)}</span></div>`;
   document.body.append(w);
-  setTimeout(() => w.classList.add("bye"), 1500);
-  setTimeout(() => w.remove(), 1900);
+  setTimeout(() => w.classList.add("bye"), 1100);
+  setTimeout(() => w.remove(), 1450);
 }
 
 

@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 23 nov 2026
+- Animaciones más rápidas y sutiles.
+- Interruptor de animaciones en Mi cuenta.
 - Credencial que gira y se voltea a la placa.
 - Cancha iluminada y pelota que rebota al reservar.
 - Inicio en cascada y anillo del plan que se llena.

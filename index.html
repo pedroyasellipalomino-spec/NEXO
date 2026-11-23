@@ -24,7 +24,7 @@
   [hidden] { display: none !important; }
 </style>
 <link rel="stylesheet" href="css/styles.css">
-<script>try{var t=localStorage.getItem("nexo-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{var t=localStorage.getItem("nexo-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);if(localStorage.getItem("nexo-motion")==="off")document.documentElement.setAttribute("data-motion","off")}catch(e){}</script>
 </head>
 <body>
 <!-- Bienvenida: el logo arma sus eslabones (solo la primera vez en la pestaña; no bloquea toques) -->
@@ -1491,6 +1491,9 @@
       <div class="card">
         <div><h2 class="h2">Apariencia</h2><p class="small" style="font-size:13px">Elige cómo se ve Nexo. "Automático" sigue la configuración de tu dispositivo.</p></div>
         <div data-theme-seg></div>
+      </div>
+      <div class="card">
+        <div class="row" style="align-items:flex-start;gap:12px"><div><h2 class="h2">Animaciones</h2><p class="small" style="font-size:13px">Movimientos al cambiar de pantalla, pagar o seguir tu pedido. Apágalas si prefieres una app más quieta.</p></div><button class="switch" type="button" role="switch" aria-checked="true" aria-label="Animaciones" data-motion-set></button></div>
       </div>
       <div class="card">
         <div class="row" style="align-items:flex-start;gap:12px"><div><h2 class="h2">Modo demostración</h2><p class="small" style="font-size:13px">Muestra herramientas para probar el prototipo: cambiar la fecha en tu estado de cuenta y simular que un pedido ya está listo.</p></div><button class="switch" type="button" role="switch" aria-checked="false" aria-label="Modo demostración" data-demo-mode></button></div>
