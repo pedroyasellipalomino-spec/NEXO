@@ -2,6 +2,10 @@
 
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
+## 24 nov 2026
+- iPad: menú y barra fijos; solo se mueve el contenido.
+- Teléfono: franja verde del inicio de sesión más baja.
+
 ## 23 nov 2026
 - Modo oscuro: verdes y etiquetas con mejor contraste.
 - Iniciales del avatar lateral ahora en blanco.

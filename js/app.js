@@ -384,7 +384,12 @@ function show(id) {
   if (id === "local-menu" && typeof renderLocalMenu === "function") renderLocalMenu();
   if (id === "planes") { const s = document.querySelector("#planList .opt.plan.on"); if (s) try { updatePlan(s); } catch (err) {} }
 
+  scrollTopNow(id);
+}
+// Vuelve arriba: la ventana (teléfono) y, desde 700 px, el contenido de la pantalla, que es lo único que se desplaza
+function scrollTopNow(id) {
   window.scrollTo(0, 0);
+  const c = document.querySelector(`#${id || current} > .main > .content`); if (c) c.scrollTop = 0;
 }
 function go(id) { if (location.hash === "#" + id) show(id); else location.hash = id; }
 
@@ -3293,7 +3298,7 @@ document.addEventListener("click", e => {
   }
   const on = e.target.closest("[data-mod-on]"); if (on) { const a = accByEmail(on.dataset.modOn); delete a.disabled; saveAccounts(); logAudit("rol", `Reactivó a ${a.full}.`); toast(`${a.full} recuperó su acceso de ${ROLE_LABEL[a.role].toLowerCase()}.`); current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); return; }
   const ic = e.target.closest("[data-inv-cancel]"); if (ic) { invites = invites.filter(i => i.email !== ic.dataset.invCancel); saveInvites(); logAudit("rol", `Canceló la invitación de ${ic.dataset.invCancel}.`); toast("Invitación cancelada."); current === "creador-equipo" ? renderCreadorEquipo() : renderEquipo(); return; }
-  const md = e.target.closest("[data-md]"); if (md) { mdSel = md.dataset.md; mdConfirm = null; mdMode = "reply"; renderModeracion(); if (innerWidth < 1100) document.querySelector("#mdBody > .stack:nth-child(2)")?.scrollIntoView({ block: "start" }); else window.scrollTo(0, 0); return; }
+  const md = e.target.closest("[data-md]"); if (md) { mdSel = md.dataset.md; mdConfirm = null; mdMode = "reply"; renderModeracion(); if (innerWidth < 1100) document.querySelector("#mdBody > .stack:nth-child(2)")?.scrollIntoView({ block: "start" }); else scrollTopNow("moderacion"); return; }
   const mt = e.target.closest("[data-md-tab]"); if (mt) { mdTab = mt.dataset.mdTab; mdSel = null; renderModeracion(); return; }
   const mm = e.target.closest("[data-md-mode]"); if (mm) { const txt = document.getElementById("mdText")?.value || ""; mdMode = mm.dataset.mdMode; renderModeracion(); const ta = document.getElementById("mdText"); ta.value = txt; ta.focus(); return; }
   if (e.target.closest("[data-md-take]")) { mdTake(tkById(mdSel)); renderModeracion(); return; }
