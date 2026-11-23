@@ -3,6 +3,8 @@
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
 ## 23 nov 2026
+- Modo oscuro: verdes y etiquetas con mejor contraste.
+- Iniciales del avatar lateral ahora en blanco.
 - iPad: moderación, tablas y tablero reacomodados.
 - iPad: tarjetas de Inicio en tres columnas.
 - Enlaces y botones pequeños, más fáciles de tocar.
