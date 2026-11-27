@@ -2,6 +2,9 @@
 
 Cada cambio en menos de 10 palabras. Lo más reciente va arriba.
 
+## 27 nov 2026
+- "Pagada fuera de Nexo" pide comprobante y Caja la valida.
+
 ## 23 nov 2026
 - Tasa BCV actualizada a Bs. 918,77.
 - Pagos con tarjeta: Caja los valida antes de contarlos.

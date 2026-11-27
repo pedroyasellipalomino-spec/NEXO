@@ -695,10 +695,11 @@ const ST = { externa: ["ok", "Pagada fuera de Nexo"], pagada: ["ok", "Pagada"], 
 function invLine(iv) {
   const s = statusOf(iv), p = pagos[iv.id];
   if (s === "pagada") return `Pagada el ${p.fecha} · ${p.via}${p.pp ? " · con pronto pago" : ""}`;
-  if (p && p.estado === "rechazada" && ["pronto", "pendiente", "vencida"].includes(s)) return `${p.method === "tarjeta" ? "Pago con tarjeta rechazado" : "Transferencia rechazada"}: ${p.motivo}. Vuelve a pagarla · ${s === "pronto" ? `Pronto pago hasta el ${fmtDW(iv.ppEnd)}` : s === "pendiente" ? `Vence el ${fmtDW(iv.due)}` : `Venció el ${fmtDW(iv.due)}`}`;
+  if (p && p.estado === "rechazada" && ["pronto", "pendiente", "vencida"].includes(s)) return `${p.method === "tarjeta" ? "Pago con tarjeta rechazado" : p.method === "externa" ? "Caja no validó tu pago fuera de Nexo" : "Transferencia rechazada"}: ${p.motivo}. Vuelve a pagarla · ${s === "pronto" ? `Pronto pago hasta el ${fmtDW(iv.ppEnd)}` : s === "pendiente" ? `Vence el ${fmtDW(iv.due)}` : `Venció el ${fmtDW(iv.due)}`}`;
+  if (s === "revision" && p.method === "externa") return `Pagada fuera de Nexo · Caja está revisando tu comprobante${p.ref ? ` · Ref. ${escH(p.ref.slice(-6))}` : ""}`;
   if (s === "revision" && p.method === "tarjeta") return `Pago con tarjeta en revisión · ${escH(p.card || "Tarjeta")} · ${money(p.monto)}${p.ref ? ` · Aut. ${p.ref}` : ""}`;
   if (s === "revision") return `Transferencia en revisión · ${p.currency === "bs" ? `${bsAmt(p.paidAmount)} (${money(p.monto)})` : money(p.monto)}${p.ref ? ` · Ref. ${p.ref.slice(-6)}` : ""}`;
-  if (s === "externa") return "Indicaste que la pagaste fuera de Nexo · Puedes cambiarlo en Mis materias";
+  if (s === "externa") return p.validatedAt ? `Pagada fuera de Nexo · validada por Caja` : "Indicaste que la pagaste fuera de Nexo · Puedes cambiarlo en Mis materias";
   if (s === "futura") return `Se emite el ${fmtDW(iv.issue)} · Pronto pago hasta el ${fmtDW(iv.ppEnd)}`;
   if (s === "pronto") return `Pronto pago hasta el ${fmtDW(iv.ppEnd)} · Luego ${money(PRICE_REG * MATERIAS.length)}`;
   if (s === "pendiente") return `Vence el ${fmtDW(iv.due)}`;
@@ -987,8 +988,8 @@ function buildNotifs() {
     const s = statusOf(iv), amt = money(amountOf(iv));
     if (t < iv.issue) push({ id: `inv-${iv.id}-soon`, cat: "universidad", when: addDays(iv.issue, -5), title: `La factura de ${iv.mes} se emite el ${fmtDW(iv.issue)}`, body: `Págala antes del ${fmtDW(iv.ppEnd)} y cada materia te cuesta ${money(PRICE_PP)} en lugar de ${money(PRICE_REG)}.`, go: "materias" });
     if (s === "pagada") { push({ id: `inv-${iv.id}-paid`, cat: "universidad", when: PAGOS0[iv.id] ? addDays(iv.issue, 2) : t, title: `Recibimos el pago de la factura de ${iv.mes}`, body: `${money(pagos[iv.id].monto)} · ${pagos[iv.id].via}${pagos[iv.id].pp ? " · con pronto pago" : ""}.`, go: "materias" }); }
-    if (pagos[iv.id] && pagos[iv.id].estado === "rechazada") push({ id: `inv-${iv.id}-rej-${pagos[iv.id].rejectedAt}`, cat: "universidad", alert: true, when: t, title: `Rechazamos tu ${pagos[iv.id].method === "tarjeta" ? "pago con tarjeta" : "transferencia"} de ${iv.mes}`, body: `${pagos[iv.id].motivo}. Revisa los datos y vuelve a pagarla.`, go: "materias" });
-    if (s === "revision") push({ id: `inv-${iv.id}-rev`, cat: "universidad", when: t, title: `Tu ${pagos[iv.id] && pagos[iv.id].method === "tarjeta" ? "pago con tarjeta" : "transferencia"} de ${iv.mes} está en revisión`, body: "Te avisaremos cuando Caja lo valide.", go: "materias" });
+    if (pagos[iv.id] && pagos[iv.id].estado === "rechazada") push({ id: `inv-${iv.id}-rej-${pagos[iv.id].rejectedAt}`, cat: "universidad", alert: true, when: t, title: pagos[iv.id].method === "externa" ? `Caja no validó tu pago fuera de Nexo de ${iv.mes}` : `Rechazamos tu ${pagos[iv.id].method === "tarjeta" ? "pago con tarjeta" : "transferencia"} de ${iv.mes}`, body: `${pagos[iv.id].motivo}. Revisa los datos y vuelve a pagarla.`, go: "materias" });
+    if (s === "revision") push({ id: `inv-${iv.id}-rev`, cat: "universidad", when: t, title: `Tu ${pagos[iv.id] && pagos[iv.id].method === "tarjeta" ? "pago con tarjeta" : pagos[iv.id] && pagos[iv.id].method === "externa" ? "comprobante de pago fuera de Nexo" : "transferencia"} de ${iv.mes} está en revisión`, body: "Te avisaremos cuando Caja lo valide.", go: "materias" });
     if (["pronto", "pendiente", "vencida"].includes(s) || (s === "pagada" || s === "revision") && t >= iv.issue) {
       push({ id: `inv-${iv.id}-issued`, cat: "universidad", when: iv.issue, title: `Ya puedes pagar la factura de ${iv.mes}`, body: `Pronto pago hasta el ${fmtDW(iv.ppEnd)}: ${money(PRICE_PP * MATERIAS.length)} en lugar de ${money(PRICE_REG * MATERIAS.length)}.`, go: s === "pagada" ? "materias" : "caja" });
     }
@@ -1782,12 +1783,22 @@ function renderInsPaid() {
   if (!insPaid) insPaid = new Set(el.filter(iv => (pagos[iv.id] && pagos[iv.id].estado === "externa") || (!MATERIAS.length && iv.m < createdAt.getMonth() && createdAt.getFullYear() === 2026)).map(iv => iv.id));
   box.innerHTML = `<legend>¿Ya pagaste algún mes del trimestre fuera de Nexo?</legend>
     <p class="tiny">Por ejemplo, en la caja de la universidad o por transferencia antes de usar Nexo. Lo que no marques queda por pagar.</p>
-    ${el.map(iv => `<label class="remember paidm"><input type="checkbox" data-ins-paid="${iv.id}"${insPaid.has(iv.id) ? " checked" : ""}><span class="grow">Factura de ${iv.mes}</span><span class="small">${insN ? money(insN * PRICE_REG) : ""}</span></label>`).join("")}`;
+    ${el.map(iv => `<label class="remember paidm"><input type="checkbox" data-ins-paid="${iv.id}"${insPaid.has(iv.id) ? " checked" : ""}><span class="grow">Factura de ${iv.mes}${pagos[iv.id] && pagos[iv.id].estado === "externa" ? ` <span class="pill ok">Validada</span>` : pagos[iv.id] && pagos[iv.id].estado === "rechazada" && pagos[iv.id].method === "externa" ? ` <span class="pill bad">Rechazada</span>` : ""}</span><span class="small">${insN ? money(insN * PRICE_REG) : ""}</span></label>`).join("")}
+    <div class="stack s14" id="insProof" hidden>
+      <p class="tiny">Adjunta el comprobante de esos pagos (recibo de la caja de la universidad o de tu transferencia). Caja lo revisa y, al aprobarlo, el mes queda como pagado fuera de Nexo. Mientras tanto aparece en revisión.</p>
+      <div class="field"><label for="ins-file">Comprobante · PDF, JPG o PNG (máx. 5 MB)</label><div class="input"><input type="file" id="ins-file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"></div></div>
+      <div class="field"><label for="ins-ref">Referencia o número de recibo (opcional)</label><div class="input"><input id="ins-ref" inputmode="numeric" maxlength="20" autocomplete="off" placeholder="Ej. 0012345678"></div></div>
+    </div>`;
+  insProofSync();
 }
+// El comprobante se pide solo si hay meses marcados que Caja aún no validó
+const insNewPaid = () => insEligible().filter(iv => insPaid && insPaid.has(iv.id) && !(pagos[iv.id] && pagos[iv.id].estado === "externa"));
+function insProofSync() { const b = document.getElementById("insProof"); if (b) b.hidden = !insNewPaid().length; }
 document.addEventListener("change", e => {
   const c = e.target.closest("[data-ins-paid]"); if (!c) return;
   if (!insPaid) insPaid = new Set();
   c.checked ? insPaid.add(c.dataset.insPaid) : insPaid.delete(c.dataset.insPaid);
+  insProofSync(); document.getElementById("insErr").hidden = true;
 });
 function openInscripcion() {
   insN = MATERIAS.length; insNames = MATERIAS.map(m => m.n); insPaid = null;
@@ -1817,13 +1828,24 @@ document.getElementById("insForm").addEventListener("submit", e => {
   const found = names.map(n => findSubject(n, career));
   const seen = new Set();
   for (let k = 0; k < found.length; k++) { const key = found[k].c || fold(found[k].n); if (seen.has(key)) return err(`"${found[k].n}" está repetida. Revisa la lista.`, inputs[k]); seen.add(key); }
+  // meses pagados fuera de Nexo: necesitan comprobante y quedan en revisión hasta que Caja los valide
+  const fresh = insNewPaid(), fileIn = document.getElementById("ins-file"), file = fileIn && fileIn.files[0];
+  if (fresh.length) {
+    if (!file) return err(`Adjunta el comprobante de ${fresh.length === 1 ? `la factura de ${fresh[0].mes}` : "los meses"} que pagaste fuera de Nexo, o desmárcal${fresh.length === 1 ? "a" : "os"} si aún no la${fresh.length === 1 ? "" : "s"} pagaste.`, fileIn);
+    if (!/\.(pdf|jpe?g|png)$/i.test(file.name)) return err("El comprobante debe ser PDF, JPG o PNG.", fileIn);
+    if (file.size > 5 * 1024 * 1024) return err(`El archivo pesa ${(file.size / 1048576).toFixed(1).replace(".", ",")} MB. El máximo es 5 MB.`, fileIn);
+  }
   const wasEmpty = !MATERIAS.length;
   if (career) saveAccount({ career });
   MATERIAS = found;
-  insEligible().forEach(iv => { if (insPaid && insPaid.has(iv.id)) pagos[iv.id] = { estado: "externa", via: "Fuera de Nexo" }; else if (pagos[iv.id] && pagos[iv.id].estado === "externa") delete pagos[iv.id]; });
+  const now = Date.now(), ref = (document.getElementById("ins-ref") || { value: "" }).value.replace(/\D/g, "").slice(0, 20), path = fresh.length ? sbUploadReceipt(file, "externa") : null;
+  insEligible().forEach(iv => {
+    if (fresh.includes(iv)) pagos[iv.id] = { estado: "revision", method: "externa", monto: PRICE_REG * MATERIAS.length, pp: false, ref, currency: "usd", paidAmount: PRICE_REG * MATERIAS.length, receipt: file.name, receiptPath: path || undefined, date: isoOf(new Date()), sentAt: now, studentName: user.full };
+    else if (!(insPaid && insPaid.has(iv.id)) && pagos[iv.id] && pagos[iv.id].estado === "externa") delete pagos[iv.id];
+  });
   savePagos();
   saveMaterias(); defaultSel(); renderDebt(); renderMatList(); if (typeof renderNotifs === "function") renderNotifs();
-  toast(wasEmpty ? `Registramos tus ${MATERIAS.length} ${MATERIAS.length === 1 ? "materia" : "materias"}. Cada factura es de ${money(MATERIAS.length * PRICE_REG)}.` : "Actualizamos tus materias.");
+  toast((wasEmpty ? `Registramos tus ${MATERIAS.length} ${MATERIAS.length === 1 ? "materia" : "materias"}. Cada factura es de ${money(MATERIAS.length * PRICE_REG)}.` : "Actualizamos tus materias.") + (fresh.length ? ` Caja revisará tu comprobante de ${fresh.map(iv => iv.mes).join(" y ")}.` : ""));
   go(wasEmpty ? insReturn : "materias");
 });
 renderMatList();
@@ -4455,7 +4477,7 @@ function cajaItems() {
     Object.keys(localStorage).forEach(k => {
       if (k.startsWith("nexo-pagos:")) {
         const email = k.slice(11), pg = JSON.parse(localStorage.getItem(k) || "{}") || {};
-        Object.entries(pg).forEach(([id, p]) => { if (p && ["revision", "pagada", "rechazada"].includes(p.estado) && (p.estado === "revision" || p.validatedAt || p.rejectedAt)) out.push({ kind: "factura", key: k, email, id, p, who: p.studentName || nameOf(email), usd: p.monto, title: `Factura de ${MES_DE(id)}`, sent: p.sentAt || (p.date ? new Date(p.date + "T12:00").getTime() : 0), done: p.estado !== "revision" }); });
+        Object.entries(pg).forEach(([id, p]) => { if (p && ["revision", "pagada", "rechazada", "externa"].includes(p.estado) && (p.estado === "revision" || p.validatedAt || p.rejectedAt)) out.push({ kind: "factura", key: k, email, id, p, who: p.studentName || nameOf(email), usd: p.monto, title: `Factura de ${MES_DE(id)}${p.method === "externa" ? " · pagada fuera de Nexo" : ""}`, sent: p.sentAt || (p.date ? new Date(p.date + "T12:00").getTime() : 0), done: p.estado !== "revision" }); });
       }
       if (k.startsWith("nexo-pendrec:")) {
         const email = k.slice(13), list = JSON.parse(localStorage.getItem(k) || "[]") || [];
@@ -4482,7 +4504,7 @@ function renderValidar() {
   const k = (label, val, sub, ic) => `<div class="card kpi static sk"><div class="row start" style="gap:10px">${skIc(ic)}<span class="small">${label}</span></div><b class="kv-big">${val}</b><span class="tiny">${sub}</span></div>`;
   document.getElementById("vlKpis").innerHTML = k("Por validar", pend.length, pend.length ? `El más antiguo: ${ago(Math.min(...pend.map(x => x.sent)))}` : "Todo al día", "hourglass")
     + k("Monto por validar", money(pend.reduce((a, x) => a + x.usd, 0)), `${pend.filter(x => x.p.method === "tarjeta").length} con tarjeta · ${pend.filter(x => x.p.currency === "bs").length} en bolívares`, "banknote")
-    + k("Revisados hoy", doneToday.length, `${doneToday.filter(x => x.p.estado === "pagada" || x.p.estado === "aprobada").length} aprobados · ${doneToday.filter(x => x.p.estado === "rechazada").length} rechazados`, "badge-check");
+    + k("Revisados hoy", doneToday.length, `${doneToday.filter(x => ["pagada", "aprobada", "externa"].includes(x.p.estado)).length} aprobados · ${doneToday.filter(x => x.p.estado === "rechazada").length} rechazados`, "badge-check");
   const tabs = [["pend", `Por validar · ${pend.length}`], ["factura", "Facturas"], ["recarga", "Recargas"], ["pedido", "Comida"], ["cancha", "Canchas"], ["done", "Revisados"]];
   document.getElementById("vlTabs").innerHTML = tabs.map(([t, l]) => `<button class="pill ${t === vlTab ? "ok" : "neutral"}" type="button" data-vl-tab="${t}">${l}</button>`).join("");
   const list = all.filter(x => vlTab === "pend" ? !x.done : vlTab === "done" ? x.done : !x.done && x.kind === vlTab);
@@ -4503,7 +4525,7 @@ function renderValidar() {
       <div class="row" style="align-items:flex-start"><div class="row start" style="align-items:flex-start;gap:10px">${x.done ? "" : `<input type="checkbox" class="vl-check" data-vl-sel="${key}" aria-label="Seleccionar el pago de ${esc(x.who)}" ${vlSel.has(key) ? "checked" : ""}>`}<span class="svc-chip"><i data-lucide="${VK[1]}"></i></span><div><b class="h3">${esc(x.who)}</b><p class="small">${esc(x.title)}${p.pp ? " · con pronto pago" : ""}</p></div></div>${state}</div>
       <div class="vl-grid">
         <div><span class="tiny">Monto</span><b>${money(x.usd)}</b>${bs ? `<span class="tiny">${bsAmt(p.paidAmount)}${p.bcvRate ? ` · tasa ${bsAmt(p.bcvRate)}` : ""}</span>` : ""}</div>
-        <div><span class="tiny">Método</span><b>${card ? "Tarjeta" : x.kind === "recarga" ? "Pago Móvil" : bs ? "Transferencia en Bs." : "Transferencia en USD"}</b><span class="tiny">${esc((card ? p.card : p.bank) || "—")}</span></div>
+        <div><span class="tiny">Método</span><b>${card ? "Tarjeta" : p.method === "externa" ? "Fuera de Nexo" : x.kind === "recarga" ? "Pago Móvil" : bs ? "Transferencia en Bs." : "Transferencia en USD"}</b><span class="tiny">${esc((card ? p.card : p.method === "externa" ? "Caja de la universidad u otra vía" : p.bank) || "—")}</span></div>
         <div><span class="tiny">${card ? "Autorización" : "Referencia"}</span><b class="mono">${esc(p.ref || "—")}</b><span class="tiny">${p.date ? `Pagado el ${fmtD(new Date(p.date + "T12:00"))}` : ""}</span></div>
         <div><span class="tiny">Comprobante</span>${card ? `<b style="font-size:12px">Cobro con tarjeta</b>` : p.receipt && p.receiptPath ? `<button class="link b" type="button" data-vl-receipt="${esc(p.receiptPath)}" style="font-size:12px"><i data-lucide="file-text"></i> ${esc(p.receipt)}</button>` : p.receipt ? `<button class="link b" type="button" data-toast="Vista previa de ${esc(p.receipt)} no disponible en el prototipo." style="font-size:12px"><i data-lucide="file-text"></i> ${esc(p.receipt)}</button>` : `<b style="font-size:12px">Datos del Pago Móvil</b>`}<span class="tiny">Enviado ${ago(x.sent).toLowerCase()}</span></div>
       </div>
@@ -4536,7 +4558,8 @@ function vlDecide(key, ok, motivo, quiet = false) {
   const ref6 = (item.p.ref || "").slice(-6);
   if (item.kind === "factura") {
     const pg = JSON.parse(localStorage.getItem(sk) || "{}"), p = pg[id];
-    pg[id] = ok ? { ...p, estado: "pagada", fecha: fmtD(new Date(now)), via: p.method === "tarjeta" ? (p.card || "Tarjeta") : p.currency === "bs" ? "Transferencia en Bs." : "Transferencia", validatedAt: now, validatedBy: me }
+    pg[id] = ok && p.method === "externa" ? { ...p, estado: "externa", via: "Fuera de Nexo", validatedAt: now, validatedBy: me }
+      : ok ? { ...p, estado: "pagada", fecha: fmtD(new Date(now)), via: p.method === "tarjeta" ? (p.card || "Tarjeta") : p.currency === "bs" ? "Transferencia en Bs." : "Transferencia", validatedAt: now, validatedBy: me }
                 : { ...p, estado: "rechazada", motivo, rejectedAt: now, rejectedBy: me };
     localStorage.setItem(sk, JSON.stringify(pg));
     vlUpdateMove(item.email, m => m.title.includes(`Factura de ${MES_DE(id)}`) && (!ref6 || (m.detail || "").includes(ref6)), ok ? "Pagado" : "Rechazado", ok ? "ok" : "warn");
@@ -4744,7 +4767,7 @@ function homeItems() {
     if (account && account.carnet) activeInvoices().forEach(iv => {
       const s = statusOf(iv), p = pagos[iv.id], amt = money(amountOf(iv));
       const rej = p && p.estado === "rechazada" && ["pronto", "pendiente", "vencida"].includes(s);
-      if (rej) out.push({ pr: 1, tone: "bad", icon: "circle-x", title: `Rechazamos tu ${p.method === "tarjeta" ? "pago con tarjeta" : "transferencia"} de ${iv.mes}`, body: `${p.motivo}. Vuelve a pagarla por ${amt}.`, cta: "Pagar", go: "caja" });
+      if (rej) out.push({ pr: 1, tone: "bad", icon: "circle-x", title: p.method === "externa" ? `Caja no validó tu pago fuera de Nexo de ${iv.mes}` : `Rechazamos tu ${p.method === "tarjeta" ? "pago con tarjeta" : "transferencia"} de ${iv.mes}`, body: `${p.motivo}. ${p.method === "externa" ? `Envía otro comprobante en Mis materias o págala por ${amt}.` : `Vuelve a pagarla por ${amt}.`}`, cta: "Pagar", go: "caja" });
       else if (s === "vencida") out.push({ pr: 1, tone: "warn", icon: "receipt-text", title: `Tu factura de ${iv.mes} está vencida`, body: `Venció el ${fmtDW(iv.due)}. Págala por ${amt} para quedar al día.`, cta: "Pagar", go: "caja" });
       else if (s === "pronto") { const d = Math.round((day0(iv.ppEnd) - t) / 864e5); out.push({ pr: d <= 1 ? 2 : 4, tone: d <= 1 ? "warn" : "", icon: "badge-percent", title: d === 0 ? "El pronto pago termina hoy" : d === 1 ? "El pronto pago termina mañana" : `Pronto pago de ${iv.mes} hasta el ${fmtDW(iv.ppEnd)}`, body: `Paga ${amt} y ahorra ${money((PRICE_REG - PRICE_PP) * MATERIAS.length)}.`, cta: "Pagar", go: "caja" }); }
       else if (s === "pendiente") { const d = Math.round((day0(iv.due) - t) / 864e5); out.push({ pr: d <= 3 ? 2 : 4, tone: d <= 3 ? "warn" : "", icon: "receipt-text", title: d === 0 ? `Tu factura de ${iv.mes} vence hoy` : `Tu factura de ${iv.mes} vence ${d === 1 ? "mañana" : `en ${d} días`}`, body: `${amt} · vence el ${fmtDW(iv.due)}.`, cta: "Pagar", go: "caja" }); }
@@ -5514,8 +5537,8 @@ function sbCajaItems() {
   sbCajaRows.forEach(row => {
     const name = row.full_name || row.email || "Estudiante";
     Object.entries(row.pagos || {}).forEach(([id, p]) => {
-      if (p && ["revision", "pagada", "rechazada"].includes(p.estado) && (p.estado === "revision" || p.validatedAt || p.rejectedAt))
-        out.push({ kind: "factura", key: "sb:" + row.user_id, email: row.email, id, p, who: p.studentName || name, usd: p.monto, title: `Factura de ${MES_DE(id)}`, sent: p.sentAt || (p.date ? new Date(p.date + "T12:00").getTime() : 0), done: p.estado !== "revision" });
+      if (p && ["revision", "pagada", "rechazada", "externa"].includes(p.estado) && (p.estado === "revision" || p.validatedAt || p.rejectedAt))
+        out.push({ kind: "factura", key: "sb:" + row.user_id, email: row.email, id, p, who: p.studentName || name, usd: p.monto, title: `Factura de ${MES_DE(id)}${p.method === "externa" ? " · pagada fuera de Nexo" : ""}`, sent: p.sentAt || (p.date ? new Date(p.date + "T12:00").getTime() : 0), done: p.estado !== "revision" });
     });
     (row.pendrec || []).forEach(r => out.push(recargaItem(r, "sb:" + row.user_id, row.email, name)));
   });
@@ -5551,7 +5574,7 @@ function sbCajaDecide(key, ok, motivo, quiet) {
     return item;
   }
   // se marca al instante; si el servidor lo rechaza, se recarga la lista
-  Object.assign(item.p, ok ? { estado: item.kind === "factura" ? "pagada" : "aprobada", validatedAt: now, validatedBy: me } : { estado: "rechazada", motivo, rejectedAt: now, rejectedBy: me });
+  Object.assign(item.p, ok ? { estado: item.kind === "factura" ? (item.p.method === "externa" ? "externa" : "pagada") : "aprobada", validatedAt: now, validatedBy: me } : { estado: "rechazada", motivo, rejectedAt: now, rejectedBy: me });
   const row = sbCajaRows.find(r => r.user_id === uid);
   if (row) { if (item.kind === "factura") row.pagos = { ...row.pagos, [id]: { ...row.pagos[id], ...item.p } }; else row.pendrec = row.pendrec.map(r => r.id === id ? { ...r, estado: item.p.estado, motivo: item.p.motivo, validatedAt: item.p.validatedAt, rejectedAt: item.p.rejectedAt, validatedBy: item.p.validatedBy, rejectedBy: item.p.rejectedBy } : r); }
   sbLastWrite = sbWriteAt["cj" + uid] = now;
